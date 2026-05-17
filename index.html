@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notiq — Révise plus vite, comprends mieux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c0b;
+  --bg2: #111410;
+  --bg3: #161a15;
+  --green: #1fbd82;
+  --green-dim: #0f7a52;
+  --green-glow: rgba(31,189,130,0.12);
+  --green-pale: rgba(31,189,130,0.06);
+  --text: #e8ede9;
+  --text-dim: #7a8c7e;
+  --text-muted: #3d4d41;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(31,189,130,0.3);
+  --radius: 12px;
+  --radius-lg: 18px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-size: 15px;
+  line-height: 1.6;
+}
+h1,h2,h3,h4 { font-family: 'Syne', sans-serif; line-height: 1.15; }
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem; height: 60px;
+  background: rgba(10,12,11,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
+.nav-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta { background: var(--green); color: #000; padding: 8px 20px; border-radius: 99px; font-size: 14px; font-weight: 500; text-decoration: none; font-family: 'Syne', sans-serif; transition: all 0.2s; }
+.nav-cta:hover { background: #25d492; transform: translateY(-1px); }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 120px 2rem 4rem;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(31,189,130,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--green-pale); border: 1px solid rgba(31,189,130,0.2);
+  border-radius: 99px; padding: 6px 16px;
+  font-size: 13px; color: var(--green); margin-bottom: 2rem;
+  animation: fadeUp 0.6s ease both;
+}
+.hero h1 {
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+  animation: fadeUp 0.6s 0.1s ease both;
+  letter-spacing: -0.02em;
+}
+.hero h1 span { color: var(--green); }
+.hero p {
+  font-size: 1.1rem; color: var(--text-dim); max-width: 520px;
+  margin: 0 auto 2.5rem;
+  animation: fadeUp 0.6s 0.2s ease both;
+  font-weight: 300;
+}
+.hero-btns {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+.btn-main {
+  background: var(--green); color: #000;
+  padding: 14px 32px; border-radius: 99px;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px;
+  text-decoration: none; transition: all 0.2s;
+  box-shadow: 0 0 30px rgba(31,189,130,0.3);
+}
+.btn-main:hover { background: #25d492; transform: translateY(-2px); box-shadow: 0 0 40px rgba(31,189,130,0.4); }
+.btn-ghost {
+  background: transparent; color: var(--text);
+  padding: 14px 32px; border-radius: 99px;
+  border: 1px solid var(--border);
+  font-family: 'Syne', sans-serif; font-weight: 500; font-size: 15px;
+  text-decoration: none; transition: all 0.2s; cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--border-hover); background: var(--green-pale); }
+.hero-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 1px;
+  margin-top: 5rem; width: 100%; max-width: 700px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  overflow: hidden; animation: fadeUp 0.6s 0.4s ease both;
+  background: var(--border);
+}
+.hero-stat { background: var(--bg2); padding: 1.5rem; text-align: center; }
+.hero-stat .num { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 700; color: var(--green); }
+.hero-stat .lbl { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+/* SECTIONS */
+section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+.section-tag {
+  display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--green); margin-bottom: 1rem;
+  font-family: 'Syne', sans-serif;
+}
+.section-title { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+.section-sub { color: var(--text-dim); font-size: 1rem; max-width: 520px; font-weight: 300; }
+
+/* FEATURES */
+.features-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1px; margin-top: 3.5rem;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--border); overflow: hidden;
+}
+.feat-card {
+  background: var(--bg2); padding: 2rem;
+  transition: background 0.2s;
+}
+.feat-card:hover { background: var(--bg3); }
+.feat-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--green-pale); border: 1px solid rgba(31,189,130,0.15);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.25rem; font-size: 20px;
+}
+.feat-card h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+.feat-card p { font-size: 14px; color: var(--text-dim); line-height: 1.7; font-weight: 300; }
+
+/* EXPLAIN STYLES */
+.styles-section { padding: 6rem 2rem; background: var(--bg2); }
+.styles-section > div { max-width: 1100px; margin: 0 auto; }
+.styles-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px; margin-top: 3rem;
+}
+.style-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem;
+  transition: all 0.2s; cursor: default;
+}
+.style-card:hover { border-color: var(--border-hover); background: var(--bg); transform: translateY(-3px); }
+.style-card .icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+.style-card h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.4rem; }
+.style-card p { font-size: 13px; color: var(--text-dim); }
+
+/* APP SECTION */
+.app-section { padding: 6rem 2rem; }
+.app-section > div { max-width: 1100px; margin: 0 auto; }
+.app-wrap {
+  margin-top: 3rem; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--bg2);
+}
+.app-nav {
+  display: flex; gap: 2px; padding: 12px 12px 0;
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+}
+.atab {
+  padding: 10px 18px; border: none; background: transparent;
+  color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 14px;
+  cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.atab.active { background: var(--bg2); color: var(--text); border-bottom-color: var(--green); }
+.atab:hover:not(.active) { color: var(--text); }
+.app-body { padding: 1.5rem; min-height: 400px; }
+.apanel { display: none; }
+.apanel.active { display: block; }
+
+/* COURSE IMPORT */
+.course-textarea {
+  width: 100%; padding: 16px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+  resize: vertical; line-height: 1.7; min-height: 200px;
+  transition: border-color 0.2s;
+}
+.course-textarea:focus { outline: none; border-color: rgba(31,189,130,0.4); }
+.course-textarea::placeholder { color: var(--text-muted); }
+.action-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+.btn-green {
+  background: var(--green); color: #000; border: none;
+  padding: 11px 24px; border-radius: 99px;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+}
+.btn-green:hover { background: #25d492; transform: translateY(-1px); }
+.btn-outline {
+  background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+  padding: 11px 20px; border-radius: 99px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-outline:hover { border-color: var(--border-hover); color: var(--text); }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 14px; border-radius: 99px;
+  background: rgba(31,189,130,0.08); border: 1px solid rgba(31,189,130,0.2);
+  font-size: 13px; color: var(--green);
+}
+.pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: p 1.5s infinite; }
+@keyframes p { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* EXPLAIN TAB */
+.explain-bar { display: flex; gap: 8px; margin-bottom: 1rem; }
+.explain-input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 99px; padding: 11px 20px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+}
+.explain-input:focus { outline: none; border-color: rgba(31,189,130,0.4); }
+.explain-input::placeholder { color: var(--text-muted); }
+.style-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+.spill {
+  padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-dim); font-size: 13px;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+}
+.spill.active { background: var(--green-pale); border-color: rgba(31,189,130,0.4); color: var(--green); }
+.spill:hover:not(.active) { border-color: var(--border-hover); color: var(--text); }
+.explain-result {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  font-size: 14px; line-height: 1.8; color: var(--text-dim);
+  min-height: 160px;
+}
+.explain-result .step { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.explain-result .step:last-child { border-bottom: none; }
+.step-n { width: 26px; height: 26px; border-radius: 50%; background: var(--green); color: #000; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.analogy-block { background: rgba(31,189,130,0.06); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; color: var(--text-dim); }
+
+/* QUIZ */
+.quiz-card-ui {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem; margin-bottom: 12px;
+}
+.quiz-q-text { font-size: 15px; color: var(--text); margin-bottom: 1rem; font-weight: 500; }
+.qopts { display: flex; flex-direction: column; gap: 8px; }
+.qopt {
+  padding: 10px 16px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text-dim); text-align: left;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.15s;
+}
+.qopt:hover:not(:disabled) { border-color: var(--border-hover); color: var(--text); }
+.qopt.correct { background: rgba(31,189,130,0.1); border-color: rgba(31,189,130,0.4); color: var(--green); }
+.qopt.wrong { background: rgba(220,60,60,0.08); border-color: rgba(220,60,60,0.3); color: #e06060; }
+.qexpl { margin-top: 10px; padding: 10px 14px; background: var(--bg3); border-radius: 8px; font-size: 13px; color: var(--text-dim); }
+.score-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.score-big { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 700; color: var(--green); }
+
+/* FLASH */
+.flash-outer { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.flash-ui {
+  width: 100%; max-width: 500px; min-height: 180px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2rem;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; cursor: pointer; font-size: 16px;
+  transition: all 0.2s; position: relative; color: var(--text);
+}
+.flash-ui:hover { border-color: var(--border-hover); }
+.flash-ui.flipped { background: rgba(31,189,130,0.06); border-color: rgba(31,189,130,0.3); color: var(--green); }
+.flash-badge { position: absolute; top: 10px; right: 14px; font-size: 11px; color: var(--text-muted); }
+.flash-controls { display: flex; gap: 10px; align-items: center; }
+.flash-cnt { font-size: 13px; color: var(--text-muted); }
+
+/* CHAT */
+.chat-box {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem; min-height: 260px;
+  max-height: 320px; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 12px; margin-bottom: 12px;
+}
+.cmsg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
+.cmsg.user { align-self: flex-end; background: var(--green); color: #000; border-bottom-right-radius: 4px; font-weight: 500; }
+.cmsg.ai { align-self: flex-start; background: var(--bg3); border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text-dim); }
+.chat-row { display: flex; gap: 8px; }
+.chat-in {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 99px; padding: 11px 20px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+}
+.chat-in:focus { outline: none; border-color: rgba(31,189,130,0.4); }
+.chat-in::placeholder { color: var(--text-muted); }
+
+/* SUMMARY */
+.summary-body { font-size: 14px; line-height: 1.9; color: var(--text-dim); }
+.kp { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.kp:last-child { border-bottom: none; }
+.kp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-top: 7px; flex-shrink: 0; }
+
+/* HOW IT WORKS */
+.steps-row { display: flex; gap: 0; margin-top: 3.5rem; position: relative; }
+.steps-row::before {
+  content: ''; position: absolute; top: 28px; left: calc(16.6% + 1px);
+  right: calc(16.6% + 1px); height: 1px; background: var(--border);
+}
+.how-step { flex: 1; text-align: center; padding: 0 1.5rem; }
+.how-num {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--green);
+  margin: 0 auto 1.25rem; position: relative; z-index: 1;
+}
+.how-step h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+.how-step p { font-size: 13px; color: var(--text-dim); }
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border); padding: 2rem;
+  text-align: center; color: var(--text-muted); font-size: 13px;
+}
+footer a { color: var(--green); text-decoration: none; }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+
+/* LOADING */
+.loading-txt { color: var(--text-muted); font-style: italic; font-size: 14px; }
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid var(--border); border-top-color: var(--green);
+  border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 99px; }
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .steps-row { flex-direction: column; gap: 2rem; }
+  .steps-row::before { display: none; }
+  .hero-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo"><div class="dot"></div> Notiq</a>
+  <ul class="nav-links">
+    <li><a href="#features">Fonctionnalités</a></li>
+    <li><a href="#how">Comment ça marche</a></li>
+    <li><a href="#app">L'app</a></li>
+  </ul>
+  <a href="#app" class="nav-cta">Commencer →</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">✦ Propulsé par l'IA Claude</div>
+  <h1>Révise plus vite,<br><span>comprends mieux</span></h1>
+  <p>Colle ton cours, choisis ton style d'explication. Quiz, flashcards, résumés et chat IA — tout ce qu'il te faut pour réussir tes examens.</p>
+  <div class="hero-btns">
+    <a href="#app" class="btn-main">Essayer maintenant →</a>
+    <a href="#features" class="btn-ghost">Voir les fonctionnalités</a>
+  </div>
+  <div class="hero-grid">
+    <div class="hero-stat"><div class="num">5</div><div class="lbl">styles d'explication</div></div>
+    <div class="hero-stat"><div class="num">∞</div><div class="lbl">questions de quiz</div></div>
+    <div class="hero-stat"><div class="num">100%</div><div class="lbl">basé sur ton cours</div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" class="fade-in">
+  <div class="section-tag">Fonctionnalités</div>
+  <h2 class="section-title">Tout pour réviser intelligemment</h2>
+  <p class="section-sub">Une IA qui s'adapte à toi — pas l'inverse. Tu fournis le cours, elle fait le reste.</p>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">💡</div>
+      <h3>Explications multi-styles</h3>
+      <p>Analogies, étapes, exemples concrets, explication pour enfant… Choisis le style qui te parle le mieux, change-en à la volée.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✅</div>
+      <h3>Quiz QCM intelligents</h3>
+      <p>Des questions générées directement depuis ton cours, avec score en temps réel et explications pour chaque réponse.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🃏</div>
+      <h3>Flashcards automatiques</h3>
+      <p>Les notions clés de ton cours transformées en cartes recto-verso. Mémorise sans effort, répète ce qui compte.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <h3>Résumés structurés</h3>
+      <p>Un résumé clair avec les points essentiels mis en valeur — généré en quelques secondes depuis n'importe quel texte.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">💬</div>
+      <h3>Chat sur ton cours</h3>
+      <p>Pose toutes tes questions à l'IA. Elle connaît ton cours par cœur et répond en se basant dessus. Disponible 24h/24.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <h3>Zéro inscription</h3>
+      <p>Colle ton cours, clique. Aucun compte, aucune config. L'app fonctionne directement dans ton navigateur.</p>
+    </div>
+  </div>
+</section>
+
+<!-- EXPLAIN STYLES -->
+<div class="styles-section fade-in">
+  <div>
+    <div class="section-tag">Explications</div>
+    <h2 class="section-title">5 façons d'apprendre<br>le même concept</h2>
+    <p class="section-sub">Tout le monde comprend différemment. Choisis le style qui te correspond, ou teste-les tous.</p>
+    <div class="styles-grid">
+      <div class="style-card">
+        <div class="icon">🔤</div>
+        <h4>Simple & clair</h4>
+        <p>Définition directe, développement progressif. La base.</p>
+      </div>
+      <div class="style-card">
+        <div class="icon">💡</div>
+        <h4>Par analogie</h4>
+        <p>"Imagine que…" — des métaphores du quotidien pour tout comprendre.</p>
+      </div>
+      <div class="style-card">
+        <div class="icon">🔢</div>
+        <h4>Étape par étape</h4>
+        <p>Décomposition numérotée pour ne rien rater du raisonnement.</p>
+      </div>
+      <div class="style-card">
+        <div class="icon">🧮</div>
+        <h4>Exemple concret</h4>
+        <p>Cas pratiques, calculs, applications réelles. Tu vois, tu comprends.</p>
+      </div>
+      <div class="style-card">
+        <div class="icon">⭐</div>
+        <h4>Comme à un enfant</h4>
+        <p>Mots simples, images mentales. Idéal pour débloquer les concepts abstraits.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="fade-in">
+  <div class="section-tag">Comment ça marche</div>
+  <h2 class="section-title">En 3 étapes</h2>
+  <div class="steps-row">
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <h4>Colle ton cours</h4>
+      <p>N'importe quel texte — maths, bio, histoire, philo. Copie-colle et c'est parti.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <h4>L'IA analyse</h4>
+      <p>Quiz, flashcards et résumé générés automatiquement en quelques secondes.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <h4>Tu révises</h4>
+      <p>Pose tes questions, explore les explications, entraîne-toi jusqu'à maîtriser.</p>
+    </div>
+  </div>
+</section>
+
+<!-- THE APP -->
+<div class="app-section fade-in" id="app">
+  <div>
+    <div class="section-tag">L'application</div>
+    <h2 class="section-title">Commence à réviser</h2>
+    <p class="section-sub">Charge ton cours ci-dessous et explore tous les outils.</p>
+    <div class="app-wrap">
+      <div class="app-nav">
+        <button class="atab active" onclick="switchATab('import',this)">📥 Cours</button>
+        <button class="atab" onclick="switchATab('explain',this)">💡 Explications</button>
+        <button class="atab" onclick="switchATab('quiz',this)">✅ Quiz</button>
+        <button class="atab" onclick="switchATab('flash',this)">🃏 Flashcards</button>
+        <button class="atab" onclick="switchATab('summary',this)">📄 Résumé</button>
+        <button class="atab" onclick="switchATab('chat',this)">💬 Chat</button>
+      </div>
+      <div class="app-body">
+
+        <!-- IMPORT -->
+        <div class="apanel active" id="ap-import">
+          <textarea class="course-textarea" id="course-text" placeholder="Colle le texte de ton cours ici...&#10;&#10;Exemple : 'La dérivée d'une fonction f en un point a est la limite du taux de variation...'"></textarea>
+          <div class="action-row">
+            <button class="btn-green" onclick="loadCourse()">
+              <span id="load-icon">✦</span> Charger et analyser
+            </button>
+            <span id="load-msg" style="font-size:13px;color:var(--text-muted)"></span>
+            <span id="loaded-pill" style="display:none" class="status-pill"><span class="pulse"></span> Cours chargé</span>
+          </div>
+        </div>
+
+        <!-- EXPLAIN -->
+        <div class="apanel" id="ap-explain">
+          <div class="explain-bar">
+            <input class="explain-input" id="ex-topic" type="text" placeholder="Ex : la dérivée, la mitose, la Révolution française..." />
+            <button class="btn-green" onclick="doExplain()">✦ Expliquer</button>
+          </div>
+          <div class="style-pills">
+            <button class="spill active" onclick="pickStyle(this,'simple')">🔤 Simple</button>
+            <button class="spill" onclick="pickStyle(this,'analogy')">💡 Analogie</button>
+            <button class="spill" onclick="pickStyle(this,'steps')">🔢 Étapes</button>
+            <button class="spill" onclick="pickStyle(this,'example')">🧮 Exemple</button>
+            <button class="spill" onclick="pickStyle(this,'eli5')">⭐ Enfant</button>
+          </div>
+          <div class="explain-result" id="ex-result">
+            <span class="loading-txt">Saisis un concept et choisis ton style d'explication…</span>
+          </div>
+        </div>
+
+        <!-- QUIZ -->
+        <div class="apanel" id="ap-quiz">
+          <div id="quiz-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer un quiz.</div>
+          <div id="quiz-ui" style="display:none">
+            <div class="score-row">
+              <div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">Score</div>
+                <div class="score-big" id="score-display">0/0</div>
+              </div>
+              <button class="btn-outline" onclick="genQuiz()" style="margin-left:auto">↻ Nouveau quiz</button>
+            </div>
+            <div id="quiz-list"></div>
+          </div>
+        </div>
+
+        <!-- FLASH -->
+        <div class="apanel" id="ap-flash">
+          <div id="flash-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer des flashcards.</div>
+          <div id="flash-ui" style="display:none" class="flash-outer">
+            <div class="flash-ui" id="flash-card" onclick="flipFlash()">
+              <span class="flash-badge" id="flash-badge"></span>
+              <span id="flash-text">…</span>
+            </div>
+            <div class="flash-controls">
+              <button class="btn-outline" onclick="prevFlash()">← Préc.</button>
+              <span class="flash-cnt" id="flash-cnt">1 / 1</span>
+              <button class="btn-outline" onclick="nextFlash()">Suiv. →</button>
+            </div>
+            <button class="btn-outline" onclick="genFlash()">↻ Nouvelles flashcards</button>
+          </div>
+        </div>
+
+        <!-- SUMMARY -->
+        <div class="apanel" id="ap-summary">
+          <div id="summary-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour obtenir un résumé.</div>
+          <div id="summary-ui" style="display:none" class="summary-body"></div>
+        </div>
+
+        <!-- CHAT -->
+        <div class="apanel" id="ap-chat">
+          <div class="chat-box" id="chat-box">
+            <div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions dessus. Je suis là pour t'aider à comprendre. 👋</div>
+          </div>
+          <div class="chat-row">
+            <input class="chat-in" id="chat-in" type="text" placeholder="Ta question…" onkeydown="if(event.key==='Enter')sendChat()" />
+            <button class="btn-green" onclick="sendChat()">Envoyer</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>Notiq — Propulsé par <a href="https://anthropic.com">Claude</a> · Fait pour réviser mieux · Bonne chance pour tes examens 🍀</p>
+</footer>
+
+<script>
+const STYLES = {
+  simple: 'Explique ce concept simplement et clairement en 3-5 paragraphes. Commence par la définition puis approfondis. Texte brut sans markdown.',
+  analogy: 'Explique ce concept uniquement par des analogies du quotidien. Propose 3 analogies différentes, chacune commençant par "Imagine que…". Texte brut.',
+  steps: 'Explique ce concept étape par étape. Numérote chaque étape : "Étape 1 : ...". Sois précis et progressif. Texte brut.',
+  example: 'Explique ce concept par des exemples concrets avec des calculs si pertinents. Donne 3 exemples détaillés. Texte brut.',
+  eli5: 'Explique ce concept comme à un enfant de 10 ans. Mots simples, images mentales, enthousiasme. Texte brut.'
+};
+
+let courseText = '';
+let chatHistory = [];
+let quizData = []; let quizAnswers = {};
+let flashData = []; let flashIdx = 0; let flashFlipped = false;
+let exStyle = 'simple'; let exCache = {};
+
+function switchATab(name, el) {
+  document.querySelectorAll('.atab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.apanel').forEach(p => p.classList.remove('active'));
+  document.getElementById('ap-'+name).classList.add('active');
+}
+
+function pickStyle(el, s) {
+  document.querySelectorAll('.spill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  exStyle = s;
+}
+
+async function ai(messages, system) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+      system: system || 'Tu es un assistant pédagogique expert. Réponds en français.',
+      messages
+    })
+  });
+  const d = await r.json();
+  return d.content.map(c => c.text||'').join('');
+}
+
+async function loadCourse() {
+  const txt = document.getElementById('course-text').value.trim();
+  if (!txt) return;
+  courseText = txt; exCache = {}; quizData = []; flashData = []; chatHistory = [];
+  document.getElementById('load-msg').textContent = 'Analyse en cours…';
+  document.getElementById('loaded-pill').style.display = 'none';
+  await Promise.all([genSummary(), genFlash()]);
+  document.getElementById('quiz-empty').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'block';
+  await genQuiz();
+  document.getElementById('load-msg').textContent = '';
+  document.getElementById('loaded-pill').style.display = 'inline-flex';
+}
+
+async function genSummary() {
+  document.getElementById('summary-empty').style.display = 'none';
+  const el = document.getElementById('summary-ui');
+  el.style.display = 'block';
+  el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
+  const res = await ai([{role:'user',content:`Cours :\n\n${courseText}\n\nFais un résumé : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`}]);
+  const lines = res.split('\n').filter(l=>l.trim());
+  let html = '';
+  let pts = '';
+  let inPts = false;
+  lines.forEach(l => {
+    if(l.startsWith('•')||l.startsWith('-')) {
+      if(!inPts){inPts=true;pts='<div style="margin:1rem 0">';}
+      pts+=`<div class="kp"><div class="kp-dot"></div><span>${l.replace(/^[•\-]\s*/,'')}</span></div>`;
+    } else {
+      if(inPts){html+=pts+'</div>';inPts=false;pts='';}
+      html+=`<p style="margin-bottom:0.75rem">${l}</p>`;
+    }
+  });
+  if(inPts) html+=pts+'</div>';
+  el.innerHTML = html;
+}
+
+async function genFlash() {
+  if(!courseText) return;
+  const res = await ai([{role:'user',content:`Cours :\n\n${courseText}\n\nGénère 8 flashcards JSON. Réponds UNIQUEMENT en JSON valide :\n{"cards":[{"front":"terme/question","back":"définition/réponse"}]}`}]);
+  try {
+    flashData = JSON.parse(res.replace(/```json|```/g,'').trim()).cards || [];
+    flashIdx = 0; flashFlipped = false;
+    document.getElementById('flash-empty').style.display = 'none';
+    document.getElementById('flash-ui').style.display = 'flex';
+    showFlash();
+  } catch(e){}
+}
+
+function showFlash() {
+  if(!flashData.length) return;
+  const c = flashData[flashIdx]; flashFlipped = false;
+  document.getElementById('flash-text').textContent = c.front;
+  document.getElementById('flash-badge').textContent = '';
+  document.getElementById('flash-card').classList.remove('flipped');
+  document.getElementById('flash-cnt').textContent = `${flashIdx+1} / ${flashData.length}`;
+}
+function flipFlash() {
+  if(!flashData.length) return;
+  flashFlipped = !flashFlipped;
+  const c = flashData[flashIdx];
+  document.getElementById('flash-text').textContent = flashFlipped ? c.back : c.front;
+  document.getElementById('flash-badge').textContent = flashFlipped ? '↩ Verso' : '';
+  document.getElementById('flash-card').classList.toggle('flipped', flashFlipped);
+}
+function nextFlash() { if(flashIdx<flashData.length-1){flashIdx++;showFlash();} }
+function prevFlash() { if(flashIdx>0){flashIdx--;showFlash();} }
+
+async function genQuiz() {
+  if(!courseText) return;
+  document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
+  quizAnswers = {};
+  const res = await ai([{role:'user',content:`Cours :\n\n${courseText}\n\nGénère 5 questions QCM. JSON uniquement :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":0,"explanation":"explication"}]}\n"correct" = index 0-3 de la bonne réponse.`}]);
+  try {
+    quizData = JSON.parse(res.replace(/```json|```/g,'').trim()).questions || [];
+    renderQuiz();
+  } catch(e) {
+    document.getElementById('quiz-list').innerHTML = '<div class="loading-txt">Erreur, réessaie.</div>';
+  }
+}
+
+function renderQuiz() {
+  const correct = Object.entries(quizAnswers).filter(([i,a])=>quizData[i]&&+a===quizData[i].correct).length;
+  document.getElementById('score-display').textContent = `${correct}/${quizData.length}`;
+  let html = '';
+  quizData.forEach((q,i) => {
+    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${q.q}</div><div class="qopts">`;
+    q.options.forEach((opt,j) => {
+      const ans = quizAnswers[i];
+      let cls = '';
+      if(ans!==undefined){ if(j===q.correct) cls='correct'; else if(j===+ans) cls='wrong'; }
+      html += `<button class="qopt ${cls}" onclick="ansQ(${i},${j})" ${ans!==undefined?'disabled':''}>${opt}</button>`;
+    });
+    html += '</div>';
+    if(quizAnswers[i]!==undefined) html += `<div class="qexpl">💬 ${q.explanation}</div>`;
+    html += '</div>';
+  });
+  document.getElementById('quiz-list').innerHTML = html;
+}
+function ansQ(qi,ai) { quizAnswers[qi]=ai; renderQuiz(); }
+
+async function doExplain() {
+  const topic = document.getElementById('ex-topic').value.trim();
+  if(!topic) return;
+  const key = topic+'|'+exStyle;
+  const el = document.getElementById('ex-result');
+  if(exCache[key]) { renderExplain(exStyle, exCache[key]); return; }
+  el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération en cours…</span>';
+  const ctx = courseText ? `Cours de référence :\n${courseText}\n\n` : '';
+  const res = await ai([{role:'user',content:`${ctx}${STYLES[exStyle]}\n\nConcept : "${topic}"`}]);
+  exCache[key] = res;
+  renderExplain(exStyle, res);
+}
+
+function renderExplain(style, text) {
+  const el = document.getElementById('ex-result');
+  const lines = text.split('\n').filter(l=>l.trim());
+  if(style==='steps') {
+    let n=0; let html='';
+    lines.forEach(l => {
+      const m = l.match(/^[EeÉé]tape\s*\d+\s*[:.]?\s*(.*)/i)||l.match(/^\d+[.)]\s+(.*)/);
+      if(m){n++;html+=`<div class="step"><div class="step-n">${n}</div><div>${m[1]||m[0]}</div></div>`;}
+      else html+=`<p style="margin:0.5rem 0;font-size:14px;color:var(--text-dim)">${l}</p>`;
+    });
+    el.innerHTML = html;
+  } else if(style==='analogy') {
+    const parts = text.split(/Imagine que/i);
+    let html = '';
+    parts.forEach((p,i) => {
+      if(i===0&&!text.toLowerCase().startsWith('imagine')) html+=`<p style="margin-bottom:1rem;font-size:14px">${p.trim()}</p>`;
+      else html+=`<div class="analogy-block">Imagine que${p.trim()}</div>`;
+    });
+    el.innerHTML = html||`<p style="font-size:14px">${text}</p>`;
+  } else {
+    el.innerHTML = lines.map(l=>`<p style="margin-bottom:0.75rem;font-size:14px">${l}</p>`).join('');
+  }
+}
+
+async function sendChat() {
+  const inp = document.getElementById('chat-in');
+  const msg = inp.value.trim(); if(!msg) return;
+  inp.value = '';
+  const box = document.getElementById('chat-box');
+  box.innerHTML += `<div class="cmsg user">${msg}</div><div class="cmsg ai" id="typing">…</div>`;
+  box.scrollTop = box.scrollHeight;
+  chatHistory.push({role:'user',content:msg});
+  const sys = courseText
+    ? `Tu es un tuteur pédagogique. Cours de l'étudiant :\n\n${courseText}\n\nRéponds en français, clairement et pédagogiquement.`
+    : `Tu es un tuteur pédagogique expert. Réponds en français.`;
+  const res = await ai(chatHistory, sys);
+  chatHistory.push({role:'assistant',content:res});
+  document.getElementById('typing').remove();
+  const p = res.split('\n').filter(l=>l.trim()).map(l=>`<p style="margin-bottom:5px">${l}</p>`).join('');
+  box.innerHTML += `<div class="cmsg ai">${p}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+// Scroll reveal
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
