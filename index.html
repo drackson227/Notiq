@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Notiq — Révise plus vite, comprends mieux</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0a0c0b;
@@ -22,18 +22,8 @@
   --border-hover: rgba(31,189,130,0.3);
   --radius: 12px;
   --radius-lg: 18px;
-  --red: #e06060;
-  --red-pale: rgba(220,60,60,0.08);
-}
-body.light {
-  --bg: #f4f7f4;
-  --bg2: #eaefe9;
-  --bg3: #dfe5de;
-  --text: #1a2219;
-  --text-dim: #4a6050;
-  --text-muted: #8aaa90;
-  --border: rgba(0,0,0,0.08);
-  --border-hover: rgba(31,189,130,0.4);
+  --red: #e05555;
+  --red-pale: rgba(224,85,85,0.08);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -45,9 +35,50 @@ body {
   overflow-x: hidden;
   font-size: 15px;
   line-height: 1.6;
-  transition: background 0.3s, color 0.3s;
 }
 h1,h2,h3,h4 { font-family: 'Syne', sans-serif; line-height: 1.15; }
+
+/* ── MODAL CLÉE API ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-overlay.hidden { display: none; }
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid rgba(31,189,130,0.2);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  max-width: 480px; width: 100%;
+  animation: fadeUp 0.4s ease both;
+}
+.modal-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
+.modal-logo .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+.modal-logo span { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; }
+.modal-box h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+.modal-box p { color: var(--text-dim); font-size: 14px; margin-bottom: 1.5rem; line-height: 1.7; }
+.modal-input {
+  width: 100%; padding: 12px 16px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  margin-bottom: 10px; transition: border-color 0.2s;
+}
+.modal-input:focus { outline: none; border-color: rgba(31,189,130,0.4); }
+.modal-input::placeholder { color: var(--text-muted); }
+.modal-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 1.25rem; }
+.modal-hint a { color: var(--green); text-decoration: none; }
+.modal-hint a:hover { text-decoration: underline; }
+.modal-error { font-size: 13px; color: var(--red); margin-bottom: 10px; display: none; }
+.modal-security {
+  margin-top: 1.25rem; padding: 10px 14px;
+  background: var(--green-pale); border: 1px solid rgba(31,189,130,0.15);
+  border-radius: 8px; font-size: 12px; color: var(--text-dim);
+  display: flex; align-items: flex-start; gap: 8px;
+}
 
 /* ── NAV ── */
 nav {
@@ -55,34 +86,29 @@ nav {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 2rem; height: 60px;
   background: rgba(10,12,11,0.88);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
-  transition: background 0.3s;
 }
-body.light nav { background: rgba(244,247,244,0.92); }
 .nav-logo { display: flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
 .nav-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
 .nav-links { display: flex; gap: 2rem; list-style: none; }
 .nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color 0.2s; }
 .nav-links a:hover { color: var(--text); }
-.nav-right { display: flex; align-items: center; gap: 8px; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
 .nav-key-btn {
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--border); padding: 7px 14px;
+  border-radius: 99px; font-size: 13px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: all 0.2s;
   display: flex; align-items: center; gap: 6px;
-  background: transparent; border: 1px solid var(--border);
-  color: var(--text-dim); padding: 7px 14px; border-radius: 99px;
-  font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif;
 }
 .nav-key-btn:hover { border-color: var(--border-hover); color: var(--text); }
-.nav-key-btn.connected { border-color: rgba(31,189,130,0.4); color: var(--green); background: var(--green-pale); }
-.theme-btn {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: transparent; border: 1px solid var(--border);
-  color: var(--text-dim); font-size: 16px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+.nav-key-btn.connected { border-color: rgba(31,189,130,0.3); color: var(--green); background: var(--green-pale); }
+.nav-cta {
+  background: var(--green); color: #000; padding: 8px 20px;
+  border-radius: 99px; font-size: 14px; font-weight: 500;
+  text-decoration: none; font-family: 'Syne', sans-serif; transition: all 0.2s;
 }
-.theme-btn:hover { border-color: var(--border-hover); color: var(--text); }
-.nav-cta { background: var(--green); color: #000; padding: 8px 20px; border-radius: 99px; font-size: 14px; font-weight: 500; text-decoration: none; font-family: 'Syne', sans-serif; transition: all 0.2s; white-space: nowrap; }
 .nav-cta:hover { background: #25d492; transform: translateY(-1px); }
 
 /* ── HERO ── */
@@ -95,8 +121,8 @@ body.light nav { background: rgba(244,247,244,0.92); }
 .hero::before {
   content: '';
   position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 700px; height: 700px;
-  background: radial-gradient(circle, rgba(31,189,130,0.07) 0%, transparent 70%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(31,189,130,0.08) 0%, transparent 70%);
   pointer-events: none;
 }
 .hero-badge {
@@ -179,7 +205,7 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 .feat-card h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
 .feat-card p { font-size: 14px; color: var(--text-dim); line-height: 1.7; font-weight: 300; }
 
-/* ── STYLES SECTION ── */
+/* ── EXPLAIN STYLES SECTION ── */
 .styles-section { padding: 6rem 2rem; background: var(--bg2); }
 .styles-section > div { max-width: 1100px; margin: 0 auto; }
 .styles-grid {
@@ -189,14 +215,31 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 .style-card {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 1.5rem;
-  transition: all 0.2s; cursor: default;
+  transition: all 0.2s;
 }
 .style-card:hover { border-color: var(--border-hover); background: var(--bg); transform: translateY(-3px); }
 .style-card .icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
 .style-card h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.4rem; }
 .style-card p { font-size: 13px; color: var(--text-dim); }
 
-/* ── APP ── */
+/* ── HOW IT WORKS ── */
+.steps-row { display: flex; gap: 0; margin-top: 3.5rem; position: relative; }
+.steps-row::before {
+  content: ''; position: absolute; top: 28px; left: calc(16.6% + 1px);
+  right: calc(16.6% + 1px); height: 1px; background: var(--border);
+}
+.how-step { flex: 1; text-align: center; padding: 0 1.5rem; }
+.how-num {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--green);
+  margin: 0 auto 1.25rem; position: relative; z-index: 1;
+}
+.how-step h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+.how-step p { font-size: 13px; color: var(--text-dim); }
+
+/* ── APP SECTION ── */
 .app-section { padding: 6rem 2rem; }
 .app-section > div { max-width: 1100px; margin: 0 auto; }
 .app-wrap {
@@ -207,49 +250,54 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 .app-nav {
   display: flex; gap: 2px; padding: 12px 12px 0;
   background: var(--bg3); border-bottom: 1px solid var(--border);
-  overflow-x: auto;
+  overflow-x: auto; scrollbar-width: none;
 }
-.app-nav::-webkit-scrollbar { height: 0; }
+.app-nav::-webkit-scrollbar { display: none; }
 .atab {
-  padding: 10px 16px; border: none; background: transparent;
-  color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 13px;
+  padding: 10px 18px; border: none; background: transparent;
+  color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 14px;
   cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.15s;
-  border-bottom: 2px solid transparent; white-space: nowrap; flex-shrink: 0;
+  border-bottom: 2px solid transparent; white-space: nowrap;
 }
 .atab.active { background: var(--bg2); color: var(--text); border-bottom-color: var(--green); }
 .atab:hover:not(.active) { color: var(--text); }
-.app-body { padding: 1.5rem; min-height: 420px; }
+.app-body { padding: 1.5rem; min-height: 400px; }
 .apanel { display: none; }
 .apanel.active { display: block; }
 
-/* ── BUTTONS ── */
-.btn-green {
-  background: var(--green); color: #000; border: none;
-  padding: 11px 24px; border-radius: 99px;
-  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
-  cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+/* ── COURSE IMPORT ── */
+.pdf-drop-area {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 1.5rem; text-align: center; color: var(--text-muted);
+  font-size: 13px; cursor: pointer; transition: all 0.2s;
+  margin-bottom: 10px;
 }
-.btn-green:hover { background: #25d492; transform: translateY(-1px); }
-.btn-green:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-outline {
-  background: transparent; color: var(--text-dim); border: 1px solid var(--border);
-  padding: 10px 18px; border-radius: 99px;
-  font-family: 'DM Sans', sans-serif; font-size: 14px;
-  cursor: pointer; transition: all 0.2s;
-}
-.btn-outline:hover { border-color: var(--border-hover); color: var(--text); }
-
-/* ── INPUTS ── */
+.pdf-drop-area:hover, .pdf-drop-area.drag-over { border-color: rgba(31,189,130,0.4); color: var(--text-dim); }
 .course-textarea {
   width: 100%; padding: 16px; background: var(--bg);
   border: 1px solid var(--border); border-radius: var(--radius);
   color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
-  resize: vertical; line-height: 1.7; min-height: 200px;
+  resize: vertical; line-height: 1.7; min-height: 160px; max-height: 400px;
   transition: border-color 0.2s;
 }
 .course-textarea:focus { outline: none; border-color: rgba(31,189,130,0.4); }
 .course-textarea::placeholder { color: var(--text-muted); }
 .action-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+.btn-green {
+  background: var(--green); color: #000; border: none;
+  padding: 11px 24px; border-radius: 99px;
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+}
+.btn-green:hover:not(:disabled) { background: #25d492; transform: translateY(-1px); }
+.btn-green:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-outline {
+  background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+  padding: 11px 20px; border-radius: 99px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-outline:hover { border-color: var(--border-hover); color: var(--text); }
 .status-pill {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 6px 14px; border-radius: 99px;
@@ -259,41 +307,28 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: p 1.5s infinite; }
 @keyframes p { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* ── COURS SLOTS ── */
-.courses-bar {
-  display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;
-}
-.course-slot {
-  position: relative; display: flex; align-items: center; gap: 4px;
-  padding: 6px 12px; border-radius: 99px; border: 1px solid var(--border);
-  background: transparent; color: var(--text-dim); font-size: 13px;
-  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s;
-  max-width: 130px;
-}
-.course-slot.active { background: var(--green-pale); border-color: rgba(31,189,130,0.4); color: var(--green); }
-.course-slot:hover:not(.active) { border-color: var(--border-hover); color: var(--text); }
-.course-slot-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
-.course-slot-del { font-size: 10px; opacity: 0.5; cursor: pointer; padding: 2px; }
-.course-slot-del:hover { opacity: 1; color: var(--red); }
-.new-slot-btn {
-  padding: 6px 14px; border-radius: 99px; border: 1px dashed var(--border);
-  background: transparent; color: var(--text-muted); font-size: 13px;
-  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s;
-}
-.new-slot-btn:hover { border-color: rgba(31,189,130,0.3); color: var(--green); }
-.slot-name-input {
-  background: var(--bg); border: 1px solid rgba(31,189,130,0.4);
-  border-radius: 99px; padding: 5px 12px; color: var(--text);
-  font-family: 'DM Sans', sans-serif; font-size: 13px; width: 120px;
-}
-.slot-name-input:focus { outline: none; }
+/* ── PROGRESS BAR ── */
+.progress-wrap { margin-top: 14px; }
+.progress-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.progress-bar { height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.4s ease; width: 0%; }
 
-/* ── EXPLAIN ── */
+/* ── ERROR BANNER ── */
+.error-banner {
+  background: var(--red-pale); border: 1px solid rgba(224,85,85,0.25);
+  border-radius: var(--radius); padding: 12px 16px;
+  font-size: 13px; color: var(--red); margin-bottom: 12px;
+  display: none; align-items: flex-start; gap: 10px;
+}
+.error-banner.show { display: flex; }
+.error-banner button { background: none; border: none; color: var(--red); cursor: pointer; margin-left: auto; font-size: 16px; padding: 0; line-height: 1; }
+
+/* ── EXPLAIN TAB ── */
 .explain-bar { display: flex; gap: 8px; margin-bottom: 1rem; }
 .explain-input {
   flex: 1; background: var(--bg); border: 1px solid var(--border);
   border-radius: 99px; padding: 11px 20px; color: var(--text);
-  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; min-width: 0;
 }
 .explain-input:focus { outline: none; border-color: rgba(31,189,130,0.4); }
 .explain-input::placeholder { color: var(--text-muted); }
@@ -313,8 +348,16 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 }
 .step { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .step:last-child { border-bottom: none; }
-.step-n { width: 26px; height: 26px; border-radius: 50%; background: var(--green); color: #000; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-.analogy-block { background: rgba(31,189,130,0.06); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 10px; font-size: 14px; color: var(--text-dim); }
+.step-n {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--green);
+  color: #000; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.analogy-block {
+  background: rgba(31,189,130,0.06); border-left: 3px solid var(--green);
+  border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 10px;
+  font-size: 14px; color: var(--text-dim);
+}
 
 /* ── QUIZ ── */
 .quiz-card-ui {
@@ -330,111 +373,34 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 }
 .qopt:hover:not(:disabled) { border-color: var(--border-hover); color: var(--text); }
 .qopt.correct { background: rgba(31,189,130,0.1); border-color: rgba(31,189,130,0.4); color: var(--green); }
-.qopt.wrong { background: var(--red-pale); border-color: rgba(220,60,60,0.3); color: var(--red); }
+.qopt.wrong { background: rgba(224,85,85,0.08); border-color: rgba(224,85,85,0.3); color: var(--red); }
 .qexpl { margin-top: 10px; padding: 10px 14px; background: var(--bg3); border-radius: 8px; font-size: 13px; color: var(--text-dim); }
 .score-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 .score-big { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 700; color: var(--green); }
 
-/* ── MODE EXAMEN ── */
-.exam-overlay {
-  display: none; position: fixed; inset: 0; z-index: 200;
-  background: var(--bg); flex-direction: column;
-}
-.exam-overlay.open { display: flex; }
-.exam-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1rem 2rem; border-bottom: 1px solid var(--border);
-  background: var(--bg2);
-}
-.exam-timer {
-  font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 700;
-  color: var(--green);
-}
-.exam-timer.warning { color: var(--red); }
-.exam-body { flex: 1; overflow-y: auto; padding: 2rem; max-width: 720px; margin: 0 auto; width: 100%; }
-.exam-progress-bar { height: 3px; background: var(--border); }
-.exam-progress-fill { height: 100%; background: var(--green); transition: width 0.5s; }
-
 /* ── FLASHCARDS ── */
 .flash-outer { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-.flash-scene { width: 100%; max-width: 500px; height: 200px; perspective: 1000px; cursor: pointer; }
-.flash-card-inner {
-  width: 100%; height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.flash-card-inner.flipped { transform: rotateY(180deg); }
-.flash-face {
-  position: absolute; width: 100%; height: 100%;
-  backface-visibility: hidden;
-  border-radius: var(--radius-lg);
+.flash-ui {
+  width: 100%; max-width: 500px; min-height: 180px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2rem;
   display: flex; align-items: center; justify-content: center;
-  padding: 2rem; text-align: center; font-size: 16px;
-  border: 1px solid var(--border);
+  text-align: center; cursor: pointer; font-size: 16px;
+  transition: all 0.2s; position: relative; color: var(--text);
 }
-.flash-front { background: var(--bg); color: var(--text); }
-.flash-back { background: rgba(31,189,130,0.06); border-color: rgba(31,189,130,0.3); color: var(--green); transform: rotateY(180deg); }
-.flash-hint { font-size: 12px; color: var(--text-muted); margin-top: -0.5rem; }
+.flash-ui:hover { border-color: var(--border-hover); }
+.flash-ui.flipped { background: rgba(31,189,130,0.06); border-color: rgba(31,189,130,0.3); color: var(--green); }
+.flash-hint { font-size: 12px; color: var(--text-muted); }
+.flash-badge { position: absolute; top: 10px; right: 14px; font-size: 11px; color: var(--text-muted); }
 .flash-controls { display: flex; gap: 10px; align-items: center; }
 .flash-cnt { font-size: 13px; color: var(--text-muted); }
-.flash-progress {
-  width: 100%; max-width: 500px; height: 3px;
-  background: var(--border); border-radius: 99px; overflow: hidden;
-}
-.flash-progress-bar { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.3s; }
-
-/* ── ANKI MODE ── */
-.anki-btns { display: flex; gap: 8px; margin-top: 8px; }
-.anki-btn {
-  flex: 1; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px;
-  cursor: pointer; transition: all 0.15s; color: var(--text-dim);
-}
-.anki-btn.hard:hover { border-color: rgba(220,60,60,0.4); color: var(--red); background: var(--red-pale); }
-.anki-btn.ok:hover { border-color: rgba(255,180,0,0.4); color: #ffb400; background: rgba(255,180,0,0.05); }
-.anki-btn.easy:hover { border-color: rgba(31,189,130,0.4); color: var(--green); background: var(--green-pale); }
-.anki-stats { font-size: 13px; color: var(--text-muted); text-align: center; }
 
 /* ── SUMMARY ── */
+.summary-actions { display: flex; gap: 8px; margin-bottom: 1rem; }
 .summary-body { font-size: 14px; line-height: 1.9; color: var(--text-dim); }
 .kp { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
 .kp:last-child { border-bottom: none; }
 .kp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-top: 7px; flex-shrink: 0; }
-.export-bar { display: flex; gap: 8px; margin-bottom: 1rem; }
-
-/* ── SCORE DE MAITRISE ── */
-.mastery-card {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-.mastery-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
-.mastery-score {
-  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
-}
-.mastery-ring-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
-.mastery-ring-wrap svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
-.mastery-pct {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--green);
-}
-.mastery-details { flex: 1; }
-.mastery-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dim); padding: 4px 0; }
-.mastery-row span:last-child { color: var(--text); font-weight: 500; }
-.mastery-bar-track { height: 4px; background: var(--border); border-radius: 99px; margin-top: 2px; }
-.mastery-bar-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.5s; }
-
-/* ── HISTORIQUE ── */
-.history-card {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1rem 1.25rem;
-  margin-bottom: 8px; display: flex; align-items: center; gap: 1rem;
-}
-.history-date { font-size: 12px; color: var(--text-muted); min-width: 80px; }
-.history-score { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--green); min-width: 50px; }
-.history-label { font-size: 13px; color: var(--text-dim); flex: 1; }
-.history-stars { color: var(--green); font-size: 12px; }
 
 /* ── CHAT ── */
 .chat-box {
@@ -450,91 +416,11 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 .chat-in {
   flex: 1; background: var(--bg); border: 1px solid var(--border);
   border-radius: 99px; padding: 11px 20px; color: var(--text);
-  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; min-width: 0;
 }
 .chat-in:focus { outline: none; border-color: rgba(31,189,130,0.4); }
 .chat-in::placeholder { color: var(--text-muted); }
-
-/* ── MINDMAP ── */
-#mindmap-canvas { width: 100%; height: 420px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); }
-
-/* ── POMODORO ── */
-.pomo-wrap {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 1.5rem; padding: 1rem 0;
-}
-.pomo-ring {
-  position: relative; width: 180px; height: 180px;
-}
-.pomo-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
-.pomo-ring-bg { fill: none; stroke: var(--border); stroke-width: 6; }
-.pomo-ring-fill { fill: none; stroke: var(--green); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
-.pomo-time {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  font-family: 'Syne', sans-serif; font-size: 2.4rem; font-weight: 700; color: var(--text);
-}
-.pomo-label { font-size: 13px; color: var(--text-muted); text-align: center; }
-.pomo-label span { color: var(--green); font-weight: 500; }
-.pomo-controls { display: flex; gap: 10px; align-items: center; }
-.pomo-mode { display: flex; gap: 8px; }
-.pomo-pill {
-  padding: 6px 16px; border-radius: 99px; border: 1px solid var(--border);
-  background: transparent; color: var(--text-dim); font-size: 13px;
-  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s;
-}
-.pomo-pill.active { background: var(--green-pale); border-color: rgba(31,189,130,0.4); color: var(--green); }
-
-/* ── API KEY MODAL ── */
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 999;
-  background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 1rem;
-  opacity: 0; pointer-events: none; transition: opacity 0.2s;
-}
-.modal-overlay.open { opacity: 1; pointer-events: all; }
-.modal {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 2rem;
-  width: 100%; max-width: 460px;
-  transform: translateY(20px); transition: transform 0.2s;
-}
-.modal-overlay.open .modal { transform: translateY(0); }
-.modal h3 { font-family: 'Syne', sans-serif; font-size: 1.2rem; margin-bottom: 0.5rem; }
-.modal p { font-size: 14px; color: var(--text-dim); margin-bottom: 1.25rem; line-height: 1.6; }
-.modal-input {
-  width: 100%; padding: 12px 16px; background: var(--bg);
-  border: 1px solid var(--border); border-radius: var(--radius);
-  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
-  margin-bottom: 12px;
-}
-.modal-input:focus { outline: none; border-color: rgba(31,189,130,0.4); }
-.modal-input::placeholder { color: var(--text-muted); }
-.modal-row { display: flex; gap: 10px; }
-.modal-link { font-size: 13px; color: var(--green); text-decoration: none; }
-.modal-link:hover { text-decoration: underline; }
-.modal-note {
-  margin-top: 1rem; padding: 10px 14px;
-  background: var(--green-pale); border: 1px solid rgba(31,189,130,0.15);
-  border-radius: 8px; font-size: 13px; color: var(--text-dim);
-}
-
-/* ── HOW IT WORKS ── */
-.steps-row { display: flex; gap: 0; margin-top: 3.5rem; position: relative; }
-.steps-row::before {
-  content: ''; position: absolute; top: 28px; left: calc(16.6% + 1px);
-  right: calc(16.6% + 1px); height: 1px; background: var(--border);
-}
-.how-step { flex: 1; text-align: center; padding: 0 1.5rem; }
-.how-num {
-  width: 56px; height: 56px; border-radius: 50%;
-  border: 1px solid var(--border); background: var(--bg2);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--green);
-  margin: 0 auto 1.25rem; position: relative; z-index: 1;
-}
-.how-step h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
-.how-step p { font-size: 13px; color: var(--text-dim); }
+.chat-in:disabled { opacity: 0.5; }
 
 /* ── FOOTER ── */
 footer {
@@ -543,7 +429,10 @@ footer {
 }
 footer a { color: var(--green); text-decoration: none; }
 
-/* ── LOADING / UTILS ── */
+/* ── UTILS ── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
 .loading-txt { color: var(--text-muted); font-style: italic; font-size: 14px; }
 .spinner {
   display: inline-block; width: 16px; height: 16px;
@@ -551,156 +440,59 @@ footer a { color: var(--green); text-decoration: none; }
   border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
-.fade-in.visible { opacity: 1; transform: translateY(0); }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 99px; }
 
-/* ── PDF IMPORT ── */
-.pdf-drop {
-  border: 2px dashed var(--border); border-radius: var(--radius);
-  padding: 2rem; text-align: center; cursor: pointer;
-  transition: all 0.2s; margin-bottom: 1rem;
-}
-.pdf-drop:hover, .pdf-drop.drag { border-color: rgba(31,189,130,0.4); background: var(--green-pale); }
-.pdf-drop p { color: var(--text-muted); font-size: 14px; margin-top: 0.5rem; }
-
-/* ── CONFETTI ── */
-#confetti-canvas {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none; z-index: 9999; display: none;
-}
-
-/* ══ MOBILE ══ */
+/* ── MOBILE ── */
 @media (max-width: 768px) {
-  nav { padding: 0 1rem; height: 54px; }
   .nav-links { display: none; }
-  .nav-cta { display: none !important; }
-  .nav-key-btn { padding: 6px 10px; font-size: 12px; }
-  #key-status-txt { display: none; }
-  .theme-btn { width: 32px; height: 32px; font-size: 14px; }
-
-  .hero { padding: 90px 1.25rem 3rem; }
-  .hero h1 { font-size: 2.4rem; }
-  .hero p { font-size: 0.95rem; }
-  .hero-btns { flex-direction: column; align-items: stretch; }
-  .btn-main, .btn-ghost { text-align: center; padding: 14px 20px; }
-  .hero-grid { grid-template-columns: repeat(3,1fr); margin-top: 2.5rem; }
-  .hero-stat .num { font-size: 1.4rem; }
-  .hero-stat .lbl { font-size: 11px; }
-
-  section { padding: 3.5rem 1.25rem; }
-  .section-title { font-size: 1.7rem; }
-  .styles-section { padding: 3.5rem 1.25rem; }
-  .styles-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-
-  .steps-row { flex-direction: column; gap: 1.5rem; }
+  .nav-cta { display: none; }
+  .steps-row { flex-direction: column; gap: 2rem; }
   .steps-row::before { display: none; }
-  .how-step { padding: 0; display: flex; align-items: flex-start; gap: 1rem; text-align: left; }
-  .how-num { margin: 0; flex-shrink: 0; width: 44px; height: 44px; font-size: 1rem; }
-
-  .app-section { padding: 3rem 0; }
-  .app-section > div { padding: 0 1.25rem; }
-  .app-wrap { border-radius: 0; margin: 0 -1.25rem; border-left: none; border-right: none; }
-  .app-nav { padding: 10px 10px 0; gap: 2px; }
-  .atab { padding: 8px 11px; font-size: 12px; }
-  .app-body { padding: 1rem; }
-
-  .courses-bar { gap: 6px; }
-  .course-slot { padding: 5px 10px; font-size: 12px; }
-  .course-slot-name { max-width: 60px; }
-  .action-row { gap: 8px; }
-  .action-row .btn-green, .action-row .btn-outline { padding: 10px 16px; font-size: 13px; }
-  .pdf-drop { padding: 1.25rem; }
-
+  .hero-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: clamp(2.2rem, 10vw, 4rem); }
   .explain-bar { flex-direction: column; }
   .explain-bar .btn-green { width: 100%; justify-content: center; }
-  .style-pills { gap: 6px; }
-  .spill { padding: 5px 11px; font-size: 12px; }
-
-  .score-row { gap: 8px; flex-wrap: wrap; }
-  .score-big { font-size: 1.8rem; }
-  .score-row .btn-outline { padding: 8px 12px; font-size: 12px; }
-  .qopt { padding: 10px 12px; font-size: 13px; }
-
-  .flash-scene { height: 170px; }
-  .flash-face { font-size: 15px; padding: 1.25rem; }
-  .anki-btns { gap: 6px; }
-  .anki-btn { padding: 10px 6px; font-size: 12px; }
-
-  .export-bar { flex-wrap: wrap; }
-  .export-bar .btn-outline { font-size: 12px; padding: 8px 12px; }
-
-  #mindmap-canvas { height: 280px; }
-
-  .chat-box { min-height: 200px; max-height: 260px; }
-  .chat-row { gap: 6px; }
-  .chat-in { padding: 10px 14px; font-size: 14px; }
-  .chat-row .btn-green { padding: 10px 16px; font-size: 13px; }
-
-  .pomo-wrap { gap: 1rem; }
-  .pomo-ring { width: 150px; height: 150px; }
-  .pomo-ring svg { width: 150px; height: 150px; }
-  .pomo-time { font-size: 2rem; }
-  .pomo-mode { flex-wrap: wrap; justify-content: center; gap: 6px; }
-  .pomo-pill { padding: 5px 12px; font-size: 12px; }
-
-  .mastery-score { flex-direction: column; align-items: flex-start; gap: 1rem; }
-  .history-card { flex-wrap: wrap; gap: 6px; }
-  .history-label { min-width: 100%; }
-
-  .exam-header { padding: 0.75rem 1rem; }
-  .exam-timer { font-size: 1.5rem; }
-  .exam-body { padding: 1rem; }
-
-  .modal { padding: 1.5rem; }
-  .modal-row { flex-direction: column; }
-  .modal-row .btn-green { width: 100%; justify-content: center; }
-
-  .features-grid { grid-template-columns: 1fr; }
-  .feat-card { padding: 1.25rem; }
-}
-
-@media (max-width: 380px) {
-  .hero h1 { font-size: 2rem; }
-  .atab { padding: 7px 8px; font-size: 11px; }
-  .hero-grid { grid-template-columns: 1fr; }
+  .chat-row { flex-direction: column; }
+  .chat-row .btn-green { width: 100%; justify-content: center; }
+  .app-body { padding: 1rem; }
+  .modal-box { padding: 1.75rem; }
+  .score-row { flex-direction: column; align-items: flex-start; }
 }
 </style>
 </head>
 <body>
 
-<!-- CONFETTI CANVAS -->
-<canvas id="confetti-canvas"></canvas>
-
-<!-- API KEY MODAL -->
-<div class="modal-overlay" id="key-modal">
-  <div class="modal">
-    <h3>🔑 Clé API Gemini</h3>
-    <p>Pour utiliser Notiq, entre ta clé API Google Gemini gratuite. Elle est sauvegardée uniquement dans ton navigateur.</p>
-    <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" />
-    <div class="modal-row">
-      <button class="btn-green" onclick="saveKey()">Connecter</button>
-      <a class="modal-link" href="https://aistudio.google.com/app/apikey" target="_blank">Obtenir une clé gratuite →</a>
+<!-- ══════════════════════════════════════
+     MODAL CLÉE API
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="api-modal">
+  <div class="modal-box">
+    <div class="modal-logo">
+      <div class="dot"></div>
+      <span>Notiq</span>
     </div>
-    <div class="modal-note">🔒 Ta clé reste dans ton navigateur et n'est jamais envoyée ailleurs que vers l'API Google.</div>
+    <h2>🔑 Clé API Gemini</h2>
+    <p>Pour utiliser Notiq, entre ta clé API Google Gemini. Elle est <strong>gratuite</strong> et sauvegardée uniquement dans ton navigateur — jamais envoyée à nos serveurs.</p>
+    <input class="modal-input" type="password" id="api-key-input" placeholder="AIza..." autocomplete="off" />
+    <div class="modal-hint">
+      Pas encore de clé ? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Obtiens-en une gratuitement →</a>
+      <br>C'est rapide, gratuit, et ne demande pas de carte bancaire.
+    </div>
+    <div class="modal-error" id="modal-error">❌ Clé invalide ou erreur réseau. Vérifie ta clé et réessaie.</div>
+    <button class="btn-green" id="modal-connect-btn" onclick="connectAPI()" style="width:100%;justify-content:center">
+      <span id="modal-btn-icon">✦</span> Connecter
+    </button>
+    <div class="modal-security">
+      🔒 Ta clé reste dans ton navigateur (localStorage) et n'est jamais envoyée ailleurs que vers l'API Google Gemini.
+    </div>
   </div>
 </div>
 
-<!-- MODE EXAMEN -->
-<div class="exam-overlay" id="exam-overlay">
-  <div class="exam-progress-bar"><div class="exam-progress-fill" id="exam-progress-fill"></div></div>
-  <div class="exam-header">
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem">📝 Mode Examen</div>
-    <div class="exam-timer" id="exam-timer">20:00</div>
-    <button class="btn-outline" onclick="closeExam()">✕ Quitter</button>
-  </div>
-  <div class="exam-body" id="exam-body"></div>
-</div>
-
-<!-- NAV -->
+<!-- ══════════════════════════════════════
+     NAV
+═══════════════════════════════════════ -->
 <nav>
   <a href="#" class="nav-logo"><div class="dot"></div> Notiq</a>
   <ul class="nav-links">
@@ -709,20 +501,18 @@ footer a { color: var(--green); text-decoration: none; }
     <li><a href="#app">L'app</a></li>
   </ul>
   <div class="nav-right">
-    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Mode clair/sombre">🌙</button>
-    <button class="nav-key-btn" id="key-status-btn" onclick="openKeyModal()">
-      <span id="key-status-icon">🔑</span>
-      <span id="key-status-txt">Clé API</span>
-    </button>
-    <a href="#app" class="nav-cta" id="nav-cta-btn">Commencer →</a>
+    <button class="nav-key-btn" id="nav-key-btn" onclick="showAPIModal()">🔑 Clé API</button>
+    <a href="#app" class="nav-cta">Commencer →</a>
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- ══════════════════════════════════════
+     HERO
+═══════════════════════════════════════ -->
 <div class="hero">
-  <div class="hero-badge">✦ Propulsé par Gemini — 100% gratuit</div>
+  <div class="hero-badge">✦ Propulsé par Gemini 2.0 Flash — 100% gratuit</div>
   <h1>Révise plus vite,<br><span>comprends mieux</span></h1>
-  <p>Colle ton cours, choisis ton style d'explication. Quiz, flashcards, résumés, carte mentale et chat IA — tout ce qu'il te faut pour réussir tes examens.</p>
+  <p>Colle ton cours, choisis ton style d'explication. Quiz, flashcards, résumés et chat IA — tout ce qu'il te faut pour réussir tes examens.</p>
   <div class="hero-btns">
     <a href="#app" class="btn-main">Essayer maintenant →</a>
     <a href="#features" class="btn-ghost">Voir les fonctionnalités</a>
@@ -734,24 +524,50 @@ footer a { color: var(--green); text-decoration: none; }
   </div>
 </div>
 
-<!-- FEATURES -->
+<!-- ══════════════════════════════════════
+     FEATURES
+═══════════════════════════════════════ -->
 <section id="features" class="fade-in">
   <div class="section-tag">Fonctionnalités</div>
   <h2 class="section-title">Tout pour réviser intelligemment</h2>
   <p class="section-sub">Une IA qui s'adapte à toi — pas l'inverse. Tu fournis le cours, elle fait le reste.</p>
   <div class="features-grid">
-    <div class="feat-card"><div class="feat-icon">💡</div><h3>Explications multi-styles</h3><p>Analogies, étapes, exemples concrets, explication pour enfant… Choisis le style qui te parle le mieux, change-en à la volée.</p></div>
-    <div class="feat-card"><div class="feat-icon">✅</div><h3>Quiz QCM intelligents</h3><p>Des questions générées directement depuis ton cours, avec score en temps réel et explications pour chaque réponse.</p></div>
-    <div class="feat-card"><div class="feat-icon">🃏</div><h3>Flashcards animées</h3><p>Les notions clés transformées en cartes avec effet de retournement 3D et répétition espacée style Anki.</p></div>
-    <div class="feat-card"><div class="feat-icon">🗺️</div><h3>Carte mentale</h3><p>Visualise les concepts et leurs liens sous forme de mind map interactive générée depuis ton cours.</p></div>
-    <div class="feat-card"><div class="feat-icon">⏱️</div><h3>Timer Pomodoro</h3><p>Travaille en sessions de 25 minutes avec des pauses intégrées pour rester concentré et productif.</p></div>
-    <div class="feat-card"><div class="feat-icon">📚</div><h3>Plusieurs cours</h3><p>Sauvegarde jusqu'à 5 matières différentes — Maths, Bio, Histoire. Switche en un clic.</p></div>
-    <div class="feat-card"><div class="feat-icon">📝</div><h3>Mode examen</h3><p>Un timer de 20 min, le quiz en plein écran, sans distractions. Entraîne-toi comme en conditions réelles.</p></div>
-    <div class="feat-card"><div class="feat-icon">📊</div><h3>Score de maîtrise</h3><p>Suis ta progression globale sur le cours avec un score de maîtrise calculé depuis tes quiz et flashcards.</p></div>
+    <div class="feat-card">
+      <div class="feat-icon">💡</div>
+      <h3>Explications multi-styles</h3>
+      <p>Analogies, étapes, exemples concrets, explication pour enfant… Choisis le style qui te parle le mieux.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✅</div>
+      <h3>Quiz QCM intelligents</h3>
+      <p>Des questions générées directement depuis ton cours, avec score en temps réel et explications.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🃏</div>
+      <h3>Flashcards automatiques</h3>
+      <p>Les notions clés transformées en cartes recto-verso. Mémorise sans effort, répète ce qui compte.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <h3>Résumés structurés</h3>
+      <p>Un résumé clair avec les points essentiels — généré en quelques secondes depuis n'importe quel texte.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">💬</div>
+      <h3>Chat sur ton cours</h3>
+      <p>Pose toutes tes questions à l'IA. Elle connaît ton cours par cœur. Disponible 24h/24.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <h3>Zéro inscription</h3>
+      <p>Clé API gratuite, aucun compte Notiq, aucune config. L'app fonctionne directement dans ton navigateur.</p>
+    </div>
   </div>
 </section>
 
-<!-- EXPLAIN STYLES -->
+<!-- ══════════════════════════════════════
+     EXPLAIN STYLES
+═══════════════════════════════════════ -->
 <div class="styles-section fade-in">
   <div>
     <div class="section-tag">Explications</div>
@@ -767,23 +583,40 @@ footer a { color: var(--green); text-decoration: none; }
   </div>
 </div>
 
-<!-- HOW IT WORKS -->
+<!-- ══════════════════════════════════════
+     HOW IT WORKS
+═══════════════════════════════════════ -->
 <section id="how" class="fade-in">
   <div class="section-tag">Comment ça marche</div>
   <h2 class="section-title">En 3 étapes</h2>
   <div class="steps-row">
-    <div class="how-step"><div class="how-num">1</div><h4>Colle ou importe ton cours</h4><p>Texte, PDF, maths, bio, histoire. Tout fonctionne.</p></div>
-    <div class="how-step"><div class="how-num">2</div><h4>L'IA analyse</h4><p>Quiz, flashcards, carte mentale et résumé générés en secondes.</p></div>
-    <div class="how-step"><div class="how-num">3</div><h4>Tu révises</h4><p>Pose tes questions, entraîne-toi, utilise le Pomodoro. Tu maîtrises.</p></div>
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <h4>Obtiens ta clé gratuite</h4>
+      <p>Crée ta clé Gemini sur Google AI Studio en 2 minutes. Gratuit, sans carte bancaire.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <h4>Colle ton cours</h4>
+      <p>N'importe quel texte — maths, bio, histoire, philo. Quiz, flashcards et résumé générés automatiquement.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <h4>Tu révises</h4>
+      <p>Pose tes questions, explore les explications, entraîne-toi jusqu'à maîtriser.</p>
+    </div>
   </div>
 </section>
 
-<!-- THE APP -->
+<!-- ══════════════════════════════════════
+     THE APP
+═══════════════════════════════════════ -->
 <div class="app-section fade-in" id="app">
   <div>
     <div class="section-tag">L'application</div>
     <h2 class="section-title">Commence à réviser</h2>
     <p class="section-sub">Charge ton cours ci-dessous et explore tous les outils.</p>
+
     <div class="app-wrap">
       <div class="app-nav">
         <button class="atab active" onclick="switchATab('import',this)">📥 Cours</button>
@@ -791,36 +624,51 @@ footer a { color: var(--green); text-decoration: none; }
         <button class="atab" onclick="switchATab('quiz',this)">✅ Quiz</button>
         <button class="atab" onclick="switchATab('flash',this)">🃏 Flashcards</button>
         <button class="atab" onclick="switchATab('summary',this)">📄 Résumé</button>
-        <button class="atab" onclick="switchATab('mindmap',this)">🗺️ Carte mentale</button>
         <button class="atab" onclick="switchATab('chat',this)">💬 Chat</button>
-        <button class="atab" onclick="switchATab('pomodoro',this)">⏱️ Pomodoro</button>
-        <button class="atab" onclick="switchATab('stats',this)">📊 Stats</button>
       </div>
+
       <div class="app-body">
 
-        <!-- IMPORT -->
+        <!-- ── IMPORT ── -->
         <div class="apanel active" id="ap-import">
-          <div class="courses-bar" id="courses-bar"></div>
-          <div class="pdf-drop" id="pdf-drop" onclick="document.getElementById('pdf-input').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
-            <div style="font-size:2rem">📄</div>
-            <p>Clique ici ou glisse un <strong>PDF</strong> pour importer ton cours</p>
+          <div class="pdf-drop-area" id="pdf-drop" onclick="document.getElementById('pdf-file').click()">
+            📄 Clique ici ou glisse un <strong>PDF</strong> pour importer ton cours
+            <input type="file" id="pdf-file" accept=".pdf" style="display:none" onchange="handlePDF(this)">
           </div>
-          <input type="file" id="pdf-input" accept="application/pdf,.pdf" style="display:none" onchange="handlePDF(this)">
-          <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici...&#10;&#10;Exemple : 'La dérivée d'une fonction f en un point a est la limite du taux de variation...'"></textarea>
+          <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici...&#10;&#10;Exemple : 'La dérivée d'une fonction f en un point a est la limite du taux de variation...'" maxlength="30000"></textarea>
+          <div id="char-count" style="font-size:12px;color:var(--text-muted);margin-top:4px;text-align:right"></div>
+
+          <div class="error-banner" id="load-error">
+            <span id="load-error-msg">Erreur lors du chargement.</span>
+            <button onclick="hideError('load-error')">✕</button>
+          </div>
+
           <div class="action-row">
-            <button class="btn-green" onclick="loadCourse()"><span>✦</span> Charger et analyser</button>
+            <button class="btn-green" id="load-btn" onclick="loadCourse()">
+              <span id="load-icon">✦</span> <span id="load-label">Charger et analyser</span>
+            </button>
             <button class="btn-outline" onclick="clearCourse()">🗑 Effacer</button>
-            <span id="load-msg" style="font-size:13px;color:var(--text-muted)"></span>
             <span id="loaded-pill" style="display:none" class="status-pill"><span class="pulse"></span> Cours chargé</span>
           </div>
-          <div id="saved-notice" style="display:none;margin-top:10px;font-size:13px;color:var(--text-muted)">💾 Cours sauvegardé automatiquement</div>
+
+          <div class="progress-wrap" id="progress-wrap" style="display:none">
+            <div class="progress-label">
+              <span id="progress-step">Analyse en cours…</span>
+              <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+          </div>
         </div>
 
-        <!-- EXPLAIN -->
+        <!-- ── EXPLAIN ── -->
         <div class="apanel" id="ap-explain">
+          <div class="error-banner" id="explain-error">
+            <span id="explain-error-msg"></span>
+            <button onclick="hideError('explain-error')">✕</button>
+          </div>
           <div class="explain-bar">
-            <input class="explain-input" id="ex-topic" type="text" placeholder="Ex : la dérivée, la mitose, la Révolution française…" onkeydown="if(event.key==='Enter')doExplain()"/>
-            <button class="btn-green" onclick="doExplain()">✦ Expliquer</button>
+            <input class="explain-input" id="ex-topic" type="text" placeholder="Ex : la dérivée, la mitose, la Révolution française…" onkeydown="if(event.key==='Enter')doExplain()" />
+            <button class="btn-green" onclick="doExplain()" id="explain-btn">✦ Expliquer</button>
           </div>
           <div class="style-pills">
             <button class="spill active" onclick="pickStyle(this,'simple')">🔤 Simple</button>
@@ -834,8 +682,12 @@ footer a { color: var(--green); text-decoration: none; }
           </div>
         </div>
 
-        <!-- QUIZ -->
+        <!-- ── QUIZ ── -->
         <div class="apanel" id="ap-quiz">
+          <div class="error-banner" id="quiz-error">
+            <span id="quiz-error-msg"></span>
+            <button onclick="hideError('quiz-error')">✕</button>
+          </div>
           <div id="quiz-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer un quiz.</div>
           <div id="quiz-ui" style="display:none">
             <div class="score-row">
@@ -843,498 +695,353 @@ footer a { color: var(--green); text-decoration: none; }
                 <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">Score</div>
                 <div class="score-big" id="score-display">0/0</div>
               </div>
-              <button class="btn-outline" onclick="startExam()" style="display:flex;align-items:center;gap:6px">📝 Mode examen</button>
-              <button class="btn-outline" onclick="genQuiz()" style="margin-left:auto">↻ Nouveau quiz</button>
+              <button class="btn-outline" onclick="genQuiz()" id="quiz-regen-btn" style="margin-left:auto">↻ Nouveau quiz</button>
             </div>
             <div id="quiz-list"></div>
           </div>
         </div>
 
-        <!-- FLASHCARDS -->
+        <!-- ── FLASHCARDS ── -->
         <div class="apanel" id="ap-flash">
+          <div class="error-banner" id="flash-error">
+            <span id="flash-error-msg"></span>
+            <button onclick="hideError('flash-error')">✕</button>
+          </div>
           <div id="flash-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer des flashcards.</div>
           <div id="flash-ui" style="display:none" class="flash-outer">
-            <div class="flash-progress"><div class="flash-progress-bar" id="flash-bar"></div></div>
-            <div class="flash-scene" onclick="flipFlash()">
-              <div class="flash-card-inner" id="flash-inner">
-                <div class="flash-face flash-front"><span id="flash-front-text">…</span></div>
-                <div class="flash-face flash-back"><span id="flash-back-text">…</span></div>
-              </div>
+            <div class="flash-ui" id="flash-card" onclick="flipFlash()">
+              <span class="flash-badge" id="flash-badge"></span>
+              <span id="flash-text">…</span>
             </div>
-            <p class="flash-hint">Clique sur la carte pour retourner</p>
-            <div id="anki-btns" class="anki-btns" style="display:none">
-              <button class="anki-btn hard" onclick="ankiRate('hard')">😅 Difficile</button>
-              <button class="anki-btn ok" onclick="ankiRate('ok')">🙂 Correct</button>
-              <button class="anki-btn easy" onclick="ankiRate('easy')">😎 Facile</button>
-            </div>
+            <div class="flash-hint">Clique sur la carte pour retourner</div>
             <div class="flash-controls">
               <button class="btn-outline" onclick="prevFlash()">← Préc.</button>
               <span class="flash-cnt" id="flash-cnt">1 / 1</span>
               <button class="btn-outline" onclick="nextFlash()">Suiv. →</button>
             </div>
-            <div class="anki-stats" id="anki-stats"></div>
             <button class="btn-outline" onclick="genFlash()">↻ Nouvelles flashcards</button>
           </div>
         </div>
 
-        <!-- SUMMARY -->
+        <!-- ── SUMMARY ── -->
         <div class="apanel" id="ap-summary">
+          <div class="error-banner" id="summary-error">
+            <span id="summary-error-msg"></span>
+            <button onclick="hideError('summary-error')">✕</button>
+          </div>
           <div id="summary-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour obtenir un résumé.</div>
-          <div id="summary-ui" style="display:none">
-            <div class="export-bar">
-              <button class="btn-outline" onclick="exportSummaryPDF()" style="font-size:13px">⬇️ Exporter en PDF</button>
-              <button class="btn-outline" onclick="copySummary()" style="font-size:13px">📋 Copier</button>
-            </div>
-            <div class="summary-body" id="summary-content"></div>
+          <div id="summary-actions" style="display:none" class="summary-actions">
+            <button class="btn-outline" onclick="copySummary()">📋 Copier</button>
           </div>
+          <div id="summary-ui" style="display:none" class="summary-body"></div>
         </div>
 
-        <!-- MINDMAP -->
-        <div class="apanel" id="ap-mindmap">
-          <div id="mindmap-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer la carte mentale.</div>
-          <div id="mindmap-ui" style="display:none">
-            <canvas id="mindmap-canvas"></canvas>
-            <div style="text-align:center;margin-top:10px">
-              <button class="btn-outline" onclick="genMindmap()">↻ Régénérer</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- CHAT -->
+        <!-- ── CHAT ── -->
         <div class="apanel" id="ap-chat">
+          <div class="error-banner" id="chat-error">
+            <span id="chat-error-msg"></span>
+            <button onclick="hideError('chat-error')">✕</button>
+          </div>
           <div class="chat-box" id="chat-box">
             <div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions dessus. Je suis là pour t'aider à comprendre. 👋</div>
           </div>
           <div class="chat-row">
             <input class="chat-in" id="chat-in" type="text" placeholder="Ta question…" onkeydown="if(event.key==='Enter')sendChat()" />
-            <button class="btn-green" onclick="sendChat()">Envoyer</button>
+            <button class="btn-green" id="chat-send-btn" onclick="sendChat()">Envoyer</button>
           </div>
         </div>
 
-        <!-- POMODORO -->
-        <div class="apanel" id="ap-pomodoro">
-          <div class="pomo-wrap">
-            <div class="pomo-mode">
-              <button class="pomo-pill active" onclick="setPomoMode('work',this)">Travail 25min</button>
-              <button class="pomo-pill" onclick="setPomoMode('short',this)">Pause 5min</button>
-              <button class="pomo-pill" onclick="setPomoMode('long',this)">Longue pause 15min</button>
-            </div>
-            <div class="pomo-ring">
-              <svg width="180" height="180" viewBox="0 0 180 180">
-                <circle class="pomo-ring-bg" cx="90" cy="90" r="80"/>
-                <circle class="pomo-ring-fill" id="pomo-circle" cx="90" cy="90" r="80" stroke-dasharray="502" stroke-dashoffset="0"/>
-              </svg>
-              <div class="pomo-time" id="pomo-time">25:00</div>
-            </div>
-            <div class="pomo-label">Session <span id="pomo-session">1</span> · <span id="pomo-mode-label">Concentration</span></div>
-            <div class="pomo-controls">
-              <button class="btn-outline" onclick="resetPomo()">↺ Reset</button>
-              <button class="btn-green" id="pomo-btn" onclick="togglePomo()">▶ Démarrer</button>
-            </div>
-            <div style="font-size:13px;color:var(--text-muted);text-align:center;max-width:340px">
-              La technique Pomodoro : 25 min de travail concentré, puis 5 min de pause. Après 4 sessions, une longue pause de 15 min.
-            </div>
-          </div>
-        </div>
-
-        <!-- STATS -->
-        <div class="apanel" id="ap-stats">
-          <div class="mastery-card">
-            <div class="mastery-title">📊 Score de maîtrise global</div>
-            <div class="mastery-score">
-              <div class="mastery-ring-wrap">
-                <svg width="80" height="80" viewBox="0 0 80 80">
-                  <circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="5"/>
-                  <circle id="mastery-circle" cx="40" cy="40" r="34" fill="none" stroke="var(--green)" stroke-width="5" stroke-linecap="round"
-                    stroke-dasharray="213" stroke-dashoffset="213" style="transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 0.8s"/>
-                </svg>
-                <div class="mastery-pct" id="mastery-pct">0%</div>
-              </div>
-              <div class="mastery-details">
-                <div class="mastery-row"><span>Quiz complétés</span><span id="stat-quiz-count">0</span></div>
-                <div class="mastery-bar-track"><div class="mastery-bar-fill" id="stat-quiz-bar" style="width:0%"></div></div>
-                <div class="mastery-row" style="margin-top:8px"><span>Flashcards maîtrisées</span><span id="stat-flash-count">0%</span></div>
-                <div class="mastery-bar-track"><div class="mastery-bar-fill" id="stat-flash-bar" style="width:0%"></div></div>
-                <div class="mastery-row" style="margin-top:8px"><span>Sessions Pomodoro</span><span id="stat-pomo-count">0</span></div>
-              </div>
-            </div>
-          </div>
-          <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:0.95rem;margin-bottom:0.75rem">Historique des quiz</div>
-          <div id="history-list"><div style="color:var(--text-muted);font-size:14px">Aucun quiz complété pour l'instant.</div></div>
-          <div style="margin-top:1rem">
-            <button class="btn-outline" style="font-size:13px" onclick="clearHistory()">🗑 Effacer l'historique</button>
-          </div>
-        </div>
-
-      </div>
-    </div>
+      </div><!-- /app-body -->
+    </div><!-- /app-wrap -->
   </div>
 </div>
 
-<!-- FOOTER -->
+<!-- ══════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════ -->
 <footer>
-  <p>© 2025 Notiq — Propulsé par <a href="https://aistudio.google.com" target="_blank">Gemini</a> · 100% gratuit · Bonne chance pour tes examens 🍀</p>
+  <p>© 2025 Notiq — Propulsé par <a href="https://aistudio.google.com" target="_blank" rel="noopener">Gemini 2.0 Flash</a> · 100% gratuit · Bonne chance pour tes examens 🍀</p>
 </footer>
 
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════ -->
 <script>
-// ══════════════════════════════════════
-// CONFIG & STATE
-// ══════════════════════════════════════
-const STYLES = {
-  simple:  'Explique ce concept simplement et clairement en 3-5 paragraphes. Commence par la définition puis approfondis progressivement. Texte brut sans markdown.',
+// ── CONSTANTES ──
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const MAX_CHAT_HISTORY = 10; // max échanges gardés en mémoire
+const MAX_COURSE_CHARS = 12000; // tronque le cours pour les prompts IA
+
+const EXPLAIN_STYLES = {
+  simple:  'Explique ce concept simplement et clairement en 3-5 paragraphes. Commence par la définition puis approfondis. Texte brut sans markdown.',
   analogy: 'Explique ce concept uniquement par des analogies du quotidien. Propose 3 analogies différentes, chacune commençant par "Imagine que…". Texte brut.',
   steps:   'Explique ce concept étape par étape. Numérote chaque étape : "Étape 1 : ...". Sois précis et progressif. Texte brut.',
-  example: 'Explique ce concept par des exemples concrets. Si pertinent, inclus des calculs numériques détaillés et des applications pratiques. Donne 3 exemples. Texte brut.',
+  example: 'Explique ce concept par des exemples concrets avec des calculs si pertinents. Donne 3 exemples détaillés. Texte brut.',
   eli5:    'Explique ce concept comme à un enfant de 10 ans. Mots simples, images mentales, enthousiasme. Texte brut.'
 };
 
-let courseText  = '';
+// ── STATE ──
+let apiKey = '';
+let courseText = '';
 let chatHistory = [];
-let quizData    = []; let quizAnswers = {};
-let flashData   = []; let flashIdx = 0;
-let exStyle     = 'simple'; let exCache = {};
-let mindmapData = null;
-let apiKey      = '';
+let quizData = []; let quizAnswers = {};
+let flashData = []; let flashIdx = 0; let flashFlipped = false;
+let exStyle = 'simple'; let exCache = {};
 let summaryText = '';
-
-// Anki state
-let ankiScores = {}; // flashIdx -> 'hard'|'ok'|'easy'
-
-// Multi-cours
-let courses = {}; // { id: { name, text } }
-let activeCourseId = null;
-
-// Stats & history
-let quizHistory = [];
-let pomoCompletedSessions = 0;
+let isLoading = false;
 
 // ── INIT ──
-window.addEventListener('load', () => {
-  // Hide nav CTA on mobile
-  if (window.innerWidth <= 768) {
-    const cta = document.getElementById('nav-cta-btn');
-    if (cta) cta.style.display = 'none';
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('notiq_gemini_key');
+  if (saved) {
+    apiKey = saved;
+    setAPIConnected(true);
+    document.getElementById('api-modal').classList.add('hidden');
   }
-
-  apiKey = localStorage.getItem('notiq_gemini_key') || '';
-  updateKeyStatus();
-
-  // Load theme
-  if (localStorage.getItem('notiq_theme') === 'light') {
-    document.body.classList.add('light');
-    document.getElementById('theme-btn').textContent = '☀️';
-  }
-
-  // Load multi-cours
-  const savedCourses = localStorage.getItem('notiq_courses');
-  if (savedCourses) {
-    courses = JSON.parse(savedCourses);
-  } else {
-    // Migrate old single course
-    const oldCourse = localStorage.getItem('notiq_course');
-    if (oldCourse) {
-      const id = 'c' + Date.now();
-      courses[id] = { name: 'Mon cours', text: oldCourse };
-      localStorage.removeItem('notiq_course');
-      saveCourses();
-    }
-  }
-
-  // Load stats
-  const savedHistory = localStorage.getItem('notiq_history');
-  if (savedHistory) quizHistory = JSON.parse(savedHistory);
-  pomoCompletedSessions = parseInt(localStorage.getItem('notiq_pomo_sessions') || '0');
-
-  renderCoursesBar();
-  // Auto-select first course if any
-  const ids = Object.keys(courses);
-  if (ids.length > 0) {
-    selectCourse(ids[0]);
-  }
-
-  if (!apiKey) openKeyModal();
-  initScrollReveal();
-  initPomodoro();
-  renderStats();
-});
-
-// ══════════════════════════════════════
-// THEME
-// ══════════════════════════════════════
-function toggleTheme() {
-  const light = document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent = light ? '☀️' : '🌙';
-  localStorage.setItem('notiq_theme', light ? 'light' : 'dark');
-}
-
-// ══════════════════════════════════════
-// MULTI-COURS
-// ══════════════════════════════════════
-function saveCourses() {
-  localStorage.setItem('notiq_courses', JSON.stringify(courses));
-}
-
-function renderCoursesBar() {
-  const bar = document.getElementById('courses-bar');
-  let html = '';
-  Object.entries(courses).forEach(([id, c]) => {
-    const active = id === activeCourseId ? 'active' : '';
-    html += `<div class="course-slot ${active}" onclick="selectCourse('${id}')">
-      <span class="course-slot-name">${c.name}</span>
-      <span class="course-slot-del" onclick="deleteCourse(event,'${id}')">✕</span>
-    </div>`;
+  // PDF drag & drop
+  const drop = document.getElementById('pdf-drop');
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') processPDFFile(file);
   });
-  html += `<button class="new-slot-btn" onclick="newCourse()">+ Nouveau cours</button>`;
-  bar.innerHTML = html;
-}
+  // Char counter
+  document.getElementById('course-text').addEventListener('input', updateCharCount);
+});
 
-function newCourse() {
-  const name = prompt('Nom du cours (ex: Maths, Bio, Histoire) :');
-  if (!name) return;
-  const id = 'c' + Date.now();
-  courses[id] = { name: name.trim(), text: '' };
-  saveCourses();
-  selectCourse(id);
-  renderCoursesBar();
-}
-
-function selectCourse(id) {
-  activeCourseId = id;
-  if (courses[id]) {
-    document.getElementById('course-text').value = courses[id].text || '';
-    courseText = courses[id].text || '';
-  }
-  renderCoursesBar();
-  // Reset generated content
-  exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = [];
-  document.getElementById('loaded-pill').style.display = 'none';
-  document.getElementById('saved-notice').style.display = courseText ? 'block' : 'none';
-  if (courseText) {
-    document.getElementById('quiz-empty').style.display = 'none';
-    document.getElementById('quiz-ui').style.display = 'block';
-  } else {
-    document.getElementById('quiz-empty').style.display = 'block';
-    document.getElementById('quiz-ui').style.display = 'none';
-  }
-}
-
-function deleteCourse(e, id) {
-  e.stopPropagation();
-  if (!confirm('Supprimer ce cours ?')) return;
-  delete courses[id];
-  saveCourses();
-  if (activeCourseId === id) {
-    activeCourseId = null;
-    courseText = '';
-    document.getElementById('course-text').value = '';
-  }
-  renderCoursesBar();
-  const ids = Object.keys(courses);
-  if (ids.length > 0) selectCourse(ids[0]);
-}
-
-// ══════════════════════════════════════
-// API KEY MANAGEMENT
-// ══════════════════════════════════════
-function openKeyModal() {
-  const m = document.getElementById('key-modal');
-  m.classList.add('open');
+// ── API MODAL ──
+function showAPIModal() {
+  document.getElementById('api-modal').classList.remove('hidden');
   document.getElementById('api-key-input').value = apiKey || '';
-  setTimeout(() => document.getElementById('api-key-input').focus(), 200);
+  document.getElementById('modal-error').style.display = 'none';
 }
-function closeKeyModal() {
-  document.getElementById('key-modal').classList.remove('open');
-}
-function saveKey() {
-  const k = document.getElementById('api-key-input').value.trim();
-  if (!k) return;
-  apiKey = k;
-  localStorage.setItem('notiq_gemini_key', k);
-  updateKeyStatus();
-  closeKeyModal();
-}
-function updateKeyStatus() {
-  const btn = document.getElementById('key-status-btn');
-  const txt = document.getElementById('key-status-txt');
-  const ico = document.getElementById('key-status-icon');
-  if (apiKey) {
-    btn.classList.add('connected');
-    txt.textContent = 'Connecté';
-    ico.textContent = '✅';
+
+async function connectAPI() {
+  const input = document.getElementById('api-key-input').value.trim();
+  if (!input) return;
+  const btn = document.getElementById('modal-connect-btn');
+  const errEl = document.getElementById('modal-error');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  document.getElementById('modal-btn-icon').innerHTML = '<span class="spinner"></span>';
+
+  // Test rapide de la clé
+  const ok = await testAPIKey(input);
+  btn.disabled = false;
+  document.getElementById('modal-btn-icon').textContent = '✦';
+
+  if (ok) {
+    apiKey = input;
+    localStorage.setItem('notiq_gemini_key', apiKey);
+    setAPIConnected(true);
+    document.getElementById('api-modal').classList.add('hidden');
   } else {
-    btn.classList.remove('connected');
-    txt.textContent = 'Clé API';
-    ico.textContent = '🔑';
+    errEl.style.display = 'block';
   }
 }
-document.getElementById('key-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeKeyModal();
-});
-document.getElementById('api-key-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveKey();
-});
 
-// ══════════════════════════════════════
-// GEMINI API
-// ══════════════════════════════════════
-async function ai(prompt, systemPrompt) {
-  if (!apiKey) { openKeyModal(); throw new Error('No API key'); }
-  const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
+async function testAPIKey(key) {
+  try {
+    const r = await fetch(`${GEMINI_URL}?key=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: fullPrompt }] }],
-        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 }
-      })
-    }
-  );
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    if (r.status === 400 || r.status === 403) { openKeyModal(); throw new Error('Clé API invalide'); }
-    throw new Error(err.error?.message || 'Erreur API');
-  }
-  const d = await r.json();
-  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'Dis "ok".' }] }], generationConfig: { maxOutputTokens: 10 } })
+    });
+    return r.ok;
+  } catch { return false; }
 }
 
-// ══════════════════════════════════════
-// PDF IMPORT
-// ══════════════════════════════════════
-function handleDragOver(e) { e.preventDefault(); document.getElementById('pdf-drop').classList.add('drag'); }
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('pdf-drop').classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file) {
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      processPDF(file);
-    } else {
-      alert('⚠️ Ce fichier nest pas un PDF. Importe un fichier .pdf uniquement.');
-    }
-  }
-}
-function handlePDF(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-    processPDF(file);
+function setAPIConnected(ok) {
+  const btn = document.getElementById('nav-key-btn');
+  if (ok) {
+    btn.textContent = '✅ Clé connectée';
+    btn.classList.add('connected');
   } else {
-    alert('⚠️ Ce fichier nest pas un PDF. Importe un fichier .pdf uniquement.');
-    input.value = '';
-  }
-}
-async function processPDF(file) {
-  const drop = document.getElementById('pdf-drop');
-  drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Extraction du texte…</p>';
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-    let text = '';
-    const str = new TextDecoder('latin1').decode(uint8);
-    const streams = str.match(/stream[\r\n]([\s\S]*?)[\r\n]endstream/g) || [];
-    for (const s of streams) {
-      const content = s.replace(/^stream[\r\n]/, '').replace(/[\r\n]endstream$/, '');
-      const words = content.match(/\(([^)]{1,200})\)\s*Tj/g) || [];
-      words.forEach(w => { text += w.replace(/^\(/, '').replace(/\)\s*Tj$/, '') + ' '; });
-    }
-    if (text.trim().length < 50) {
-      text = `[PDF importé : ${file.name}]\nLe texte n'a pas pu être extrait automatiquement. Copie-colle le contenu manuellement si besoin.`;
-    }
-    document.getElementById('course-text').value = text.trim();
-    drop.innerHTML = `<div style="font-size:2rem">✅</div><p>${file.name} importé avec succès</p>`;
-  } catch(e) {
-    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> pour importer ton cours</p>';
+    btn.textContent = '🔑 Clé API';
+    btn.classList.remove('connected');
   }
 }
 
-// ══════════════════════════════════════
-// TABS
-// ══════════════════════════════════════
-function switchATab(name, el) {
-  document.querySelectorAll('.atab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.apanel').forEach(p => p.classList.remove('active'));
-  document.getElementById('ap-'+name).classList.add('active');
-  if (name === 'stats') renderStats();
-}
-function pickStyle(el, s) {
-  document.querySelectorAll('.spill').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  exStyle = s;
-}
+// ── CALL GEMINI ──
+async function callGemini(prompt, systemPrompt) {
+  if (!apiKey) { showAPIModal(); throw new Error('NO_KEY'); }
 
-// ══════════════════════════════════════
-// LOAD COURSE
-// ══════════════════════════════════════
-async function loadCourse() {
-  const txt = document.getElementById('course-text').value.trim();
-  if (!txt) return;
-  courseText = txt;
-  exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {};
-
-  // Save to active slot or create new
-  if (activeCourseId && courses[activeCourseId]) {
-    courses[activeCourseId].text = txt;
+  const contents = [];
+  if (systemPrompt) {
+    contents.push({ role: 'user', parts: [{ text: systemPrompt }] });
+    contents.push({ role: 'model', parts: [{ text: 'Compris, je vais suivre ces instructions.' }] });
+  }
+  if (Array.isArray(prompt)) {
+    // historique de chat
+    prompt.forEach(m => contents.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
   } else {
-    const id = 'c' + Date.now();
-    const name = prompt('Nom de ce cours ?') || 'Mon cours';
-    courses[id] = { name, text: txt };
-    activeCourseId = id;
-    renderCoursesBar();
+    contents.push({ role: 'user', parts: [{ text: prompt }] });
   }
-  saveCourses();
 
-  document.getElementById('saved-notice').style.display = 'block';
-  document.getElementById('load-msg').textContent = '⏳ Résumé…';
-  document.getElementById('loaded-pill').style.display = 'none';
-  let errors = 0;
-  try { await genSummary(); } catch(e) { errors++; }
-  document.getElementById('load-msg').textContent = '⏳ Flashcards…';
-  try { await genFlash(); } catch(e) { errors++; }
-  document.getElementById('quiz-empty').style.display = 'none';
-  document.getElementById('quiz-ui').style.display = 'block';
-  document.getElementById('load-msg').textContent = '⏳ Quiz…';
-  try { await genQuiz(); } catch(e) { errors++; }
-  document.getElementById('mindmap-empty').style.display = 'none';
-  document.getElementById('mindmap-ui').style.display = 'block';
-  document.getElementById('load-msg').textContent = '⏳ Carte mentale…';
-  try { await genMindmap(); } catch(e) { errors++; }
-  if (errors === 0) {
-    document.getElementById('load-msg').textContent = '';
-    document.getElementById('loaded-pill').style.display = 'inline-flex';
-  } else {
-    document.getElementById('load-msg').textContent = `⚠️ ${errors} outil(s) n'ont pas pu se charger. Réessaie.`;
-  }
+  const r = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      generationConfig: { maxOutputTokens: 1500, temperature: 0.7 }
+    })
+  });
+
+  if (r.status === 429) throw new Error('RATE_LIMIT');
+  if (r.status === 400) throw new Error('BAD_REQUEST');
+  if (r.status === 403) throw new Error('INVALID_KEY');
+  if (!r.ok) throw new Error(`HTTP_${r.status}`);
+
+  const data = await r.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('EMPTY_RESPONSE');
+  return text;
+}
+
+function getErrorMessage(err) {
+  if (err.message === 'RATE_LIMIT') return '⏱️ Trop de requêtes. Attends quelques secondes et réessaie.';
+  if (err.message === 'INVALID_KEY') return '🔑 Clé API invalide. Clique sur "Clé API" en haut pour la mettre à jour.';
+  if (err.message === 'NO_KEY') return '🔑 Entre d\'abord ta clé API Gemini.';
+  if (err.message === 'EMPTY_RESPONSE') return '⚠️ Réponse vide de Gemini. Réessaie.';
+  if (err.message === 'BAD_REQUEST') return '⚠️ Requête invalide. Le cours est peut-être trop court.';
+  if (err.name === 'TypeError') return '🌐 Erreur réseau. Vérifie ta connexion internet.';
+  return `⚠️ Erreur inattendue : ${err.message}`;
+}
+
+function showError(id, msg) {
+  document.getElementById(id + '-msg').textContent = msg;
+  document.getElementById(id).classList.add('show');
+}
+function hideError(id) { document.getElementById(id).classList.remove('show'); }
+
+// ── COURS ──
+function updateCharCount() {
+  const t = document.getElementById('course-text').value;
+  const el = document.getElementById('char-count');
+  el.textContent = t.length > 0 ? `${t.length.toLocaleString()} caractères` : '';
+  el.style.color = t.length > 25000 ? 'var(--red)' : 'var(--text-muted)';
 }
 
 function clearCourse() {
   document.getElementById('course-text').value = '';
-  if (activeCourseId && courses[activeCourseId]) {
-    courses[activeCourseId].text = '';
-    saveCourses();
-  }
-  document.getElementById('saved-notice').style.display = 'none';
+  updateCharCount();
   courseText = '';
+  exCache = {};
+  chatHistory = [];
+  document.getElementById('loaded-pill').style.display = 'none';
+  document.getElementById('quiz-empty').style.display = 'block';
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('flash-empty').style.display = 'block';
+  document.getElementById('flash-ui').style.display = 'none';
+  document.getElementById('summary-empty').style.display = 'block';
+  document.getElementById('summary-ui').style.display = 'none';
+  document.getElementById('summary-actions').style.display = 'none';
+  summaryText = '';
 }
 
-// ══════════════════════════════════════
-// SUMMARY
-// ══════════════════════════════════════
+function handlePDF(input) {
+  if (input.files[0]) processPDFFile(input.files[0]);
+}
+
+function processPDFFile(file) {
+  // Lecture basique PDF texte via FileReader (pour les PDF non-scannés)
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Extraction texte brut depuis PDF (méthode simple)
+    const bytes = new Uint8Array(e.target.result);
+    let text = '';
+    for (let i = 0; i < bytes.length; i++) {
+      if (bytes[i] >= 32 && bytes[i] < 127) text += String.fromCharCode(bytes[i]);
+      else if (bytes[i] === 10 || bytes[i] === 13) text += '\n';
+    }
+    // Nettoyage basique du texte PDF
+    text = text.replace(/[^\x20-\x7E\n\u00C0-\u024F]/g, ' ')
+               .replace(/\s{3,}/g, '\n')
+               .replace(/([a-z])([A-Z])/g, '$1 $2')
+               .trim();
+    if (text.length > 200) {
+      document.getElementById('course-text').value = text.substring(0, 30000);
+      updateCharCount();
+    } else {
+      showError('load-error', '⚠️ PDF non lisible (peut-être scanné). Copie-colle le texte manuellement.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── CHARGEMENT COURS (appels séquentiels avec délai) ──
+function setProgress(step, pct) {
+  document.getElementById('progress-step').textContent = step;
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function loadCourse() {
+  if (isLoading) return;
+  const txt = document.getElementById('course-text').value.trim();
+  if (!txt || txt.length < 50) {
+    showError('load-error', '⚠️ Le cours est trop court. Ajoute au moins quelques phrases.');
+    return;
+  }
+  if (!apiKey) { showAPIModal(); return; }
+
+  hideError('load-error');
+  isLoading = true;
+  courseText = txt;
+  exCache = {};
+  chatHistory = [];
+  quizData = []; quizAnswers = {};
+  flashData = [];
+
+  const btn = document.getElementById('load-btn');
+  btn.disabled = true;
+  document.getElementById('load-icon').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('load-label').textContent = 'Analyse…';
+  document.getElementById('loaded-pill').style.display = 'none';
+  document.getElementById('progress-wrap').style.display = 'block';
+  setProgress('Génération du résumé…', 10);
+
+  try {
+    // 1. Résumé
+    await genSummary();
+    setProgress('Génération des flashcards…', 40);
+    await sleep(1200);
+
+    // 2. Flashcards
+    await genFlash();
+    setProgress('Génération du quiz…', 70);
+    await sleep(1200);
+
+    // 3. Quiz
+    await genQuiz();
+    setProgress('Terminé !', 100);
+    await sleep(500);
+
+    document.getElementById('loaded-pill').style.display = 'inline-flex';
+  } catch(e) {
+    showError('load-error', getErrorMessage(e));
+  } finally {
+    isLoading = false;
+    btn.disabled = false;
+    document.getElementById('load-icon').textContent = '✦';
+    document.getElementById('load-label').textContent = 'Charger et analyser';
+    document.getElementById('progress-wrap').style.display = 'none';
+  }
+}
+
+// ── RÉSUMÉ ──
 async function genSummary() {
-  document.getElementById('summary-empty').style.display = 'none';
-  const el = document.getElementById('summary-content');
-  document.getElementById('summary-ui').style.display = 'block';
-  el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
-  const res = await ai(
-    `Cours :\n\n${courseText}\n\nFais un résumé structuré : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`,
-    'Tu es un assistant pédagogique expert. Réponds en français.'
+  const course = courseText.substring(0, MAX_COURSE_CHARS);
+  const res = await callGemini(
+    `Cours :\n\n${course}\n\nFais un résumé : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`
   );
   summaryText = res;
   const lines = res.split('\n').filter(l => l.trim());
-  let html = ''; let pts = ''; let inPts = false;
+  let html = '', pts = '', inPts = false;
   lines.forEach(l => {
     if (l.startsWith('•') || l.startsWith('-')) {
       if (!inPts) { inPts = true; pts = '<div style="margin:1rem 0">'; }
@@ -1345,128 +1052,90 @@ async function genSummary() {
     }
   });
   if (inPts) html += pts + '</div>';
-  el.innerHTML = html;
+  document.getElementById('summary-empty').style.display = 'none';
+  document.getElementById('summary-ui').style.display = 'block';
+  document.getElementById('summary-actions').style.display = 'flex';
+  document.getElementById('summary-ui').innerHTML = html;
 }
 
 function copySummary() {
-  navigator.clipboard.writeText(summaryText).then(() => alert('Résumé copié ! 📋'));
+  navigator.clipboard.writeText(summaryText).then(() => {
+    const btn = document.querySelector('.summary-actions .btn-outline');
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copié !';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
 }
 
-function exportSummaryPDF() {
-  const win = window.open('', '_blank');
-  const courseName = (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'Cours';
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Résumé — ${courseName}</title>
-  <style>body{font-family:sans-serif;max-width:700px;margin:2rem auto;line-height:1.7;color:#1a2219}
-  h1{font-size:1.5rem;margin-bottom:1.5rem}p{margin-bottom:0.75rem}
-  ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
-  </style></head><body>
-  <h1>Résumé — ${courseName}</h1>
-  <p>${summaryText.replace(/\n/g,'</p><p>').replace(/• /g,'<li>').replace(/<\/p><p><li>/g,'</p><ul><li>').replace(/<li>([^<]+)<\/p>/g,'<li>$1</li></ul>')}</p>
-  <script>window.print();window.close();<\/script></body></html>`);
-  win.document.close();
-}
-
-// ══════════════════════════════════════
-// FLASHCARDS + ANKI
-// ══════════════════════════════════════
+// ── FLASHCARDS ──
 async function genFlash() {
-  if (!courseText) return;
-  ankiScores = {};
-  const res = await ai(
-    `Cours :\n\n${courseText}\n\nGénère 10 flashcards JSON. Réponds UNIQUEMENT en JSON valide sans markdown :\n{"cards":[{"front":"terme/question","back":"définition/réponse complète"}]}`,
-    'Tu es un assistant pédagogique. Réponds uniquement en JSON valide.'
+  const course = courseText.substring(0, MAX_COURSE_CHARS);
+  const res = await callGemini(
+    `Cours :\n\n${course}\n\nGénère 8 flashcards. Réponds UNIQUEMENT en JSON valide sans markdown :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse"}]}`
   );
-  try {
-    const clean = res.replace(/```json|```/g, '').trim();
-    flashData = JSON.parse(clean).cards || [];
-    flashIdx = 0;
-    document.getElementById('flash-empty').style.display = 'none';
-    document.getElementById('flash-ui').style.display = 'flex';
-    showFlash();
-  } catch(e) {}
+  const clean = res.replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(clean);
+  flashData = parsed.cards || [];
+  flashIdx = 0; flashFlipped = false;
+  document.getElementById('flash-empty').style.display = 'none';
+  document.getElementById('flash-ui').style.display = 'flex';
+  showFlash();
 }
+
 function showFlash() {
   if (!flashData.length) return;
   const c = flashData[flashIdx];
-  document.getElementById('flash-inner').classList.remove('flipped');
-  document.getElementById('flash-front-text').textContent = c.front;
-  document.getElementById('flash-back-text').textContent = c.back;
-  document.getElementById('flash-cnt').textContent = `${flashIdx+1} / ${flashData.length}`;
-  document.getElementById('flash-bar').style.width = `${((flashIdx+1)/flashData.length)*100}%`;
-  document.getElementById('anki-btns').style.display = 'none';
-  updateAnkiStats();
+  flashFlipped = false;
+  document.getElementById('flash-text').textContent = c.front;
+  document.getElementById('flash-badge').textContent = '';
+  document.getElementById('flash-card').classList.remove('flipped');
+  document.getElementById('flash-cnt').textContent = `${flashIdx + 1} / ${flashData.length}`;
 }
 function flipFlash() {
-  const inner = document.getElementById('flash-inner');
-  inner.classList.toggle('flipped');
-  if (inner.classList.contains('flipped')) {
-    document.getElementById('anki-btns').style.display = 'flex';
-  }
+  if (!flashData.length) return;
+  flashFlipped = !flashFlipped;
+  const c = flashData[flashIdx];
+  document.getElementById('flash-text').textContent = flashFlipped ? c.back : c.front;
+  document.getElementById('flash-badge').textContent = flashFlipped ? '↩ Verso' : '';
+  document.getElementById('flash-card').classList.toggle('flipped', flashFlipped);
 }
-function nextFlash() {
-  if (flashIdx < flashData.length - 1) { flashIdx++; showFlash(); }
-}
-function prevFlash() {
-  if (flashIdx > 0) { flashIdx--; showFlash(); }
-}
-function ankiRate(rating) {
-  ankiScores[flashIdx] = rating;
-  updateAnkiStats();
-  // Auto-advance
-  setTimeout(() => {
-    if (flashIdx < flashData.length - 1) { flashIdx++; showFlash(); }
-    else {
-      // All done — check mastery
-      const easy = Object.values(ankiScores).filter(v => v === 'easy').length;
-      const pct = Math.round((easy / flashData.length) * 100);
-      if (pct >= 80) launchConfetti();
-      renderStats();
-    }
-  }, 400);
-}
-function updateAnkiStats() {
-  const rated = Object.keys(ankiScores).length;
-  const easy = Object.values(ankiScores).filter(v => v === 'easy').length;
-  if (rated === 0) { document.getElementById('anki-stats').textContent = ''; return; }
-  document.getElementById('anki-stats').textContent =
-    `${rated}/${flashData.length} évaluées · ${easy} faciles · ${rated - easy} à retravailler`;
+function nextFlash() { if (flashIdx < flashData.length - 1) { flashIdx++; showFlash(); } }
+function prevFlash() { if (flashIdx > 0) { flashIdx--; showFlash(); } }
+
+// ── QUIZ ──
+async function genQuiz() {
+  const course = courseText.substring(0, MAX_COURSE_CHARS);
+  document.getElementById('quiz-empty').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'block';
+  document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
+  document.getElementById('quiz-regen-btn') && (document.getElementById('quiz-regen-btn').disabled = true);
+  quizAnswers = {};
+
+  const res = await callGemini(
+    `Cours :\n\n${course}\n\nGénère 5 questions QCM variées. JSON uniquement sans markdown :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":0,"explanation":"explication courte en français"}]}\n"correct" = index 0-3 de la bonne réponse.`
+  );
+
+  const clean = res.replace(/```json|```/g, '').trim();
+  quizData = JSON.parse(clean).questions || [];
+  document.getElementById('quiz-regen-btn') && (document.getElementById('quiz-regen-btn').disabled = false);
+  renderQuiz();
 }
 
-// ══════════════════════════════════════
-// QUIZ
-// ══════════════════════════════════════
-async function genQuiz() {
-  if (!courseText) return;
-  document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
-  quizAnswers = {};
-  const res = await ai(
-    `Cours :\n\n${courseText}\n\nGénère 6 questions QCM variées. JSON uniquement sans markdown :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":0,"explanation":"explication détaillée"}]}\n"correct" = index 0-3 de la bonne réponse.`,
-    'Tu es un professeur expert. Réponds uniquement en JSON valide.'
-  );
-  try {
-    const clean = res.replace(/```json|```/g, '').trim();
-    quizData = JSON.parse(clean).questions || [];
-    renderQuiz();
-  } catch(e) {
-    document.getElementById('quiz-list').innerHTML = '<div class="loading-txt">Erreur, réessaie.</div>';
-  }
-}
 function renderQuiz() {
-  const correct = Object.entries(quizAnswers).filter(([i,a]) => quizData[i] && +a === quizData[i].correct).length;
-  const total = quizData.length;
-  document.getElementById('score-display').textContent = `${correct}/${total}`;
-  // Check if all answered
-  if (Object.keys(quizAnswers).length === total && total > 0) {
-    saveQuizResult(correct, total);
-  }
+  const correct = Object.entries(quizAnswers).filter(([i, a]) => quizData[i] && +a === quizData[i].correct).length;
+  const answered = Object.keys(quizAnswers).length;
+  document.getElementById('score-display').textContent = answered > 0 ? `${correct}/${answered}` : `0/${quizData.length}`;
   let html = '';
   quizData.forEach((q, i) => {
-    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${q.q}</div><div class="qopts">`;
+    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i + 1}. ${q.q}</div><div class="qopts">`;
     q.options.forEach((opt, j) => {
       const ans = quizAnswers[i];
       let cls = '';
-      if (ans !== undefined) { if (j === q.correct) cls = 'correct'; else if (j === +ans) cls = 'wrong'; }
-      html += `<button class="qopt ${cls}" onclick="ansQ(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${opt}</button>`;
+      if (ans !== undefined) {
+        if (j === q.correct) cls = 'correct';
+        else if (j === +ans) cls = 'wrong';
+      }
+      html += `<button class="qopt ${cls}" onclick="answerQuiz(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${opt}</button>`;
     });
     html += '</div>';
     if (quizAnswers[i] !== undefined) html += `<div class="qexpl">💬 ${q.explanation}</div>`;
@@ -1474,116 +1143,52 @@ function renderQuiz() {
   });
   document.getElementById('quiz-list').innerHTML = html;
 }
-function ansQ(qi, a) { quizAnswers[qi] = a; renderQuiz(); }
+function answerQuiz(qi, ans) { quizAnswers[qi] = ans; renderQuiz(); }
 
-function saveQuizResult(correct, total) {
-  const pct = Math.round((correct / total) * 100);
-  const entry = {
-    date: new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }),
-    score: `${correct}/${total}`,
-    pct,
-    course: (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'Cours'
-  };
-  quizHistory.unshift(entry);
-  if (quizHistory.length > 20) quizHistory.pop();
-  localStorage.setItem('notiq_history', JSON.stringify(quizHistory));
-  renderStats();
-  if (pct === 100) launchConfetti();
+// ── EXPLICATIONS ──
+function switchATab(name, el) {
+  document.querySelectorAll('.atab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.apanel').forEach(p => p.classList.remove('active'));
+  document.getElementById('ap-' + name).classList.add('active');
+}
+function pickStyle(el, s) {
+  document.querySelectorAll('.spill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  exStyle = s;
 }
 
-// ══════════════════════════════════════
-// MODE EXAMEN
-// ══════════════════════════════════════
-let examInterval = null;
-let examTimeLeft = 20 * 60;
-let examAnswers = {};
-
-function startExam() {
-  if (!quizData.length) { alert('Génère un quiz d\'abord !'); return; }
-  examAnswers = {};
-  examTimeLeft = 20 * 60;
-  document.getElementById('exam-overlay').classList.add('open');
-  renderExamBody();
-  updateExamTimer();
-  examInterval = setInterval(() => {
-    examTimeLeft--;
-    updateExamTimer();
-    const fill = document.getElementById('exam-progress-fill');
-    fill.style.width = `${(examTimeLeft / (20*60)) * 100}%`;
-    if (examTimeLeft <= 0) closeExam(true);
-  }, 1000);
-}
-function updateExamTimer() {
-  const m = String(Math.floor(examTimeLeft/60)).padStart(2,'0');
-  const s = String(examTimeLeft%60).padStart(2,'0');
-  const el = document.getElementById('exam-timer');
-  el.textContent = `${m}:${s}`;
-  el.classList.toggle('warning', examTimeLeft < 120);
-}
-function renderExamBody() {
-  let html = '<h2 style="font-family:Syne;margin-bottom:1.5rem">Réponds à toutes les questions</h2>';
-  quizData.forEach((q, i) => {
-    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${q.q}</div><div class="qopts">`;
-    q.options.forEach((opt, j) => {
-      const ans = examAnswers[i];
-      let cls = '';
-      if (ans !== undefined) { if (j === q.correct) cls = 'correct'; else if (j === +ans) cls = 'wrong'; }
-      html += `<button class="qopt ${cls}" onclick="examAns(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${opt}</button>`;
-    });
-    html += '</div>';
-    if (examAnswers[i] !== undefined) html += `<div class="qexpl">💬 ${q.explanation}</div>`;
-    html += '</div>';
-  });
-  const allDone = Object.keys(examAnswers).length === quizData.length;
-  if (allDone) {
-    const c = Object.entries(examAnswers).filter(([i,a]) => quizData[i] && +a === quizData[i].correct).length;
-    html += `<div style="padding:2rem;text-align:center;font-family:Syne;font-size:1.5rem;font-weight:700;color:var(--green)">
-      Résultat : ${c}/${quizData.length} — ${Math.round(c/quizData.length*100)}%
-      <div style="margin-top:1rem"><button class="btn-green" onclick="closeExam(false)">Terminer l'examen</button></div>
-    </div>`;
-  }
-  document.getElementById('exam-body').innerHTML = html;
-}
-function examAns(qi, a) {
-  examAnswers[qi] = a;
-  renderExamBody();
-  const allDone = Object.keys(examAnswers).length === quizData.length;
-  if (allDone) {
-    const c = Object.entries(examAnswers).filter(([i,ans]) => quizData[i] && +ans === quizData[i].correct).length;
-    saveQuizResult(c, quizData.length);
-    if (c === quizData.length) launchConfetti();
-  }
-}
-function closeExam(timeout) {
-  clearInterval(examInterval);
-  document.getElementById('exam-overlay').classList.remove('open');
-  if (timeout) alert('⏱️ Temps écoulé ! L\'examen est terminé.');
-}
-
-// ══════════════════════════════════════
-// EXPLAIN
-// ══════════════════════════════════════
 async function doExplain() {
   const topic = document.getElementById('ex-topic').value.trim();
   if (!topic) return;
+  if (!apiKey) { showAPIModal(); return; }
   const key = topic + '|' + exStyle;
   const el = document.getElementById('ex-result');
   if (exCache[key]) { renderExplain(exStyle, exCache[key]); return; }
+
+  hideError('explain-error');
   el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération en cours…</span>';
-  const ctx = courseText ? `Cours de référence :\n${courseText}\n\n` : '';
+  const btn = document.getElementById('explain-btn');
+  btn.disabled = true;
+
   try {
-    const res = await ai(`${ctx}${STYLES[exStyle]}\n\nConcept : "${topic}"`, 'Tu es un tuteur pédagogique expert. Réponds en français.');
+    const ctx = courseText ? `Cours de référence (utilise-le pour contextualiser) :\n${courseText.substring(0, MAX_COURSE_CHARS)}\n\n` : '';
+    const res = await callGemini(`${ctx}${EXPLAIN_STYLES[exStyle]}\n\nConcept à expliquer : "${topic}"`);
     exCache[key] = res;
     renderExplain(exStyle, res);
   } catch(e) {
-    el.innerHTML = '<span class="loading-txt">❌ Erreur — vérifie ta clé API</span>';
+    showError('explain-error', getErrorMessage(e));
+    el.innerHTML = '<span class="loading-txt">Erreur. Réessaie.</span>';
+  } finally {
+    btn.disabled = false;
   }
 }
+
 function renderExplain(style, text) {
   const el = document.getElementById('ex-result');
   const lines = text.split('\n').filter(l => l.trim());
   if (style === 'steps') {
-    let n = 0; let html = '';
+    let n = 0, html = '';
     lines.forEach(l => {
       const m = l.match(/^[EeÉé]tape\s*\d+\s*[:.]?\s*(.*)/i) || l.match(/^\d+[.)]\s+(.*)/);
       if (m) { n++; html += `<div class="step"><div class="step-n">${n}</div><div>${m[1] || m[0]}</div></div>`; }
@@ -1595,7 +1200,7 @@ function renderExplain(style, text) {
     let html = '';
     parts.forEach((p, i) => {
       if (i === 0 && !text.toLowerCase().startsWith('imagine')) html += `<p style="margin-bottom:1rem;font-size:14px">${p.trim()}</p>`;
-      else html += `<div class="analogy-block">Imagine que${p.trim()}</div>`;
+      else if (p.trim()) html += `<div class="analogy-block">Imagine que${p.trim()}</div>`;
     });
     el.innerHTML = html || `<p style="font-size:14px">${text}</p>`;
   } else {
@@ -1603,346 +1208,59 @@ function renderExplain(style, text) {
   }
 }
 
-// ══════════════════════════════════════
-// MIND MAP
-// ══════════════════════════════════════
-async function genMindmap() {
-  const canvas = document.getElementById('mindmap-canvas');
-  const ctx2d = canvas.getContext('2d');
-  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-  canvas.height = 420 * window.devicePixelRatio;
-  ctx2d.scale(window.devicePixelRatio, window.devicePixelRatio);
-  const W = canvas.offsetWidth; const H = 420;
-  ctx2d.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
-  ctx2d.fillRect(0, 0, W, H);
-  ctx2d.fillStyle = '#3d4d41';
-  ctx2d.font = '14px DM Sans';
-  ctx2d.textAlign = 'center';
-  ctx2d.fillText('Génération de la carte mentale…', W/2, H/2);
-  try {
-    const res = await ai(
-      `Cours :\n\n${courseText}\n\nGénère une carte mentale avec un nœud central et 5-7 branches principales, chacune avec 2-3 sous-nœuds. JSON uniquement sans markdown :\n{"center":"titre principal","branches":[{"label":"branche","children":["enfant1","enfant2"]}]}`,
-      'Tu es un assistant pédagogique. Réponds uniquement en JSON valide.'
-    );
-    const clean = res.replace(/```json|```/g, '').trim();
-    mindmapData = JSON.parse(clean);
-    drawMindmap(canvas, ctx2d, W, H, mindmapData);
-  } catch(e) {
-    ctx2d.fillStyle = '#7a8c7e';
-    ctx2d.fillText('Erreur — vérifie ta clé API', W/2, H/2);
-  }
-}
-function drawMindmap(canvas, ctx, W, H, data) {
-  ctx.clearRect(0, 0, W, H);
-  const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-  const cx = W / 2; const cy = H / 2;
-  const branches = data.branches || [];
-  const angleStep = (2 * Math.PI) / branches.length;
-  const branchR = Math.min(W, H) * 0.32;
-  const childR  = Math.min(W, H) * 0.16;
-  ctx.beginPath(); ctx.arc(cx, cy, 52, 0, 2 * Math.PI);
-  ctx.fillStyle = '#1fbd82'; ctx.fill();
-  ctx.fillStyle = '#000'; ctx.font = 'bold 13px Syne, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  wrapText(ctx, data.center || 'Cours', cx, cy, 90, 15);
-  branches.forEach((branch, i) => {
-    const angle = i * angleStep - Math.PI / 2;
-    const bx = cx + Math.cos(angle) * branchR;
-    const by = cy + Math.sin(angle) * branchR;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(bx, by);
-    ctx.strokeStyle = 'rgba(31,189,130,0.35)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(bx, by, 62, 22, 0, 0, 2 * Math.PI);
-    ctx.fillStyle = '#161a15'; ctx.strokeStyle = 'rgba(31,189,130,0.5)'; ctx.lineWidth = 1.5;
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#e8ede9'; ctx.font = '12px DM Sans, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(truncate(branch.label, 14), bx, by);
-    (branch.children || []).forEach((child, j) => {
-      const childCount = branch.children.length;
-      const spread = childCount > 1 ? 0.45 : 0;
-      const childAngle = angle + (j - (childCount - 1) / 2) * spread;
-      const chx = bx + Math.cos(childAngle) * childR;
-      const chy = by + Math.sin(childAngle) * childR;
-      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(chx, chy);
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(chx, chy, 48, 16, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = '#111410'; ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#7a8c7e'; ctx.font = '11px DM Sans, sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(truncate(child, 12), chx, chy);
-    });
-  });
-}
-function wrapText(ctx, text, x, y, maxW, lineH) {
-  const words = text.split(' ');
-  let line = '';
-  const lines = [];
-  words.forEach(w => {
-    const test = line + w + ' ';
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
-    else line = test;
-  });
-  if (line) lines.push(line.trim());
-  const startY = y - (lines.length - 1) * lineH / 2;
-  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineH));
-}
-function truncate(s, n) { return s.length > n ? s.slice(0, n-1) + '…' : s; }
-
-// ══════════════════════════════════════
-// CHAT
-// ══════════════════════════════════════
+// ── CHAT ──
 async function sendChat() {
   const inp = document.getElementById('chat-in');
-  const msg = inp.value.trim(); if (!msg) return;
-  if (!apiKey) { openKeyModal(); return; }
+  const msg = inp.value.trim();
+  if (!msg) return;
+  if (!apiKey) { showAPIModal(); return; }
+
+  hideError('chat-error');
   inp.value = '';
+  inp.disabled = true;
+  const sendBtn = document.getElementById('chat-send-btn');
+  sendBtn.disabled = true;
+
   const box = document.getElementById('chat-box');
+  box.innerHTML += `<div class="cmsg user">${msg}</div>`;
   const typingId = 'typing-' + Date.now();
-  box.innerHTML += `<div class="cmsg user">${msg}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
+  box.innerHTML += `<div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
   box.scrollTop = box.scrollHeight;
 
-  // Build system context as first user message if needed
-  const sys = courseText
-    ? `Tu es un tuteur pédagogique expert. Voici le cours de l'étudiant :\n\n${courseText}\n\nRéponds en français, clairement et pédagogiquement, en te basant sur ce cours.`
-    : 'Tu es un tuteur pédagogique expert. Réponds en français, clairement et pédagogiquement.';
+  // Tronque l'historique
+  chatHistory.push({ role: 'user', content: msg });
+  if (chatHistory.length > MAX_CHAT_HISTORY * 2) chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY * 2);
 
-  // Add user message to history
-  chatHistory.push({ role: 'user', parts: [{ text: msg }] });
+  const sys = courseText
+    ? `Tu es un tuteur pédagogique. Voici le cours de l'étudiant (base-toi dessus pour répondre) :\n\n${courseText.substring(0, MAX_COURSE_CHARS)}\n\nRéponds en français, clairement et pédagogiquement. Sois concis.`
+    : `Tu es un tuteur pédagogique expert. Réponds en français, clairement. Sois concis.`;
 
   try {
-    // Inject system context as first user/model exchange
-    let contents = [];
-    if (chatHistory.length === 1) {
-      // First message: prepend system context
-      contents = [
-        { role: 'user', parts: [{ text: sys + '\n\nRéponds juste "Compris !" pour confirmer.' }] },
-        { role: 'model', parts: [{ text: 'Compris !' }] },
-        { role: 'user', parts: [{ text: msg }] }
-      ];
-    } else {
-      contents = chatHistory.map(m => ({ role: m.role, parts: m.parts }));
-    }
-
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
-        })
-      }
-    );
-    const d = await r.json();
-
-    // Handle API errors clearly
-    if (d.error) {
-      const errMsg = d.error.message || 'Erreur API';
-      document.getElementById(typingId).innerHTML = `❌ ${errMsg}`;
-      chatHistory.pop(); // remove failed message
-      return;
-    }
-
-    const reply = d.candidates?.[0]?.content?.parts?.[0]?.text || 'Je n\'ai pas pu répondre, réessaie.';
-    chatHistory.push({ role: 'model', parts: [{ text: reply }] });
-    const lines = reply.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${l}</p>`).join('');
-    document.getElementById(typingId).innerHTML = lines;
+    const res = await callGemini(chatHistory, sys);
+    chatHistory.push({ role: 'assistant', content: res });
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+    const p = res.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${l}</p>`).join('');
+    box.innerHTML += `<div class="cmsg ai">${p}</div>`;
   } catch(e) {
-    document.getElementById(typingId).innerHTML = '❌ Erreur réseau — vérifie ta connexion et ta clé API';
-    chatHistory.pop();
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+    chatHistory.pop(); // retire le message non répondu
+    showError('chat-error', getErrorMessage(e));
+    box.innerHTML += `<div class="cmsg ai" style="color:var(--red);border-color:rgba(224,85,85,0.2)">${getErrorMessage(e)}</div>`;
+  } finally {
+    inp.disabled = false;
+    sendBtn.disabled = false;
+    inp.focus();
+    box.scrollTop = box.scrollHeight;
   }
-  box.scrollTop = box.scrollHeight;
 }
 
-// ══════════════════════════════════════
-// POMODORO
-// ══════════════════════════════════════
-const POMO_MODES = { work: 25*60, short: 5*60, long: 15*60 };
-let pomoMode = 'work';
-let pomoTotal = POMO_MODES.work;
-let pomoLeft  = POMO_MODES.work;
-let pomoRunning = false;
-let pomoInterval = null;
-let pomoSession = 1;
-function initPomodoro() { renderPomo(); }
-function setPomoMode(mode, el) {
-  document.querySelectorAll('.pomo-pill').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  pomoMode = mode;
-  pomoTotal = POMO_MODES[mode];
-  pomoLeft = pomoTotal;
-  stopPomo();
-  renderPomo();
-}
-function togglePomo() {
-  if (pomoRunning) stopPomo(); else startPomo();
-}
-function startPomo() {
-  pomoRunning = true;
-  document.getElementById('pomo-btn').textContent = '⏸ Pause';
-  pomoInterval = setInterval(() => {
-    pomoLeft--;
-    if (pomoLeft <= 0) {
-      pomoLeft = 0;
-      stopPomo();
-      if (pomoMode === 'work') {
-        pomoSession++;
-        pomoCompletedSessions++;
-        localStorage.setItem('notiq_pomo_sessions', pomoCompletedSessions);
-        document.getElementById('pomo-session').textContent = pomoSession;
-        renderStats();
-      }
-    }
-    renderPomo();
-  }, 1000);
-}
-function stopPomo() {
-  pomoRunning = false;
-  clearInterval(pomoInterval);
-  document.getElementById('pomo-btn').textContent = '▶ Démarrer';
-}
-function resetPomo() {
-  stopPomo();
-  pomoLeft = pomoTotal;
-  renderPomo();
-}
-function renderPomo() {
-  const m = String(Math.floor(pomoLeft/60)).padStart(2,'0');
-  const s = String(pomoLeft%60).padStart(2,'0');
-  document.getElementById('pomo-time').textContent = `${m}:${s}`;
-  const circ = document.getElementById('pomo-circle');
-  const circumference = 2 * Math.PI * 80;
-  const progress = pomoLeft / pomoTotal;
-  circ.style.strokeDasharray = circumference;
-  circ.style.strokeDashoffset = circumference * (1 - progress);
-  const labels = { work: 'Concentration', short: 'Pause courte', long: 'Longue pause' };
-  document.getElementById('pomo-mode-label').textContent = labels[pomoMode];
-}
-
-// ══════════════════════════════════════
-// STATS & MASTERY
-// ══════════════════════════════════════
-function renderStats() {
-  // Quiz stats
-  const quizCount = quizHistory.length;
-  const avgPct = quizCount > 0 ? Math.round(quizHistory.reduce((s, e) => s + e.pct, 0) / quizCount) : 0;
-  document.getElementById('stat-quiz-count').textContent = quizCount;
-  document.getElementById('stat-quiz-bar').style.width = `${avgPct}%`;
-
-  // Flash stats
-  const totalFlash = flashData.length || 0;
-  const easyFlash = Object.values(ankiScores).filter(v => v === 'easy').length;
-  const flashPct = totalFlash > 0 ? Math.round((easyFlash / totalFlash) * 100) : 0;
-  document.getElementById('stat-flash-count').textContent = `${flashPct}%`;
-  document.getElementById('stat-flash-bar').style.width = `${flashPct}%`;
-
-  // Pomo
-  document.getElementById('stat-pomo-count').textContent = pomoCompletedSessions;
-
-  // Global mastery score
-  let mastery = 0;
-  if (quizCount > 0) mastery = Math.round((avgPct * 0.6) + (flashPct * 0.3) + Math.min(pomoCompletedSessions * 2, 10));
-  mastery = Math.min(mastery, 100);
-  document.getElementById('mastery-pct').textContent = `${mastery}%`;
-  const circ = document.getElementById('mastery-circle');
-  const circumference = 2 * Math.PI * 34;
-  circ.style.strokeDashoffset = circumference * (1 - mastery / 100);
-
-  // History
-  const histEl = document.getElementById('history-list');
-  if (!quizHistory.length) {
-    histEl.innerHTML = '<div style="color:var(--text-muted);font-size:14px">Aucun quiz complété pour l\'instant.</div>';
-    return;
-  }
-  histEl.innerHTML = quizHistory.slice(0, 10).map(e => {
-    const stars = e.pct >= 80 ? '⭐⭐⭐' : e.pct >= 50 ? '⭐⭐' : '⭐';
-    return `<div class="history-card">
-      <div class="history-date">${e.date}</div>
-      <div class="history-score">${e.score}</div>
-      <div class="history-label">${e.course} · ${e.pct}%</div>
-      <div class="history-stars">${stars}</div>
-    </div>`;
-  }).join('');
-}
-
-function clearHistory() {
-  if (!confirm('Effacer tout l\'historique ?')) return;
-  quizHistory = [];
-  localStorage.removeItem('notiq_history');
-  pomoCompletedSessions = 0;
-  localStorage.removeItem('notiq_pomo_sessions');
-  renderStats();
-}
-
-// ══════════════════════════════════════
-// CONFETTI 🎉
-// ══════════════════════════════════════
-function launchConfetti() {
-  const canvas = document.getElementById('confetti-canvas');
-  canvas.style.display = 'block';
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const ctx = canvas.getContext('2d');
-  const pieces = Array.from({length: 120}, () => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * -canvas.height,
-    r: Math.random() * 8 + 4,
-    d: Math.random() * 3 + 2,
-    color: ['#1fbd82','#25d492','#fff','#ffb400','#ff6b6b'][Math.floor(Math.random()*5)],
-    tilt: Math.random() * 10 - 5,
-    tiltSpeed: (Math.random() * 0.1) - 0.05,
-    swing: Math.random() * 2,
-    swingSpeed: Math.random() * 0.05 + 0.02
-  }));
-  let frame = 0;
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    pieces.forEach(p => {
-      p.y += p.d;
-      p.tilt += p.tiltSpeed;
-      p.swing += p.swingSpeed;
-      p.x += Math.sin(p.swing) * 1.5;
-      ctx.beginPath();
-      ctx.ellipse(p.x + p.tilt, p.y, p.r, p.r/2, p.tilt, 0, 2*Math.PI);
-      ctx.fillStyle = p.color;
-      ctx.fill();
-    });
-    frame++;
-    if (frame < 200) requestAnimationFrame(draw);
-    else { ctx.clearRect(0,0,canvas.width,canvas.height); canvas.style.display='none'; }
-  }
-  draw();
-}
-
-// ══════════════════════════════════════
-// SCROLL REVEAL
-// ══════════════════════════════════════
-function initScrollReveal() {
-  const obs = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-  }, { threshold: 0.1 });
-  document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
-}
-
-// Redraw mindmap on resize
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    if (mindmapData) {
-      const canvas = document.getElementById('mindmap-canvas');
-      const ctx2d = canvas.getContext('2d');
-      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-      canvas.height = 420 * window.devicePixelRatio;
-      ctx2d.scale(window.devicePixelRatio, window.devicePixelRatio);
-      drawMindmap(canvas, ctx2d, canvas.offsetWidth, 420, mindmapData);
-    }
-  }, 300);
-});
+// ── SCROLL REVEAL ──
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
 </script>
 </body>
 </html>
