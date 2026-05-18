@@ -82,7 +82,7 @@ body.light nav { background: rgba(244,247,244,0.92); }
   transition: all 0.2s;
 }
 .theme-btn:hover { border-color: var(--border-hover); color: var(--text); }
-.nav-cta { background: var(--green); color: #000; padding: 8px 20px; border-radius: 99px; font-size: 14px; font-weight: 500; text-decoration: none; font-family: 'Syne', sans-serif; transition: all 0.2s; }
+.nav-cta { background: var(--green); color: #000; padding: 8px 20px; border-radius: 99px; font-size: 14px; font-weight: 500; text-decoration: none; font-family: 'Syne', sans-serif; transition: all 0.2s; white-space: nowrap; }
 .nav-cta:hover { background: #25d492; transform: translateY(-1px); }
 
 /* ── HERO ── */
@@ -573,12 +573,100 @@ footer a { color: var(--green); text-decoration: none; }
   pointer-events: none; z-index: 9999; display: none;
 }
 
+/* ══ MOBILE ══ */
 @media (max-width: 768px) {
+  nav { padding: 0 1rem; height: 54px; }
   .nav-links { display: none; }
-  .steps-row { flex-direction: column; gap: 2rem; }
+  .nav-cta { display: none !important; }
+  .nav-key-btn { padding: 6px 10px; font-size: 12px; }
+  #key-status-txt { display: none; }
+  .theme-btn { width: 32px; height: 32px; font-size: 14px; }
+
+  .hero { padding: 90px 1.25rem 3rem; }
+  .hero h1 { font-size: 2.4rem; }
+  .hero p { font-size: 0.95rem; }
+  .hero-btns { flex-direction: column; align-items: stretch; }
+  .btn-main, .btn-ghost { text-align: center; padding: 14px 20px; }
+  .hero-grid { grid-template-columns: repeat(3,1fr); margin-top: 2.5rem; }
+  .hero-stat .num { font-size: 1.4rem; }
+  .hero-stat .lbl { font-size: 11px; }
+
+  section { padding: 3.5rem 1.25rem; }
+  .section-title { font-size: 1.7rem; }
+  .styles-section { padding: 3.5rem 1.25rem; }
+  .styles-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .steps-row { flex-direction: column; gap: 1.5rem; }
   .steps-row::before { display: none; }
-  .hero-grid { grid-template-columns: 1fr; }
+  .how-step { padding: 0; display: flex; align-items: flex-start; gap: 1rem; text-align: left; }
+  .how-num { margin: 0; flex-shrink: 0; width: 44px; height: 44px; font-size: 1rem; }
+
+  .app-section { padding: 3rem 0; }
+  .app-section > div { padding: 0 1.25rem; }
+  .app-wrap { border-radius: 0; margin: 0 -1.25rem; border-left: none; border-right: none; }
+  .app-nav { padding: 10px 10px 0; gap: 2px; }
+  .atab { padding: 8px 11px; font-size: 12px; }
+  .app-body { padding: 1rem; }
+
+  .courses-bar { gap: 6px; }
+  .course-slot { padding: 5px 10px; font-size: 12px; }
+  .course-slot-name { max-width: 60px; }
+  .action-row { gap: 8px; }
+  .action-row .btn-green, .action-row .btn-outline { padding: 10px 16px; font-size: 13px; }
+  .pdf-drop { padding: 1.25rem; }
+
   .explain-bar { flex-direction: column; }
+  .explain-bar .btn-green { width: 100%; justify-content: center; }
+  .style-pills { gap: 6px; }
+  .spill { padding: 5px 11px; font-size: 12px; }
+
+  .score-row { gap: 8px; flex-wrap: wrap; }
+  .score-big { font-size: 1.8rem; }
+  .score-row .btn-outline { padding: 8px 12px; font-size: 12px; }
+  .qopt { padding: 10px 12px; font-size: 13px; }
+
+  .flash-scene { height: 170px; }
+  .flash-face { font-size: 15px; padding: 1.25rem; }
+  .anki-btns { gap: 6px; }
+  .anki-btn { padding: 10px 6px; font-size: 12px; }
+
+  .export-bar { flex-wrap: wrap; }
+  .export-bar .btn-outline { font-size: 12px; padding: 8px 12px; }
+
+  #mindmap-canvas { height: 280px; }
+
+  .chat-box { min-height: 200px; max-height: 260px; }
+  .chat-row { gap: 6px; }
+  .chat-in { padding: 10px 14px; font-size: 14px; }
+  .chat-row .btn-green { padding: 10px 16px; font-size: 13px; }
+
+  .pomo-wrap { gap: 1rem; }
+  .pomo-ring { width: 150px; height: 150px; }
+  .pomo-ring svg { width: 150px; height: 150px; }
+  .pomo-time { font-size: 2rem; }
+  .pomo-mode { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .pomo-pill { padding: 5px 12px; font-size: 12px; }
+
+  .mastery-score { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .history-card { flex-wrap: wrap; gap: 6px; }
+  .history-label { min-width: 100%; }
+
+  .exam-header { padding: 0.75rem 1rem; }
+  .exam-timer { font-size: 1.5rem; }
+  .exam-body { padding: 1rem; }
+
+  .modal { padding: 1.5rem; }
+  .modal-row { flex-direction: column; }
+  .modal-row .btn-green { width: 100%; justify-content: center; }
+
+  .features-grid { grid-template-columns: 1fr; }
+  .feat-card { padding: 1.25rem; }
+}
+
+@media (max-width: 380px) {
+  .hero h1 { font-size: 2rem; }
+  .atab { padding: 7px 8px; font-size: 11px; }
+  .hero-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -626,7 +714,7 @@ footer a { color: var(--green); text-decoration: none; }
       <span id="key-status-icon">🔑</span>
       <span id="key-status-txt">Clé API</span>
     </button>
-    <a href="#app" class="nav-cta">Commencer →</a>
+    <a href="#app" class="nav-cta" id="nav-cta-btn">Commencer →</a>
   </div>
 </nav>
 
@@ -717,7 +805,7 @@ footer a { color: var(--green); text-decoration: none; }
             <div style="font-size:2rem">📄</div>
             <p>Clique ici ou glisse un <strong>PDF</strong> pour importer ton cours</p>
           </div>
-          <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="handlePDF(this)">
+          <input type="file" id="pdf-input" accept="application/pdf,.pdf" style="display:none" onchange="handlePDF(this)">
           <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici...&#10;&#10;Exemple : 'La dérivée d'une fonction f en un point a est la limite du taux de variation...'"></textarea>
           <div class="action-row">
             <button class="btn-green" onclick="loadCourse()"><span>✦</span> Charger et analyser</button>
@@ -922,6 +1010,12 @@ let pomoCompletedSessions = 0;
 
 // ── INIT ──
 window.addEventListener('load', () => {
+  // Hide nav CTA on mobile
+  if (window.innerWidth <= 768) {
+    const cta = document.getElementById('nav-cta-btn');
+    if (cta) cta.style.display = 'none';
+  }
+
   apiKey = localStorage.getItem('notiq_gemini_key') || '';
   updateKeyStatus();
 
@@ -1087,7 +1181,7 @@ async function ai(prompt, systemPrompt) {
   if (!apiKey) { openKeyModal(); throw new Error('No API key'); }
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1114,11 +1208,23 @@ function handleDrop(e) {
   e.preventDefault();
   document.getElementById('pdf-drop').classList.remove('drag');
   const file = e.dataTransfer.files[0];
-  if (file && file.type === 'application/pdf') processPDF(file);
+  if (file) {
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      processPDF(file);
+    } else {
+      alert('⚠️ Ce fichier n'est pas un PDF. Importe un fichier .pdf uniquement.');
+    }
+  }
 }
 function handlePDF(input) {
   const file = input.files[0];
-  if (file) processPDF(file);
+  if (!file) return;
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    processPDF(file);
+  } else {
+    alert('⚠️ Ce fichier n'est pas un PDF. Importe un fichier .pdf uniquement.');
+    input.value = '';
+  }
 }
 async function processPDF(file) {
   const drop = document.getElementById('pdf-drop');
@@ -1182,19 +1288,25 @@ async function loadCourse() {
   saveCourses();
 
   document.getElementById('saved-notice').style.display = 'block';
-  document.getElementById('load-msg').textContent = 'Analyse en cours…';
+  document.getElementById('load-msg').textContent = '⏳ Résumé…';
   document.getElementById('loaded-pill').style.display = 'none';
-  try {
-    await Promise.all([genSummary(), genFlash()]);
-    document.getElementById('quiz-empty').style.display = 'none';
-    document.getElementById('quiz-ui').style.display = 'block';
-    document.getElementById('mindmap-empty').style.display = 'none';
-    document.getElementById('mindmap-ui').style.display = 'block';
-    await Promise.all([genQuiz(), genMindmap()]);
+  let errors = 0;
+  try { await genSummary(); } catch(e) { errors++; }
+  document.getElementById('load-msg').textContent = '⏳ Flashcards…';
+  try { await genFlash(); } catch(e) { errors++; }
+  document.getElementById('quiz-empty').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'block';
+  document.getElementById('load-msg').textContent = '⏳ Quiz…';
+  try { await genQuiz(); } catch(e) { errors++; }
+  document.getElementById('mindmap-empty').style.display = 'none';
+  document.getElementById('mindmap-ui').style.display = 'block';
+  document.getElementById('load-msg').textContent = '⏳ Carte mentale…';
+  try { await genMindmap(); } catch(e) { errors++; }
+  if (errors === 0) {
     document.getElementById('load-msg').textContent = '';
     document.getElementById('loaded-pill').style.display = 'inline-flex';
-  } catch(e) {
-    document.getElementById('load-msg').textContent = '❌ Erreur : vérifie ta clé API';
+  } else {
+    document.getElementById('load-msg').textContent = `⚠️ ${errors} outil(s) n'ont pas pu se charger. Réessaie.`;
   }
 }
 
@@ -1585,36 +1697,63 @@ function truncate(s, n) { return s.length > n ? s.slice(0, n-1) + '…' : s; }
 async function sendChat() {
   const inp = document.getElementById('chat-in');
   const msg = inp.value.trim(); if (!msg) return;
+  if (!apiKey) { openKeyModal(); return; }
   inp.value = '';
   const box = document.getElementById('chat-box');
   const typingId = 'typing-' + Date.now();
   box.innerHTML += `<div class="cmsg user">${msg}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
   box.scrollTop = box.scrollHeight;
+
+  // Build system context as first user message if needed
   const sys = courseText
     ? `Tu es un tuteur pédagogique expert. Voici le cours de l'étudiant :\n\n${courseText}\n\nRéponds en français, clairement et pédagogiquement, en te basant sur ce cours.`
     : 'Tu es un tuteur pédagogique expert. Réponds en français, clairement et pédagogiquement.';
+
+  // Add user message to history
   chatHistory.push({ role: 'user', parts: [{ text: msg }] });
+
   try {
-    const contents = chatHistory.map(m => ({ role: m.role, parts: m.parts }));
+    // Inject system context as first user/model exchange
+    let contents = [];
+    if (chatHistory.length === 1) {
+      // First message: prepend system context
+      contents = [
+        { role: 'user', parts: [{ text: sys + '\n\nRéponds juste "Compris !" pour confirmer.' }] },
+        { role: 'model', parts: [{ text: 'Compris !' }] },
+        { role: 'user', parts: [{ text: msg }] }
+      ];
+    } else {
+      contents = chatHistory.map(m => ({ role: m.role, parts: m.parts }));
+    }
+
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: sys }] },
           contents,
           generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
         })
       }
     );
     const d = await r.json();
-    const reply = d.candidates?.[0]?.content?.parts?.[0]?.text || 'Désolé, je n\'ai pas pu répondre.';
+
+    // Handle API errors clearly
+    if (d.error) {
+      const errMsg = d.error.message || 'Erreur API';
+      document.getElementById(typingId).innerHTML = `❌ ${errMsg}`;
+      chatHistory.pop(); // remove failed message
+      return;
+    }
+
+    const reply = d.candidates?.[0]?.content?.parts?.[0]?.text || 'Je n\'ai pas pu répondre, réessaie.';
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     const lines = reply.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${l}</p>`).join('');
     document.getElementById(typingId).innerHTML = lines;
   } catch(e) {
-    document.getElementById(typingId).innerHTML = '❌ Erreur — vérifie ta clé API';
+    document.getElementById(typingId).innerHTML = '❌ Erreur réseau — vérifie ta connexion et ta clé API';
+    chatHistory.pop();
   }
   box.scrollTop = box.scrollHeight;
 }
