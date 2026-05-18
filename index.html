@@ -1212,7 +1212,7 @@ function handleDrop(e) {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       processPDF(file);
     } else {
-      alert('⚠️ Ce fichier n'est pas un PDF. Importe un fichier .pdf uniquement.');
+      alert('⚠️ Ce fichier nest pas un PDF. Importe un fichier .pdf uniquement.');
     }
   }
 }
@@ -1222,7 +1222,7 @@ function handlePDF(input) {
   if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
     processPDF(file);
   } else {
-    alert('⚠️ Ce fichier n'est pas un PDF. Importe un fichier .pdf uniquement.');
+    alert('⚠️ Ce fichier nest pas un PDF. Importe un fichier .pdf uniquement.');
     input.value = '';
   }
 }
