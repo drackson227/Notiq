@@ -1087,7 +1087,7 @@ async function ai(prompt, systemPrompt) {
   if (!apiKey) { openKeyModal(); throw new Error('No API key'); }
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1585,54 +1585,36 @@ function truncate(s, n) { return s.length > n ? s.slice(0, n-1) + '…' : s; }
 async function sendChat() {
   const inp = document.getElementById('chat-in');
   const msg = inp.value.trim(); if (!msg) return;
-  if (!apiKey) { openKeyModal(); return; }
   inp.value = '';
   const box = document.getElementById('chat-box');
   const typingId = 'typing-' + Date.now();
   box.innerHTML += `<div class="cmsg user">${msg}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
   box.scrollTop = box.scrollHeight;
-
-  // Build system context as first user message if needed
   const sys = courseText
     ? `Tu es un tuteur pédagogique expert. Voici le cours de l'étudiant :\n\n${courseText}\n\nRéponds en français, clairement et pédagogiquement, en te basant sur ce cours.`
     : 'Tu es un tuteur pédagogique expert. Réponds en français, clairement et pédagogiquement.';
-
-  // Add user message to history
   chatHistory.push({ role: 'user', parts: [{ text: msg }] });
-
   try {
-    // Build contents: inject system as first turn if history is short
-    let contents = chatHistory.map(m => ({ role: m.role, parts: m.parts }));
-
+    const contents = chatHistory.map(m => ({ role: m.role, parts: m.parts }));
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: sys }] },
+          systemInstruction: { parts: [{ text: sys }] },
           contents,
           generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
         })
       }
     );
     const d = await r.json();
-
-    // Handle API errors clearly
-    if (d.error) {
-      const errMsg = d.error.message || 'Erreur API';
-      document.getElementById(typingId).innerHTML = `❌ ${errMsg}`;
-      chatHistory.pop(); // remove failed message
-      return;
-    }
-
-    const reply = d.candidates?.[0]?.content?.parts?.[0]?.text || 'Je n\'ai pas pu répondre, réessaie.';
+    const reply = d.candidates?.[0]?.content?.parts?.[0]?.text || 'Désolé, je n\'ai pas pu répondre.';
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     const lines = reply.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${l}</p>`).join('');
     document.getElementById(typingId).innerHTML = lines;
   } catch(e) {
-    document.getElementById(typingId).innerHTML = '❌ Erreur réseau — vérifie ta connexion et ta clé API';
-    chatHistory.pop();
+    document.getElementById(typingId).innerHTML = '❌ Erreur — vérifie ta clé API';
   }
   box.scrollTop = box.scrollHeight;
 }
