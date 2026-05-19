@@ -1264,7 +1264,13 @@ async function sendChat() {
     if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
 
     document.getElementById(typingId)?.remove();
-    const p = res.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${escHtml(l)}</p>`).join('');
+    const p = res.split('\n').filter(l => l.trim()).map(l => {
+      let line = escHtml(l);
+      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      line = line.replace(/^#{1,3}\s+(.*)/, '<strong>$1</strong>');
+      return `<p style="margin-bottom:5px">${line}</p>`;
+    }).join('');
     box.innerHTML += `<div class="cmsg ai">${p}</div>`;
     box.scrollTop = box.scrollHeight;
   } catch(e) {
