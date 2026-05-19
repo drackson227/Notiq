@@ -536,9 +536,9 @@ footer a { color: var(--green); text-decoration: none; }
 // =====================================================================
 // CONFIG & STATE
 // =====================================================================
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const MAX_RETRIES = 3;
-const RETRY_DELAYS = [7000, 14000, 21000];
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const MAX_RETRIES = 4;
+const RETRY_DELAYS = [10000, 20000, 30000, 45000];
 const MAX_CHAT_HISTORY = 20;
 
 let apiKey = localStorage.getItem('notiq_gemini_key') || '';
@@ -581,8 +581,8 @@ async function ai(prompt, attempt = 0) {
       })
     });
     if (res.status === 429) {
-      if (attempt < MAX_RETRIES) { const d = RETRY_DELAYS[attempt]; toast(`Trop de requêtes. Nouvel essai dans ${d/1000}s… (${attempt+1}/${MAX_RETRIES})`, 'warning'); await sleep(d); return ai(prompt, attempt+1); }
-      throw new Error('Rate limit atteint. Attends quelques minutes.');
+      if (attempt < MAX_RETRIES) { const d = RETRY_DELAYS[attempt]; toast(`⏳ Limite API atteinte. Nouvelle tentative dans ${d/1000}s… (${attempt+1}/${MAX_RETRIES})`, 'warning', d + 1000); await sleep(d); return ai(prompt, attempt+1); }
+      throw new Error('Limite API dépassée. Attends 1 minute et réessaie.');
     }
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur API ${res.status}`); }
     const data = await res.json();
@@ -800,13 +800,13 @@ async function loadCourse() {
     setProgress(15);
     await genSummary();
     setProgress(40);
-    await sleep(1500);
+    await sleep(4000);
     await genFlash();
     setProgress(65);
-    await sleep(1500);
+    await sleep(4000);
     await genQuiz();
     setProgress(85);
-    await sleep(1500);
+    await sleep(4000);
     await genMindmap();
     setProgress(100);
 
