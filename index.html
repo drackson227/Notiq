@@ -260,15 +260,19 @@ footer a { color: var(--green); text-decoration: none; }
 
 <div class="modal-overlay" id="api-modal">
   <div class="modal-box">
-    <h3>🔑 Clé API Gemini</h3>
-    <p>Pour utiliser Notiq, entre ta clé API Google Gemini gratuite. Elle est sauvegardée uniquement dans ton navigateur.</p>
+    <h3>🔑 Clés API</h3>
+    <p>Entre ta clé Gemini (principale) et optionnellement DeepSeek (backup automatique si Gemini bug).</p>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Gemini (obligatoire)</label>
     <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" oninput="validateKeyInput(this)" />
-    <p class="modal-hint">Pas encore de clé ? <a href="https://aistudio.google.com/app/apikey" target="_blank">Obtenir une clé gratuite →</a></p>
+    <p class="modal-hint">Pas de clé Gemini ? <a href="https://aistudio.google.com/app/apikey" target="_blank">Obtenir gratuitement →</a></p>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">DeepSeek (backup optionnel)</label>
+    <input class="modal-input" id="deepseek-key-input" type="password" placeholder="sk-..." autocomplete="off" />
+    <p class="modal-hint">Pas de clé DeepSeek ? <a href="https://platform.deepseek.com/api_keys" target="_blank">Obtenir gratuitement →</a></p>
     <div class="modal-btns">
       <button class="btn-green" onclick="saveApiKey()">Connecter</button>
       <button class="btn-outline" onclick="closeModal()">Annuler</button>
     </div>
-    <p class="modal-note">🔒 Ta clé reste dans ton navigateur et n'est jamais envoyée ailleurs que vers l'API Google.</p>
+    <p class="modal-note">🔒 Tes clés restent dans ton navigateur uniquement.</p>
   </div>
 </div>
 
@@ -537,8 +541,11 @@ footer a { color: var(--green); text-decoration: none; }
 // CONFIG & STATE
 // =====================================================================
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 const MAX_RETRIES = 4;
 const RETRY_DELAYS = [10000, 20000, 30000, 45000];
+
+let deepseekKey = localStorage.getItem('notiq_deepseek_key') || '';
 const MAX_CHAT_HISTORY = 20;
 
 let apiKey = localStorage.getItem('notiq_gemini_key') || '';
@@ -560,14 +567,63 @@ let courses = JSON.parse(localStorage.getItem('notiq_courses') || '{}');
 // =====================================================================
 // API KEY
 // =====================================================================
-function openModal() { document.getElementById('api-modal').classList.add('open'); const inp = document.getElementById('api-key-input'); inp.value = apiKey; validateKeyInput(inp); }
+function openModal() {
+  document.getElementById('api-modal').classList.add('open');
+  const inp = document.getElementById('api-key-input');
+  inp.value = apiKey;
+  validateKeyInput(inp);
+  document.getElementById('deepseek-key-input').value = deepseekKey;
+}
 function closeModal() { document.getElementById('api-modal').classList.remove('open'); }
 document.getElementById('api-modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 function validateKeyInput(inp) { const v = inp.value.trim(); inp.classList.remove('valid','invalid'); if (v.length > 20 && v.startsWith('AIza')) inp.classList.add('valid'); else if (v.length > 5) inp.classList.add('invalid'); }
-function saveApiKey() { const v = document.getElementById('api-key-input').value.trim(); if (!v.startsWith('AIza') || v.length < 20) { toast('Clé invalide. Elle doit commencer par "AIza".','error'); return; } apiKey = v; localStorage.setItem('notiq_gemini_key', apiKey); closeModal(); toast('Clé API connectée ✓','success'); }
+function saveApiKey() {
+  const v = document.getElementById('api-key-input').value.trim();
+  if (!v.startsWith('AIza') || v.length < 20) { toast('Clé Gemini invalide. Elle doit commencer par "AIza".','error'); return; }
+  apiKey = v;
+  localStorage.setItem('notiq_gemini_key', apiKey);
+  const ds = document.getElementById('deepseek-key-input').value.trim();
+  if (ds) { deepseekKey = ds; localStorage.setItem('notiq_deepseek_key', deepseekKey); }
+  closeModal();
+  toast('Clés API sauvegardées ✓' + (ds ? ' (Gemini + DeepSeek backup)' : ' (Gemini)'), 'success');
+}
 
 // =====================================================================
-// BUG FIX 1 : ai() — appel simple
+// DEEPSEEK FALLBACK
+// =====================================================================
+async function aiDeepSeek(prompt) {
+  if (!deepseekKey) throw new Error('Clé DeepSeek manquante');
+  const res = await fetch(DEEPSEEK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deepseekKey}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2048
+    })
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur DeepSeek ${res.status}`); }
+  const data = await res.json();
+  return data?.choices?.[0]?.message?.content || '';
+}
+
+async function aiDeepSeekChat(history, system) {
+  if (!deepseekKey) throw new Error('Clé DeepSeek manquante');
+  const messages = [];
+  if (system) messages.push({ role: 'system', content: system });
+  history.forEach(m => messages.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
+  const res = await fetch(DEEPSEEK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deepseekKey}` },
+    body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 1024 })
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur DeepSeek ${res.status}`); }
+  const data = await res.json();
+  return data?.choices?.[0]?.message?.content || '';
+}
+
+// =====================================================================
+// BUG FIX 1 : ai() — avec fallback DeepSeek automatique
 // =====================================================================
 async function ai(prompt, attempt = 0) {
   if (!apiKey) { openModal(); throw new Error('Clé API manquante'); }
@@ -583,18 +639,34 @@ async function ai(prompt, attempt = 0) {
         }
       })
     });
-    if (res.status === 429) {
-      if (attempt < MAX_RETRIES) { const d = RETRY_DELAYS[attempt]; toast(`⏳ Limite API atteinte. Nouvelle tentative dans ${d/1000}s… (${attempt+1}/${MAX_RETRIES})`, 'warning', d + 1000); await sleep(d); return ai(prompt, attempt+1); }
-      throw new Error('Limite API dépassée. Attends 1 minute et réessaie.');
+    if (res.status === 429 || res.status === 503 || res.status === 500) {
+      if (attempt < MAX_RETRIES) {
+        const d = RETRY_DELAYS[attempt];
+        toast(`⏳ Gemini surchargé. Nouvel essai dans ${d/1000}s… (${attempt+1}/${MAX_RETRIES})`, 'warning', d+1000);
+        await sleep(d);
+        return ai(prompt, attempt+1);
+      }
+      // Fallback DeepSeek
+      if (deepseekKey) {
+        toast('🔄 Gemini indisponible → Basculement sur DeepSeek…', 'warning', 3000);
+        return await aiDeepSeek(prompt);
+      }
+      throw new Error('Gemini surchargé. Ajoute une clé DeepSeek en backup dans les paramètres.');
     }
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur API ${res.status}`); }
     const data = await res.json();
-    // Gemini 2.5 Flash retourne parfois des "thought parts" avant le texte
-    // Il faut chercher le premier part de type text dans tous les parts
     const parts = data?.candidates?.[0]?.content?.parts || [];
     const textPart = parts.find(p => p.text !== undefined && !p.thought);
     return textPart?.text || parts.map(p => p.text || '').join('') || '';
-  } catch(e) { if (e.message === 'Clé API manquante') throw e; throw new Error(e.message || 'Erreur réseau'); }
+  } catch(e) {
+    if (e.message === 'Clé API manquante') throw e;
+    // Si erreur réseau/serveur et DeepSeek dispo → fallback
+    if (deepseekKey && attempt >= MAX_RETRIES) {
+      toast('🔄 Basculement sur DeepSeek…', 'warning', 3000);
+      return await aiDeepSeek(prompt);
+    }
+    throw new Error(e.message || 'Erreur réseau');
+  }
 }
 
 // =====================================================================
@@ -633,9 +705,13 @@ async function aiChat(history, system, attempt = 0) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    if (res.status === 429) {
+    if (res.status === 429 || res.status === 503 || res.status === 500) {
       if (attempt < MAX_RETRIES) { await sleep(RETRY_DELAYS[attempt]); return aiChat(history, system, attempt+1); }
-      throw new Error('Limite API atteinte. Attends 1 minute.');
+      if (deepseekKey) {
+        toast('🔄 Gemini indisponible → DeepSeek…', 'warning', 3000);
+        return await aiDeepSeekChat(history, system);
+      }
+      throw new Error('Gemini surchargé. Ajoute une clé DeepSeek en backup.');
     }
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur ${res.status}`); }
     const data = await res.json();
@@ -644,7 +720,10 @@ async function aiChat(history, system, attempt = 0) {
     const text = textPart?.text || parts.map(p => p.text || '').join('');
     if (!text) throw new Error('Réponse vide de Gemini');
     return text;
-  } catch(e) { throw e; }
+  } catch(e) {
+    if (deepseekKey && attempt >= MAX_RETRIES) return await aiDeepSeekChat(history, system);
+    throw e;
+  }
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -726,7 +805,8 @@ function newCourse() {
   courseText = '';
   document.getElementById('course-text').value = '';
   saveCourses();
-  renderCoursesBar();
+  if (!apiKey) setTimeout(openModal, 800);
+renderCoursesBar();
 }
 
 function loadCourseById(id) {
@@ -735,7 +815,8 @@ function loadCourseById(id) {
   courseText = courses[id].text || '';
   document.getElementById('course-text').value = courseText;
   document.getElementById('loaded-pill').style.display = courseText ? 'inline-flex' : 'none';
-  renderCoursesBar();
+  if (!apiKey) setTimeout(openModal, 800);
+renderCoursesBar();
   toast(`Cours "${courses[id].name}" chargé`, 'success');
 }
 
@@ -744,7 +825,8 @@ function deleteCourse(id) {
   delete courses[id];
   if (currentCourseId === id) { currentCourseId = null; courseText = ''; document.getElementById('course-text').value = ''; }
   saveCourses();
-  renderCoursesBar();
+  if (!apiKey) setTimeout(openModal, 800);
+renderCoursesBar();
 }
 
 function saveCourses() { localStorage.setItem('notiq_courses', JSON.stringify(courses)); }
@@ -1478,6 +1560,7 @@ const obs = new IntersectionObserver(entries => {
 }, { threshold: 0.1 });
 document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
 
+if (!apiKey) setTimeout(openModal, 800);
 renderCoursesBar();
 updateStats();
 
@@ -1485,7 +1568,7 @@ const savedText = localStorage.getItem('notiq_last_course');
 if (savedText) { document.getElementById('course-text').value = savedText; document.getElementById('save-hint').style.display = 'inline'; }
 document.getElementById('course-text').addEventListener('input', function() { localStorage.setItem('notiq_last_course', this.value); });
 
-if (!apiKey) setTimeout(openModal, 800);
+
 </script>
 </body>
 </html>
