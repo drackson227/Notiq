@@ -589,7 +589,11 @@ async function ai(prompt, attempt = 0) {
     }
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur API ${res.status}`); }
     const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Gemini 2.5 Flash retourne parfois des "thought parts" avant le texte
+    // Il faut chercher le premier part de type text dans tous les parts
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const textPart = parts.find(p => p.text !== undefined && !p.thought);
+    return textPart?.text || parts.map(p => p.text || '').join('') || '';
   } catch(e) { if (e.message === 'Clé API manquante') throw e; throw new Error(e.message || 'Erreur réseau'); }
 }
 
@@ -635,7 +639,9 @@ async function aiChat(history, system, attempt = 0) {
     }
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur ${res.status}`); }
     const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const textPart = parts.find(p => p.text !== undefined && !p.thought);
+    const text = textPart?.text || parts.map(p => p.text || '').join('');
     if (!text) throw new Error('Réponse vide de Gemini');
     return text;
   } catch(e) { throw e; }
