@@ -536,7 +536,7 @@ footer a { color: var(--green); text-decoration: none; }
 // =====================================================================
 // CONFIG & STATE
 // =====================================================================
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const MAX_RETRIES = 4;
 const RETRY_DELAYS = [10000, 20000, 30000, 45000];
 const MAX_CHAT_HISTORY = 20;
@@ -591,44 +591,41 @@ async function ai(prompt, attempt = 0) {
 }
 
 // =====================================================================
-// BUG FIX 2 : aiChat() — system prompt injecté dans le 1er message user
-// Au lieu d'un faux échange user/model qui perturbait Gemini
+// BUG FIX 2 : aiChat() — utilise system_instruction (champ natif Gemini)
 // =====================================================================
 async function aiChat(history, system, attempt = 0) {
   if (!apiKey) { openModal(); throw new Error('Clé API manquante'); }
 
-  // FIX: on injecte le system prompt directement dans le premier message user
-  // Gemini n'accepte pas role:system, mais on peut le préfixer au 1er message
-  const contents = history.map((m, i) => {
-    let text = m.content;
-    // Ajouter le system prompt au début du premier message user
-    if (i === 0 && system && m.role === 'user') {
-      text = `[Instructions système : ${system}]\n\nQuestion : ${m.content}`;
-    }
-    return {
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text }]
-    };
-  });
+  // Gemini v1beta supporte system_instruction comme champ séparé
+  const contents = history.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
 
-  // Sécurité : Gemini exige que les roles alternent user/model et commencent par user
-  // On vérifie que le premier est bien user
+  // Sécurité : doit commencer par user et alterner
   if (contents.length === 0 || contents[0].role !== 'user') {
-    throw new Error('Historique de chat invalide');
+    throw new Error('Historique invalide');
+  }
+
+  const body = {
+    contents,
+    generationConfig: { maxOutputTokens: 1024 }
+  };
+
+  // Ajouter system_instruction si fourni (champ officiel Gemini)
+  if (system) {
+    body.system_instruction = { parts: [{ text: system }] };
   }
 
   try {
     const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        generationConfig: { maxOutputTokens: 1024 }
-      })
+      body: JSON.stringify(body)
     });
     if (res.status === 429) {
       if (attempt < MAX_RETRIES) { await sleep(RETRY_DELAYS[attempt]); return aiChat(history, system, attempt+1); }
-      throw new Error('Rate limit atteint.');
+      throw new Error('Limite API atteinte. Attends 1 minute.');
     }
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur ${res.status}`); }
     const data = await res.json();
