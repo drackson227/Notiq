@@ -378,9 +378,9 @@ footer a { color: var(--green); text-decoration: none; }
         <div class="apanel active" id="ap-import">
           <div id="courses-bar" class="courses-bar"></div>
           <div class="drop-zone" id="drop-zone" onclick="document.getElementById('pdf-input').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
-            📄 Clique ici ou glisse un <strong>PDF ou une image</strong> (JPG, PNG) pour importer ton cours
+            📄 Clique ici ou glisse des <strong>PDF ou images</strong> (JPG, PNG) — plusieurs fichiers acceptés
           </div>
-          <input type="file" id="pdf-input" accept=".pdf,image/*" style="display:none" onchange="handlePdfFile(this.files[0])">
+          <input type="file" id="pdf-input" accept=".pdf,image/*" style="display:none" multiple onchange="handleMultipleFiles(this.files)">
           <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici..."></textarea>
           <div class="progress-bar-wrap" id="prog-wrap"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
           <div class="action-row">
@@ -754,26 +754,52 @@ function saveCourses() { localStorage.setItem('notiq_courses', JSON.stringify(co
 // =====================================================================
 function dragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
 function dragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
-function dropFile(e) { e.preventDefault(); dragLeave(e); const f = e.dataTransfer.files[0]; if (f?.type === 'application/pdf') handlePdfFile(f); else if (f?.type.startsWith('image/')) handlePdfFile(f); else toast('PDF ou image uniquement.', 'error'); }
+function dropFile(e) {
+  e.preventDefault(); dragLeave(e);
+  handleMultipleFiles(e.dataTransfer.files);
+}
+
+async function handleMultipleFiles(files) {
+  if (!files || files.length === 0) return;
+  const validFiles = Array.from(files).filter(f => f.type === 'application/pdf' || f.type.startsWith('image/'));
+  if (validFiles.length === 0) { toast('Seuls PDF et images sont acceptés.', 'error'); return; }
+
+  toast(`Import de ${validFiles.length} fichier(s)…`, 'success', 3000);
+  setProgress(5);
+
+  const allTexts = [];
+  for (let i = 0; i < validFiles.length; i++) {
+    const f = validFiles[i];
+    setProgress(Math.round(5 + (i / validFiles.length) * 90));
+    try {
+      if (f.type.startsWith('image/')) {
+        const base64 = await fileToBase64(f);
+        const text = await aiWithImage(base64, f.type, 'Extrais tout le texte visible dans cette image de cours. Retourne uniquement le texte brut, sans commentaire.');
+        allTexts.push(text);
+      } else {
+        const arr = await f.arrayBuffer();
+        const text = await extractPdfText(arr);
+        allTexts.push(text);
+      }
+      // Petite pause entre chaque fichier pour éviter le rate limit
+      if (i < validFiles.length - 1) await sleep(1500);
+    } catch(e) {
+      toast(`Erreur fichier ${i+1} : ${e.message}`, 'error', 4000);
+    }
+  }
+
+  if (allTexts.length > 0) {
+    const combined = allTexts.join('\n\n--- Page suivante ---\n\n');
+    document.getElementById('course-text').value = combined;
+    setProgress(100);
+    setTimeout(() => setProgress(null), 800);
+    toast(`${allTexts.length} fichier(s) importé(s) ✓`, 'success');
+  }
+}
 
 async function handlePdfFile(file) {
   if (!file) return;
-  toast('Lecture du fichier…', 'success', 2000);
-  try {
-    if (file.type.startsWith('image/')) {
-      // Image : envoyer à Gemini Vision pour extraire le texte
-      const base64 = await fileToBase64(file);
-      toast('Extraction du texte via IA…', 'success', 3000);
-      const res = await aiWithImage(base64, file.type, 'Extrais tout le texte visible dans cette image de cours. Retourne uniquement le texte brut, sans commentaire.');
-      document.getElementById('course-text').value = res;
-      toast('Image importée ✓', 'success');
-    } else {
-      const arr = await file.arrayBuffer();
-      const text = await extractPdfText(arr);
-      document.getElementById('course-text').value = text;
-      toast('PDF importé ✓', 'success');
-    }
-  } catch(e) { toast('Erreur : ' + e.message, 'error'); }
+  await handleMultipleFiles([file]);
 }
 
 function fileToBase64(file) {
