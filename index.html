@@ -378,9 +378,9 @@ footer a { color: var(--green); text-decoration: none; }
         <div class="apanel active" id="ap-import">
           <div id="courses-bar" class="courses-bar"></div>
           <div class="drop-zone" id="drop-zone" onclick="document.getElementById('pdf-input').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
-            📄 Clique ici ou glisse un <strong>PDF</strong> pour importer ton cours
+            📄 Clique ici ou glisse un <strong>PDF ou une image</strong> (JPG, PNG) pour importer ton cours
           </div>
-          <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="handlePdfFile(this.files[0])">
+          <input type="file" id="pdf-input" accept=".pdf,image/*" style="display:none" onchange="handlePdfFile(this.files[0])">
           <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici..."></textarea>
           <div class="progress-bar-wrap" id="prog-wrap"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
           <div class="action-row">
@@ -754,17 +754,59 @@ function saveCourses() { localStorage.setItem('notiq_courses', JSON.stringify(co
 // =====================================================================
 function dragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
 function dragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
-function dropFile(e) { e.preventDefault(); dragLeave(e); const f = e.dataTransfer.files[0]; if (f?.type === 'application/pdf') handlePdfFile(f); else toast('Seuls les PDF sont acceptés.', 'error'); }
+function dropFile(e) { e.preventDefault(); dragLeave(e); const f = e.dataTransfer.files[0]; if (f?.type === 'application/pdf') handlePdfFile(f); else if (f?.type.startsWith('image/')) handlePdfFile(f); else toast('PDF ou image uniquement.', 'error'); }
 
 async function handlePdfFile(file) {
   if (!file) return;
-  toast('Lecture du PDF…', 'success', 2000);
+  toast('Lecture du fichier…', 'success', 2000);
   try {
-    const arr = await file.arrayBuffer();
-    const text = await extractPdfText(arr);
-    document.getElementById('course-text').value = text;
-    toast('PDF importé ✓', 'success');
-  } catch(e) { toast('Erreur lors de la lecture du PDF.', 'error'); }
+    if (file.type.startsWith('image/')) {
+      // Image : envoyer à Gemini Vision pour extraire le texte
+      const base64 = await fileToBase64(file);
+      toast('Extraction du texte via IA…', 'success', 3000);
+      const res = await aiWithImage(base64, file.type, 'Extrais tout le texte visible dans cette image de cours. Retourne uniquement le texte brut, sans commentaire.');
+      document.getElementById('course-text').value = res;
+      toast('Image importée ✓', 'success');
+    } else {
+      const arr = await file.arrayBuffer();
+      const text = await extractPdfText(arr);
+      document.getElementById('course-text').value = text;
+      toast('PDF importé ✓', 'success');
+    }
+  } catch(e) { toast('Erreur : ' + e.message, 'error'); }
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function aiWithImage(base64, mimeType, prompt, attempt = 0) {
+  if (!apiKey) { openModal(); throw new Error('Clé API manquante'); }
+  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [
+        { inline_data: { mime_type: mimeType, data: base64 } },
+        { text: prompt }
+      ]}],
+      generationConfig: { maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } }
+    })
+  });
+  if (res.status === 429) {
+    if (attempt < MAX_RETRIES) { await sleep(RETRY_DELAYS[attempt]); return aiWithImage(base64, mimeType, prompt, attempt+1); }
+    throw new Error('Limite API atteinte.');
+  }
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || `Erreur ${res.status}`); }
+  const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const textPart = parts.find(p => p.text !== undefined && !p.thought);
+  return textPart?.text || parts.map(p => p.text || '').join('') || '';
 }
 
 async function extractPdfText(arrayBuffer) {
