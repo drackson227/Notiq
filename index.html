@@ -536,7 +536,7 @@ footer a { color: var(--green); text-decoration: none; }
 // =====================================================================
 // CONFIG & STATE
 // =====================================================================
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 const MAX_RETRIES = 4;
 const RETRY_DELAYS = [10000, 20000, 30000, 45000];
 const MAX_CHAT_HISTORY = 20;
@@ -577,7 +577,10 @@ async function ai(prompt, attempt = 0) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 2048 }
+        generationConfig: {
+          maxOutputTokens: 2048,
+          thinkingConfig: { thinkingBudget: 0 }
+        }
       })
     });
     if (res.status === 429) {
@@ -609,7 +612,10 @@ async function aiChat(history, system, attempt = 0) {
 
   const body = {
     contents,
-    generationConfig: { maxOutputTokens: 1024 }
+    generationConfig: {
+      maxOutputTokens: 1024,
+      thinkingConfig: { thinkingBudget: 0 }
+    }
   };
 
   // Ajouter system_instruction si fourni (champ officiel Gemini)
