@@ -579,7 +579,7 @@ async function ai(prompt, attempt = 0) {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           maxOutputTokens: 2048,
-          thinkingConfig: { thinkingBudget: 0 }
+          thinkingConfig: { thinkingBudget: 512 }
         }
       })
     });
@@ -618,7 +618,7 @@ async function aiChat(history, system, attempt = 0) {
     contents,
     generationConfig: {
       maxOutputTokens: 1024,
-      thinkingConfig: { thinkingBudget: 0 }
+      thinkingConfig: { thinkingBudget: 512 }
     }
   };
 
