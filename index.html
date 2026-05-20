@@ -2168,12 +2168,16 @@ function truncate(s, n) { return s && s.length > n ? s.slice(0, n-1) + '…' : (
 const MAX_CHAT_HISTORY = 20;
 
 async function sendChat() {
-  const inp = document.getElementById('chat-in');
-  const msg = inp.value.trim();
-  if (!msg) return;
-  if (!apiKey) { openKeyModal(); return; }
-  inp.value = '';
-  const box = document.getElementById('chat-box');
+    if (isChatPending) return;
+    const inp = document.getElementById('chat-in');
+    const msg = inp.value.trim();
+    if (!msg) return;
+    if (!apiKey) { openKeyModal(); return; }
+    isChatPending = true;
+    const chatBtn = document.querySelector('#ap-chat .btn-green');
+    if (chatBtn) chatBtn.disabled = true;
+    inp.value = '';
+    const box = document.getElementById('chat-box');
   const typingId = 'typing-' + Date.now();
   box.innerHTML += `<div class="cmsg user">${escHtml(msg)}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
   box.scrollTop = box.scrollHeight;
@@ -2187,7 +2191,7 @@ async function sendChat() {
   // Tronquer l'historique à MAX_CHAT_HISTORY messages
   if (chatHistory.length > MAX_CHAT_HISTORY) {
     chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
-  }
+    }
 
   try {
     // Construire les contenus avec le contexte système en premier
@@ -2245,6 +2249,8 @@ async function sendChat() {
     chatHistory.pop();
   }
   box.scrollTop = box.scrollHeight;
+  isChatPending = false;
+  if (chatBtn) chatBtn.disabled = false;
 }
 
 // ══════════════════════════════════════
