@@ -2357,6 +2357,7 @@ function launchConfetti() {
   // ── EXERCICES ──
 let exos = [], openAides = {}, openSols = {}, exoLoading = false;
 let ansMode = 'text', corrLoading = false;
+let explainDebounceTimer = null;
 let drawCtx = null, drawHistory = [], drawCurrent = [], isDrawing = false;
 let drawColor = '#e8ede9', drawSize = 3;
 
