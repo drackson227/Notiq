@@ -1718,7 +1718,7 @@ async function genSummary() {
       html += `<div class="kp"><div class="kp-dot"></div><span>${mdToHtml(l.replace(/^[•\-]\s*/, ''))}</span></div>`;
     } else {
       if (inPts) { html += pts + '</div>'; inPts = false; pts = ''; }
-      html += `<p style="margin-bottom:0.75rem">${escHtml(l)}</p>`;
+      html += `<p style="margin-bottom:0.75rem">${mdToHtml(l)}</p>`;
     }
   });
   if (inPts) html += pts + '</div>';
