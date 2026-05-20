@@ -2496,6 +2496,7 @@ function renderExos() {
     html += '</div>';
   });
   document.getElementById('exo-list').innerHTML = html;
+  renderMath(document.getElementById('exo-list'));
 }
 
 function toggleAide(i) { openAides[i] = !openAides[i]; renderExos(); }
