@@ -2035,8 +2035,8 @@ function renderExplain(style, text) {
     let n = 0; let html = '';
     lines.forEach(l => {
       const m = l.match(/^[EeÉé]tape\s*\d+\s*[:.]?\s*(.*)/i) || l.match(/^\d+[.)]\s+(.*)/);
-      if (m) { n++; html += `<div class="step"><div class="step-n">${n}</div><div>${escHtml(m[1] || m[0])}</div></div>`; }
-      else html += `<p style="margin:0.5rem 0;font-size:14px;color:var(--text-dim)">${escHtml(l)}</p>`;
+      if (m) { n++; html += `<div class="step"><div class="step-n">${n}</div><div>${mdToHtml(m[1] || m[0])}</div></div>`; }
+      else html += `<p style="margin:0.5rem 0;font-size:14px;color:var(--text-dim)">${mdToHtml(l)}</p>`;
     });
     el.innerHTML = html;
   } else if (style === 'analogy') {
