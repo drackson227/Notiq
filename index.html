@@ -1492,8 +1492,10 @@ async function handlePDF(input) {
 
   // Ajouter le texte des images au textarea
   if (totalText) {
-    const current = document.getElementById('course-text').value;
-    document.getElementById('course-text').value = current ? current + '\n\n' + totalText : totalText;
+    const current = document.getElementById('course-text').value.trim();
+    document.getElementById('course-text').value = current
+      ? current + '\n\n' + totalText
+      : totalText;
   }
 
   const ok = files.length - errors;
