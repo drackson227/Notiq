@@ -1569,8 +1569,10 @@ async function processImage(file) {
       `[IMAGE base64 mime:${mimeType}]\n${base64}\n\nTranscris intégralement le texte de cette image de cours scolaire. Instructions strictes :\n- Préserve toute la structure (titres, listes, numérotation)\n- Écris les formules mathématiques en notation LaTeX entre $ $ (ex: $x^2$, $\\sqrt{x}$, $\\frac{a}{b}$)\n- Ne saute aucun exercice, aucune question\n- Si c'est un QCM, garde les tirets et options\n- Texte structuré uniquement, pas de commentaires`
     );
     if (text.length > 5) {
-      const current = document.getElementById('course-text').value;
-      document.getElementById('course-text').value = current ? current + '\n\n' + text : text;
+      const current = document.getElementById('course-text').value.trim();
+      document.getElementById('course-text').value = current
+        ? current + '\n\n—\n\n' + text   // séparateur visible entre images
+        : text;
       drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit</p>`;
       showToast('✅ Image transcrite !', 'success');
     } else {
