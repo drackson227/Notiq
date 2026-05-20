@@ -1357,7 +1357,7 @@ async function ai(prompt, systemPrompt, retries = 2) {
       if (isUnavailable) {
         if (attempt < retries) {
           showToast(`⚠️ Gemini surchargé — tentative ${attempt}/${retries}…`);
-          await new Promise(res => setTimeout(res, attempt * 4000));
+          await new Promise(res => setTimeout(res, attempt * 6000));
           continue;
         }
         // Basculer sur DeepSeek
