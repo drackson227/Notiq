@@ -1401,14 +1401,21 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // PDF IMPORT
 // ══════════════════════════════════════
 function handleDragOver(e) { e.preventDefault(); document.getElementById('pdf-drop').classList.add('drag'); }
-function handleDrop(e) {
+// APRÈS
+async function handleDrop(e) {
   e.preventDefault();
   document.getElementById('pdf-drop').classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file) {
-  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) processPDF(file);
-  else if (file.type.startsWith('image/')) processImage(file);
-  else showToast('⚠️ Format non supporté.', 'error');
+  const files = Array.from(e.dataTransfer.files);
+  if (!files.length) return;
+  if (!apiKey) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
+  for (const file of files) {
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      await processPDF(file);
+    } else if (file.type.startsWith('image/')) {
+      await processImage(file);
+    } else {
+      showToast(`⚠️ ${file.name} : format non supporté.`, 'error');
+    }
   }
 }
 async function handlePDF(input) {
