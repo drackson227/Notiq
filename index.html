@@ -2229,8 +2229,11 @@ async function sendChat() {
       let errMsg = d.error.message || 'Erreur API';
       if (code === 429) errMsg = 'Trop de requêtes — attends quelques secondes.';
       if (code === 403 || code === 400) { errMsg = 'Clé API invalide.'; openKeyModal(); }
+      // APRÈS
       document.getElementById(typingId).innerHTML = `❌ ${escHtml(errMsg)}`;
       chatHistory.pop();
+      isChatPending = false;
+      if (chatBtn) chatBtn.disabled = false;
       return;
     }
 
