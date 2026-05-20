@@ -2195,40 +2195,11 @@ function truncate(s, n) { return s && s.length > n ? s.slice(0, n-1) + '…' : (
 // ══════════════════════════════════════
 const MAX_CHAT_HISTORY = 20;
 
-async function sendChat() {
-    if (isChatPending) return;
-    const inp = document.getElementById('chat-in');
-    const msg = inp.value.trim();
-    if (!msg) return;
-    if (!apiKey) { openKeyModal(); return; }
-    isChatPending = true;
-    const chatBtn = document.querySelector('#ap-chat .btn-green');
-    if (chatBtn) chatBtn.disabled = true;
-    inp.value = '';
-    const box = document.getElementById('chat-box');
-  const typingId = 'typing-' + Date.now();
-  box.innerHTML += `<div class="cmsg user">${escHtml(msg)}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
-  box.scrollTop = box.scrollHeight;
-
-  const sys = courseText
-    ? `Tu es un tuteur pédagogique expert. Voici le cours de l'étudiant :\n\n${courseText.slice(0,4000)}\n\nRéponds en français, clairement et pédagogiquement, en te basant sur ce cours.`
-    : 'Tu es un tuteur pédagogique expert. Réponds en français, clairement et pédagogiquement.';
-
-  chatHistory.push({ role: 'user', parts: [{ text: msg }] });
-
-  // Tronquer l'historique à MAX_CHAT_HISTORY messages
-  if (chatHistory.length > MAX_CHAT_HISTORY) {
-    chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
-    }
-
-  try {
-    // Construire le prompt avec l'historique de conversation
+try {
     const historyText = chatHistory.slice(0, -1)
       .map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`)
       .join('\n');
-    const fullPrompt = historyText
-      ? `${historyText}\nÉtudiant: ${msg}`
-      : msg;
+    const fullPrompt = historyText ? `${historyText}\nÉtudiant: ${msg}` : msg;
 
     const reply = await ai(fullPrompt, sys);
 
@@ -2237,10 +2208,9 @@ async function sendChat() {
       chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
     }
 
-    const formatted = reply.split('\n').filter(l => l.trim())
-      .map(l => `<p style="margin-bottom:5px">${mdToHtml(l)}</p>`).join('');
     const msgEl = document.getElementById(typingId);
-    msgEl.innerHTML = formatted || mdToHtml(reply);
+    msgEl.innerHTML = reply.split('\n').filter(l => l.trim())
+      .map(l => `<p style="margin-bottom:5px">${mdToHtml(l)}</p>`).join('') || mdToHtml(reply);
     renderMath(msgEl);
   } catch(e) {
     document.getElementById(typingId).innerHTML = `❌ ${escHtml(e.message || 'Erreur réseau — vérifie ta connexion.')}`;
