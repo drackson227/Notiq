@@ -2627,20 +2627,24 @@ function aiJSON(prompt, system) {
 // SCROLL REVEAL
 // ══════════════════════════════════════
   function renderMath(el) {
-  if (typeof renderMathInElement !== 'undefined') {
-    renderMathInElement(el, {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '$', right: '$', display: false },
-        { left: '\\[', right: '\\]', display: true },
-        { left: '\\(', right: '\\)', display: false }
-      ],
-      throwOnError: false
-    });
-  } else {
-    // KaTeX pas encore chargé, réessayer dans 500ms
-    setTimeout(() => renderMath(el), 500);
+  function tryRender() {
+    if (typeof renderMathInElement !== 'undefined') {
+      renderMathInElement(el, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$',  right: '$',  display: false },
+          { left: '\\[', right: '\\]', display: true },
+          { left: '\\(', right: '\\)', display: false }
+        ],
+        ignoredTags: ['script','noscript','style','textarea','pre','code'],
+        throwOnError: false
+      });
+    } else {
+      setTimeout(tryRender, 300);
+    }
   }
+  // Laisser le DOM se stabiliser avant le rendu
+  requestAnimationFrame(tryRender);
 }
   
 function initScrollReveal() {
