@@ -2460,7 +2460,9 @@ function initDrawColors() {
 function setDrawColor(c) { drawColor = c; initDrawColors(); }
 
 function initDrawCanvas() {
-  const canvas = document.getElementById('draw-canvas'); if (!canvas || drawCtx) return;
+  const canvas = document.getElementById('draw-canvas'); if (!canvas) return;
+  // Réinitialiser drawCtx à chaque appel pour éviter le blocage au changement d'onglet
+  drawCtx = null;
   const W = canvas.parentElement?.offsetWidth || 400;
   canvas.width = W * 2; canvas.height = 400;
   canvas.style.width = '100%'; canvas.style.height = '200px';
