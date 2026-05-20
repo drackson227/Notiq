@@ -2489,7 +2489,7 @@ function renderExos() {
   let html = '';
   exos.forEach((ex, i) => {
     html += `<div class="exo-card"><div style="margin-bottom:10px"><span class="exo-num">Ex. ${i+1}</span><strong style="font-family:'Syne',sans-serif;font-size:15px">${escHtml(ex.titre)}</strong></div>`;
-    html += `<p style="font-size:14px;color:var(--text);line-height:1.75;margin-bottom:12px">${escHtml(ex.enonce)}</p>`;
+    html += `<p style="font-size:14px;color:var(--text);line-height:1.75;margin-bottom:12px">${mdToHtml(ex.enonce)}</p>`;
     html += `<div class="exo-btns"><button class="btn-outline" style="font-size:13px;padding:7px 14px" onclick="toggleAide(${i})">${openAides[i]?'🙈 Masquer l\'indice':'💡 Indice'}</button><button class="btn-outline" style="font-size:13px;padding:7px 14px" onclick="toggleSol(${i})">${openSols[i]?'🙈 Masquer la solution':'✅ Solution'}</button><button class="btn-outline" style="font-size:13px;padding:7px 14px" onclick="sendToCorrect(${i})">✏️ Je corrige</button></div>`;
     if (openAides[i]) html += `<div class="exo-hint">💡 <strong>Indice :</strong> ${escHtml(ex.aide)}</div>`;
     if (openSols[i]) html += `<div class="exo-sol">✅ <strong>Solution :</strong><br>${escHtml(ex.solution)}</div>`;
