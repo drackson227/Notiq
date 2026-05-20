@@ -2039,6 +2039,7 @@ function renderExplain(style, text) {
       else html += `<p style="margin:0.5rem 0;font-size:14px;color:var(--text-dim)">${mdToHtml(l)}</p>`;
     });
     el.innerHTML = html;
+    renderMath(el);
   } else if (style === 'analogy') {
     const parts = text.split(/Imagine que/i);
     let html = '';
