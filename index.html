@@ -2225,17 +2225,19 @@ async function sendChat() {
     const d = await r.json();
 
     if (d.error) {
-      const code = d.error.code || r.status;
-      let errMsg = d.error.message || 'Erreur API';
-      if (code === 429) errMsg = 'Trop de requêtes — attends quelques secondes.';
-      if (code === 403 || code === 400) { errMsg = 'Clé API invalide.'; openKeyModal(); }
-      // APRÈS
-      document.getElementById(typingId).innerHTML = `❌ ${escHtml(errMsg)}`;
-      chatHistory.pop();
-      isChatPending = false;
-      if (chatBtn) chatBtn.disabled = false;
-      return;
-    }
+  const code = d.error.code || r.status;
+  let errMsg = d.error.message || 'Erreur API';
+  if (code === 429) errMsg = 'Trop de requêtes — attends quelques secondes.';
+  if (code === 403 || code === 400) { errMsg = 'Clé API invalide.'; openKeyModal(); }
+  document.getElementById(typingId).innerHTML = `❌ ${escHtml(errMsg)}`;
+  chatHistory.pop();
+  isChatPending = false;
+  if (chatBtn) chatBtn.disabled = false;
+  inp.disabled = false;
+  inp.focus();
+  box.scrollTop = box.scrollHeight;
+  return;
+}
 
     const reply = d.candidates?.[0]?.content?.parts?.[0]?.text || 'Je n\'ai pas pu répondre, réessaie.';
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
