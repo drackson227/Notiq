@@ -1579,10 +1579,17 @@ async function processImage(file) {
       `[IMAGE base64 mime:${mimeType}]\n${base64}\n\nTranscris intégralement le texte de cette image de cours scolaire. Instructions strictes :\n- Préserve la structure avec des titres en texte simple (ex: "Chapitre 1 : ..." sans ##)\n- Écris les formules mathématiques en notation LaTeX entre $ $ (ex: $x^2$, $\\sqrt{x}$, $\\frac{a}{b}$)\n- N'utilise PAS de markdown (pas de **, pas de ##, pas de *, pas de __)\n- Garde les listes avec des tirets simples : "- item"\n- Ne saute aucun exercice, aucune question\n- Texte structuré uniquement, pas de commentaires`
     );
     if (text.length > 5) {
+      // Nettoyer les artefacts LaTeX fréquents générés par l'IA
+      const cleanText = text
+        .replace(/\^\\circ\\circ/g, '^\\circ')   // \circ doublé
+        .replace(/\\circ\s*\\circ/g, '\\circ')    // \circ \circ avec espace
+        .replace(/\$\s+/g, '$')                    // espace après $
+        .replace(/\s+\$/g, '$')                    // espace avant $
+        .replace(/\$\$/g, '$');                    // $$ → $ (éviter display mode non voulu)
       const current = document.getElementById('course-text').value.trim();
       document.getElementById('course-text').value = current
-        ? current + '\n\n—\n\n' + text   // séparateur visible entre images
-        : text;
+        ? current + '\n\n—\n\n' + cleanText
+        : cleanText;
       drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit</p>`;
       showToast('✅ Image transcrite !', 'success');
     } else {
