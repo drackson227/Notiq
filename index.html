@@ -1715,7 +1715,7 @@ async function genSummary() {
   lines.forEach(l => {
     if (l.startsWith('•') || l.startsWith('-')) {
       if (!inPts) { inPts = true; pts = '<div style="margin:1rem 0">'; }
-      pts += `<div class="kp"><div class="kp-dot"></div><span>${escHtml(l.replace(/^[•\-]\s*/, ''))}</span></div>`;
+      html += `<div class="kp"><div class="kp-dot"></div><span>${mdToHtml(l.replace(/^[•\-]\s*/, ''))}</span></div>`;
     } else {
       if (inPts) { html += pts + '</div>'; inPts = false; pts = ''; }
       html += `<p style="margin-bottom:0.75rem">${escHtml(l)}</p>`;
