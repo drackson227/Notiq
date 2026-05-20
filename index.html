@@ -1539,26 +1539,6 @@ async function processImage(file) {
     showToast('❌ ' + (e.message || 'Erreur lors de l\'analyse'), 'error');
   }
 }
-      
-    const d = await response.json();
-    const text = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-
-    if (text.length > 5) {
-      const current = document.getElementById('course-text').value;
-      document.getElementById('course-text').value = current ? current + '\n\n' + text : text;
-      drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit (${Math.round(text.length / 1000 * 10) / 10}k caractères)</p>`;
-      showToast('✅ Image transcrite !', 'success');
-    } else {
-      drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> ou une <strong>image</strong></p>';
-      showToast('❌ Aucun texte détecté. Essaie une photo plus nette.', 'error');
-    }
-
-  } catch(e) {
-    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> ou une image</p>';
-    showToast('❌ ' + (e.message || 'Erreur lors de l\'analyse'), 'error');
-    console.error('processImage error:', e);
-  }
-}
 
 // ══════════════════════════════════════
 // TABS
