@@ -2275,8 +2275,9 @@ async function sendChat() {
       chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
     }
 
-    const formatted = reply.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${escHtml(l)}</p>`).join('');
-    document.getElementById(typingId).innerHTML = formatted || escHtml(reply);
+    const formatted = reply.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${mdToHtml(l)}</p>`).join('');
+    document.getElementById(typingId).innerHTML = formatted || mdToHtml(reply);
+    renderMath(document.getElementById(typingId));
   } catch(e) {
     document.getElementById(typingId).innerHTML = '❌ Erreur réseau — vérifie ta connexion.';
     chatHistory.pop();
