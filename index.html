@@ -1209,6 +1209,10 @@ function escHtml(s) {
 }
 
 function newCourse() {
+  if (Object.keys(courses).length >= 5) {
+    showToast('⚠️ Maximum 5 cours atteint. Supprime-en un d\'abord.', 'error');
+    return;
+  }
   const name = prompt('Nom du cours (ex: Maths, Bio, Histoire) :');
   if (!name || !name.trim()) return;
   const id = 'c' + Date.now();
