@@ -2404,6 +2404,7 @@ async function genExos() {
 }
 
 function renderExos() {
+  document.getElementById('exo-regen-btn').style.display = exos.length ? 'inline-flex' : 'none';
   if (!exos.length) { document.getElementById('exo-list').innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:1rem 0">Clique pour générer des exercices depuis ton cours.</div>'; return; }
   let html = '';
   exos.forEach((ex, i) => {
