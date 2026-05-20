@@ -1364,9 +1364,13 @@ async function ai(prompt, systemPrompt, retries = 3) {
         const dsKey = localStorage.getItem('notiq_deepseek_key');
         if (dsKey) {
           showToast('🔄 Gemini indisponible — bascule sur DeepSeek…');
-          return await aiDeepSeek(fullPrompt, dsKey);
+          try {
+            return await aiDeepSeek(fullPrompt, dsKey);
+          } catch(dsErr) {
+            throw new Error('APIs indisponibles (Gemini saturé, DeepSeek : ' + (dsErr.message || 'erreur') + '). Réessaie dans quelques minutes.');
+          }
         }
-        throw new Error('Gemini surchargé. Ajoute une clé DeepSeek dans les paramètres pour un fallback automatique.');
+        throw new Error('Gemini surchargé. Réessaie dans quelques minutes ou ajoute une clé DeepSeek.');
       }
       throw e;
     }
