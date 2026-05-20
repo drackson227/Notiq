@@ -2048,7 +2048,8 @@ function renderExplain(style, text) {
     });
     el.innerHTML = html || `<p style="font-size:14px">${escHtml(text)}</p>`;
   } else {
-    el.innerHTML = lines.map(l => `<p style="margin-bottom:0.75rem;font-size:14px">${escHtml(l)}</p>`).join('');
+    el.innerHTML = lines.map(l => `<p style="margin-bottom:0.75rem;font-size:14px">${mdToHtml(l)}</p>`).join('');
+    renderMath(el);
   }
 }
 
