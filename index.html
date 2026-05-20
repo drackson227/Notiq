@@ -1278,6 +1278,8 @@ function saveKey() {
   errEl.textContent = '';
   apiKey = k;
   localStorage.setItem('notiq_gemini_key', k);
+const dsKey = document.getElementById('deepseek-key-input').value.trim();
+if (dsKey) localStorage.setItem('notiq_deepseek_key', dsKey);
   updateKeyStatus();
   closeKeyModal();
   showToast('✅ Clé API connectée !', 'success');
