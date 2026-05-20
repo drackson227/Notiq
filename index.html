@@ -1218,8 +1218,7 @@ function selectCourse(id) {
   }
   renderCoursesBar();
   // Reset generated content
-  exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = []; ankiScores = {};
-  document.getElementById('loaded-pill').style.display = 'none';
+  exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = []; ankiScores = {}; exos = []; openAides = {}; openSols = {};  document.getElementById('loaded-pill').style.display = 'none';
   document.getElementById('load-progress').style.display = 'none';
   document.getElementById('saved-notice').style.display = courseText ? 'block' : 'none';
   const hasContent = !!courseText;
