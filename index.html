@@ -2637,6 +2637,9 @@ function aiJSON(prompt, system) {
       ],
       throwOnError: false
     });
+  } else {
+    // KaTeX pas encore chargé, réessayer dans 500ms
+    setTimeout(() => renderMath(el), 500);
   }
 }
   
