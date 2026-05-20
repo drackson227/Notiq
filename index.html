@@ -2562,18 +2562,19 @@ function aiJSON(prompt, system) {
 // ══════════════════════════════════════
   function renderMath(el) {
   if (!el) return;
-  // Nettoyer les artefacts LaTeX uniquement dans les nœuds texte (pas le HTML déjà rendu)
-  function cleanTextNodes(node) {
+  // Nettoyer les artefacts LaTeX dans les nœuds texte uniquement (ne pas re-sérialiser le DOM)
+  (function cleanNodes(node) {
     if (node.nodeType === Node.TEXT_NODE) {
-      node.textContent = node.textContent
+      const fixed = node.textContent
         .replace(/\^\\circ\\circ/g, '^\\circ')
         .replace(/\\circ[ ]*\\circ/g, '\\circ');
+      if (fixed !== node.textContent) node.textContent = fixed;
     } else if (node.nodeType === Node.ELEMENT_NODE &&
-               !['SCRIPT','STYLE','TEXTAREA'].includes(node.tagName)) {
-      node.childNodes.forEach(cleanTextNodes);
+               !['SCRIPT','STYLE','TEXTAREA','PRE'].includes(node.tagName)) {
+      Array.from(node.childNodes).forEach(cleanNodes);
     }
-  }
-  cleanTextNodes(el);
+  })(el);
+
   function tryRender() {
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(el, {
@@ -2590,7 +2591,6 @@ function aiJSON(prompt, system) {
       setTimeout(tryRender, 300);
     }
   }
-  // Laisser le DOM se stabiliser avant le rendu
   requestAnimationFrame(tryRender);
 }
   
