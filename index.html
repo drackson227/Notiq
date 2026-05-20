@@ -2234,6 +2234,172 @@ function launchConfetti() {
   }
   draw();
 }
+  // ── EXERCICES ──
+let exos = [], openAides = {}, openSols = {}, exoLoading = false;
+let ansMode = 'text', corrLoading = false;
+let drawCtx = null, drawHistory = [], drawCurrent = [], isDrawing = false;
+let drawColor = '#e8ede9', drawSize = 3;
+
+function switchExoTab(name) {
+  document.getElementById('exo-tab-gen').classList.toggle('on', name==='gen');
+  document.getElementById('exo-tab-correct').classList.toggle('on', name==='correct');
+  document.getElementById('exo-gen-panel').style.display = name==='gen' ? 'block' : 'none';
+  document.getElementById('exo-correct-panel').style.display = name==='correct' ? 'block' : 'none';
+}
+
+async function genExosQuiet() {
+  if (!courseText) return;
+  const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs liés au cours :\n{"exercices":[{"titre":"Titre court","enonce":"Énoncé complet et détaillé","aide":"Indice pour débloquer","solution":"Solution complète étape par étape"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
+  exos = data.exercices || []; openAides = {}; openSols = {};
+  document.getElementById('exo-empty').style.display = 'none';
+  document.getElementById('exo-ui').style.display = 'block';
+  renderExos();
+}
+
+async function genExos() {
+  if (!courseText) { showToast('Charge un cours d\'abord.', 'error'); return; }
+  if (exoLoading) return; exoLoading = true;
+  document.getElementById('exo-empty').style.display = 'none';
+  document.getElementById('exo-ui').style.display = 'block';
+  const btn = document.getElementById('exo-gen-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Génération…';
+  try {
+    const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs liés au cours :\n{"exercices":[{"titre":"Titre court","enonce":"Énoncé complet et détaillé","aide":"Indice pour débloquer","solution":"Solution complète étape par étape"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
+    exos = data.exercices || []; openAides = {}; openSols = {}; renderExos();
+  } catch(e) { showToast('Erreur génération exercices', 'error'); }
+  btn.disabled = false; btn.innerHTML = '✦ Générer des exercices'; exoLoading = false;
+}
+
+function renderExos() {
+  if (!exos.length) { document.getElementById('exo-list').innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:1rem 0">Clique pour générer des exercices depuis ton cours.</div>'; return; }
+  let html = '';
+  exos.forEach((ex, i) => {
+    html += `<div class="exo-card"><div style="margin-bottom:10px"><span class="exo-num">Ex. ${i+1}</span><strong style="font-family:'Syne',sans-serif;font-size:15px">${escHtml(ex.titre)}</strong></div>`;
+    html += `<p style="font-size:14px;color:var(--text);line-height:1.75;margin-bottom:12px">${escHtml(ex.enonce)}</p>`;
+    html += `<div class="exo-btns"><button class="btn-outline" style="font-size:13px;padding:7px 14px" onclick="toggleAide(${i})">${openAides[i]?'🙈 Masquer l\'indice':'💡 Indice'}</button><button class="btn-outline" style="font-size:13px;padding:7px 14px" onclick="toggleSol(${i})">${openSols[i]?'🙈 Masquer la solution':'✅ Solution'}</button><button class="btn-outline" style="font-size:13px;padding:7px 14px" onclick="sendToCorrect(${i})">✏️ Je corrige</button></div>`;
+    if (openAides[i]) html += `<div class="exo-hint">💡 <strong>Indice :</strong> ${escHtml(ex.aide)}</div>`;
+    if (openSols[i]) html += `<div class="exo-sol">✅ <strong>Solution :</strong><br>${escHtml(ex.solution)}</div>`;
+    html += '</div>';
+  });
+  document.getElementById('exo-list').innerHTML = html;
+}
+
+function toggleAide(i) { openAides[i] = !openAides[i]; renderExos(); }
+function toggleSol(i) { openSols[i] = !openSols[i]; renderExos(); }
+
+function sendToCorrect(i) {
+  document.getElementById('corr-enonce').value = exos[i].enonce;
+  document.getElementById('corr-rep').value = '';
+  document.getElementById('corr-result').innerHTML = '';
+  setAnsMode('text');
+  switchExoTab('correct');
+}
+
+function setAnsMode(mode) {
+  ansMode = mode;
+  document.getElementById('mode-text-btn').classList.toggle('on', mode==='text');
+  document.getElementById('mode-draw-btn').classList.toggle('on', mode==='draw');
+  document.getElementById('ans-text-wrap').style.display = mode==='text' ? 'block' : 'none';
+  document.getElementById('ans-draw-wrap').style.display = mode==='draw' ? 'block' : 'none';
+  if (mode === 'draw') initDrawCanvas();
+}
+
+async function corriger() {
+  const enonce = document.getElementById('corr-enonce').value.trim();
+  if (!enonce) { showToast('Saisis l\'énoncé.', 'error'); return; }
+  const repText = ansMode === 'text' ? document.getElementById('corr-rep').value.trim() : '[Réponse dessinée par l\'étudiant]';
+  if (ansMode === 'text' && !repText) { showToast('Écris ta réponse.', 'error'); return; }
+  if (corrLoading) return; corrLoading = true;
+  const btn = document.getElementById('corr-btn'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Correction…';
+  document.getElementById('corr-result').innerHTML = '';
+  try {
+    const sys = `Tu es un professeur correcteur. ${courseText ? 'Cours de référence :\n' + courseText.slice(0,3000) + '\n\n' : ''}Réponds UNIQUEMENT en JSON : {"verdict":"correct|incorrect|partiel","note_sur_10":8,"resume":"résumé de la correction","etapes":[{"n":1,"texte":"description de l'étape","ok":true}],"conseil":"conseil personnalisé"}`;
+    const data = await aiJSON(`Énoncé : ${enonce}\n\nRéponse de l'étudiant : ${repText}\n\nCorrige étape par étape en étant précis et pédagogique.`, sys);
+    renderCorrResult(data);
+  } catch(e) { document.getElementById('corr-result').innerHTML = '<div style="color:var(--red);font-size:13px;margin-top:10px">❌ Erreur lors de la correction. Réessaie.</div>'; }
+  btn.disabled = false; btn.innerHTML = '🔍 Corriger ma réponse'; corrLoading = false;
+}
+
+function renderCorrResult(d) {
+  const isOk = d.verdict==='correct', isPartial = d.verdict==='partiel';
+  const cls = isOk ? 'verdict-ok' : isPartial ? 'verdict-partial' : 'verdict-nok';
+  const icon = isOk ? '✅ Correct !' : isPartial ? '⚠️ Partiellement correct' : '❌ Incorrect';
+  let html = `<div class="corr-block"><div class="verdict ${cls}">${icon} — ${d.note_sur_10}/10</div><p style="margin-bottom:14px;font-size:14px">${escHtml(d.resume)}</p>`;
+  (d.etapes || []).forEach(s => { html += `<div class="corr-step"><div class="corr-sn" style="background:${s.ok===false?'var(--red)':'var(--green)'}">${s.n}</div><div style="font-size:14px;color:${s.ok===false?'var(--red)':'var(--text-dim)'}">${escHtml(s.texte)}</div></div>`; });
+  if (d.conseil) html += `<div style="margin-top:12px;padding:10px 14px;background:rgba(31,189,130,.06);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:13px;color:var(--text-dim)">💡 ${escHtml(d.conseil)}</div>`;
+  html += '</div>';
+  document.getElementById('corr-result').innerHTML = html;
+}
+
+function initDrawColors() {
+  const colors = ['#e8ede9','#1fbd82','#e06060','#60a0e0','#ffb400'];
+  const wrap = document.getElementById('draw-colors'); if (!wrap) return;
+  wrap.innerHTML = colors.map(c => `<div class="dcol${c===drawColor?' on':''}" onclick="setDrawColor('${c}')" style="background:${c}" title="${c}"></div>`).join('');
+}
+function setDrawColor(c) { drawColor = c; initDrawColors(); }
+
+function initDrawCanvas() {
+  const canvas = document.getElementById('draw-canvas'); if (!canvas || drawCtx) return;
+  const W = canvas.parentElement?.offsetWidth || 400;
+  canvas.width = W * 2; canvas.height = 400;
+  canvas.style.width = '100%'; canvas.style.height = '200px';
+  drawCtx = canvas.getContext('2d'); drawCtx.scale(2, 2);
+  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, W, 200);
+  drawCtx.lineJoin = 'round'; drawCtx.lineCap = 'round';
+  drawHistory = []; drawCurrent = [];
+  canvas.addEventListener('mousedown', e => startDraw(e, canvas));
+  canvas.addEventListener('mousemove', e => moveDraw(e, canvas));
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', e => startDraw(e, canvas), {passive:false});
+  canvas.addEventListener('touchmove', e => moveDraw(e, canvas), {passive:false});
+  canvas.addEventListener('touchend', endDraw);
+  document.getElementById('draw-size').addEventListener('input', e => { drawSize = parseInt(e.target.value); });
+}
+
+function startDraw(e, canvas) {
+  isDrawing = true; drawCurrent = [];
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+  const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+  drawCtx.beginPath(); drawCtx.moveTo(x, y);
+  drawCurrent.push({t:'s', x, y, c:drawColor, sz:drawSize});
+}
+
+function moveDraw(e, canvas) {
+  if (!isDrawing) return; e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+  const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+  drawCtx.lineWidth = drawSize; drawCtx.strokeStyle = drawColor;
+  drawCtx.lineTo(x, y); drawCtx.stroke(); drawCtx.beginPath(); drawCtx.moveTo(x, y);
+  drawCurrent.push({t:'l', x, y});
+}
+
+function endDraw() { if (isDrawing) { drawHistory.push([...drawCurrent]); drawCurrent = []; } isDrawing = false; }
+
+function clearCanvas() {
+  const canvas = document.getElementById('draw-canvas'); if (!drawCtx || !canvas) return;
+  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, canvas.width, canvas.height); drawHistory = [];
+}
+
+function undoDraw() {
+  if (!drawHistory.length || !drawCtx) return; drawHistory.pop();
+  const canvas = document.getElementById('draw-canvas');
+  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, canvas.width, canvas.height);
+  drawHistory.forEach(stroke => {
+    drawCtx.beginPath();
+    stroke.forEach(pt => { if (pt.t==='s') { drawCtx.strokeStyle=pt.c; drawCtx.lineWidth=pt.sz; drawCtx.moveTo(pt.x,pt.y); } else { drawCtx.lineTo(pt.x,pt.y); drawCtx.stroke(); drawCtx.beginPath(); drawCtx.moveTo(pt.x,pt.y); } });
+  });
+}
+
+function aiJSON(prompt, system) {
+  return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide, sans markdown, sans backticks.')
+    .then(text => {
+      const clean = text.replace(/```json\n?|```\n?/g, '').trim();
+      return JSON.parse(clean);
+    });
+}
 
 // ══════════════════════════════════════
 // SCROLL REVEAL
