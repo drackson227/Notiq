@@ -2195,7 +2195,31 @@ function truncate(s, n) { return s && s.length > n ? s.slice(0, n-1) + '…' : (
 // ══════════════════════════════════════
 const MAX_CHAT_HISTORY = 20;
 
-try {
+async function sendChat() {
+  if (isChatPending) return;
+  const inp = document.getElementById('chat-in');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  if (!apiKey) { openKeyModal(); return; }
+  isChatPending = true;
+  const chatBtn = document.querySelector('#ap-chat .btn-green');
+  if (chatBtn) chatBtn.disabled = true;
+  inp.value = '';
+  const box = document.getElementById('chat-box');
+  const typingId = 'typing-' + Date.now();
+  box.innerHTML += `<div class="cmsg user">${escHtml(msg)}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
+  box.scrollTop = box.scrollHeight;
+
+  const sys = courseText
+    ? `Tu es un tuteur pédagogique expert. Voici le cours de l'étudiant :\n\n${courseText.slice(0,4000)}\n\nRéponds en français, clairement et pédagogiquement, en te basant sur ce cours.`
+    : 'Tu es un tuteur pédagogique expert. Réponds en français, clairement et pédagogiquement.';
+
+  chatHistory.push({ role: 'user', parts: [{ text: msg }] });
+  if (chatHistory.length > MAX_CHAT_HISTORY) {
+    chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
+  }
+
+  try {
     const historyText = chatHistory.slice(0, -1)
       .map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`)
       .join('\n');
@@ -2216,11 +2240,11 @@ try {
     document.getElementById(typingId).innerHTML = `❌ ${escHtml(e.message || 'Erreur réseau — vérifie ta connexion.')}`;
     chatHistory.pop();
   }
+
   box.scrollTop = box.scrollHeight;
   isChatPending = false;
   if (chatBtn) chatBtn.disabled = false;
 }
-
 // ══════════════════════════════════════
 // POMODORO
 // ══════════════════════════════════════
