@@ -1290,6 +1290,10 @@ function saveKey() {
   apiKey = k;
   localStorage.setItem('notiq_gemini_key', k);
 const dsKey = document.getElementById('deepseek-key-input').value.trim();
+if (dsKey && !dsKey.startsWith('sk-')) {
+  document.getElementById('modal-error').textContent = 'Clé DeepSeek invalide (doit commencer par "sk-").';
+  return;
+}
 if (dsKey) localStorage.setItem('notiq_deepseek_key', dsKey);
   updateKeyStatus();
   closeKeyModal();
