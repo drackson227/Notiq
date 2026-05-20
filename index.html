@@ -1507,18 +1507,16 @@ async function processImage(file) {
   }
 );
 
-if (response.status === 429 || response.status === 503) {
-  // Fallback DeepSeek ne supporte pas les images, on attend et on réessaie
-  showToast('⚠️ Gemini surchargé — attente 10s avant de réessayer…');
-  await new Promise(res => setTimeout(res, 10000));
-  throw new Error('GEMINI_UNAVAILABLE');
-}
-
 if (!response.ok) {
   const err = await response.json().catch(() => ({}));
   if (response.status === 400 || response.status === 403) {
+    showToast('🔑 Clé API invalide ou expirée — vérifie ta clé.', 'error');
     openKeyModal();
     throw new Error('Clé API invalide.');
+  }
+  if (response.status === 429 || response.status === 503) {
+    showToast('⚠️ Gemini surchargé — réessaie dans quelques secondes.', 'error');
+    throw new Error('Gemini surchargé.');
   }
   throw new Error(err.error?.message || `Erreur API (${response.status})`);
 }
