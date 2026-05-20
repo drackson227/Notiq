@@ -1270,6 +1270,7 @@ function deleteCourse(e, id) {
 function openKeyModal() {
   const m = document.getElementById('key-modal');
   m.classList.add('open');
+  document.getElementById('api-key-input').value = localStorage.getItem('notiq_gemini_key') || '';
   document.getElementById('deepseek-key-input').value = localStorage.getItem('notiq_deepseek_key') || '';
   document.getElementById('modal-error').textContent = '';
   setTimeout(() => document.getElementById('api-key-input').focus(), 200);
