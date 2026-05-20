@@ -2614,6 +2614,7 @@ function aiJSON(prompt, system) {
 // SCROLL REVEAL
 // ══════════════════════════════════════
   function renderMath(el) {
+  if (!el) return;
   function tryRender() {
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(el, {
