@@ -1576,10 +1576,8 @@ async function loadCourse() {
   if (!apiKey) { openKeyModal(); return; }
   if (txt.length < 50) { showToast('⚠️ Le cours est trop court pour être analysé.', 'error'); return; }
 
-  courseText = txt;
   courseText = txt; exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
 
-  // Save
   if (activeCourseId && courses[activeCourseId]) {
     courses[activeCourseId].text = txt;
   } else {
@@ -1592,34 +1590,41 @@ async function loadCourse() {
   saveCourses();
   document.getElementById('saved-notice').style.display = 'block';
 
-  // Disable button
   const btn = document.getElementById('load-btn');
   btn.disabled = true;
   document.getElementById('loaded-pill').style.display = 'none';
   let errors = 0;
 
-  // 1. Résumé (0 → 25%)
+  // 1. Résumé (0 → 20%)
   setProgress(5);
   document.getElementById('load-msg').textContent = '⏳ Génération du résumé…';
   try { await genSummary(); } catch(e) { errors++; }
-  setProgress(25);
-  await sleep(1500);
+  setProgress(20);
+  await sleep(API_DELAY);
 
-  // 2. Flashcards (25 → 55%)
+  // 2. Flashcards (20 → 40%)
   document.getElementById('load-msg').textContent = '⏳ Génération des flashcards…';
   try { await genFlash(); } catch(e) { errors++; }
-  setProgress(55);
-  await sleep(1500);
+  setProgress(40);
+  await sleep(API_DELAY);
 
-  // 3. Quiz (55 → 80%)
+  // 3. Exercices (40 → 60%)
+  document.getElementById('exo-empty').style.display = 'none';
+  document.getElementById('exo-ui').style.display = 'block';
+  document.getElementById('load-msg').textContent = '⏳ Génération des exercices…';
+  try { await genExosQuiet(); } catch(e) { errors++; }
+  setProgress(60);
+  await sleep(API_DELAY);
+
+  // 4. Quiz (60 → 80%)
   document.getElementById('quiz-empty').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération du quiz…';
   try { await genQuiz(); } catch(e) { errors++; }
   setProgress(80);
-  await sleep(1500);
+  await sleep(API_DELAY);
 
-  // 4. Carte mentale (80 → 100%)
+  // 5. Carte mentale (80 → 100%)
   document.getElementById('mindmap-empty').style.display = 'none';
   document.getElementById('mindmap-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération de la carte mentale…';
