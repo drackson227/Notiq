@@ -2415,6 +2415,7 @@ function setAnsMode(mode) {
   document.getElementById('mode-draw-btn').classList.toggle('on', mode==='draw');
   document.getElementById('ans-text-wrap').style.display = mode==='text' ? 'block' : 'none';
   document.getElementById('ans-draw-wrap').style.display = mode==='draw' ? 'block' : 'none';
+  initDrawColors();
   if (mode === 'draw') initDrawCanvas();
 }
 
