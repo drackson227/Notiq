@@ -2227,53 +2227,28 @@ async function sendChat() {
     }
 
   try {
-    // Construire les contenus avec le contexte système en premier
-    let contents;
-    if (chatHistory.length <= 1) {
-      contents = [
-        { role: 'user', parts: [{ text: sys + '\n\nRéponds juste "Compris !" pour confirmer.' }] },
-        { role: 'model', parts: [{ text: 'Compris !' }] },
-        { role: 'user', parts: [{ text: msg }] }
-      ];
-    } else {
-      // Injecter le contexte système dans le premier message de l'historique tronqué
-      contents = [
-        { role: 'user', parts: [{ text: sys + '\n\nRéponds juste "Compris !" pour confirmer.' }] },
-        { role: 'model', parts: [{ text: 'Compris !' }] },
-        ...chatHistory
-      ];
-    }
-
-    // Construire le prompt complet avec l'historique
-    const historyText = chatHistory.slice(0, -1) // sans le dernier message (déjà dans msg)
+    // Construire le prompt avec l'historique de conversation
+    const historyText = chatHistory.slice(0, -1)
       .map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`)
       .join('\n');
     const fullPrompt = historyText
       ? `${historyText}\nÉtudiant: ${msg}`
       : msg;
 
-    let reply = '';
-    try {
-      reply = await ai(fullPrompt, sys);
-    } catch(e) {
-      document.getElementById(typingId).innerHTML = `❌ ${escHtml(e.message)}`;
-      chatHistory.pop();
-      isChatPending = false;
-      if (chatBtn) chatBtn.disabled = false;
-      box.scrollTop = box.scrollHeight;
-      return;
-    }
+    const reply = await ai(fullPrompt, sys);
+
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
-    // Tronquer à nouveau après l'ajout de la réponse
     if (chatHistory.length > MAX_CHAT_HISTORY) {
       chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
     }
 
-    const formatted = reply.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${mdToHtml(l)}</p>`).join('');
-    document.getElementById(typingId).innerHTML = formatted || mdToHtml(reply);
-    renderMath(document.getElementById(typingId));
+    const formatted = reply.split('\n').filter(l => l.trim())
+      .map(l => `<p style="margin-bottom:5px">${mdToHtml(l)}</p>`).join('');
+    const msgEl = document.getElementById(typingId);
+    msgEl.innerHTML = formatted || mdToHtml(reply);
+    renderMath(msgEl);
   } catch(e) {
-    document.getElementById(typingId).innerHTML = '❌ Erreur réseau — vérifie ta connexion.';
+    document.getElementById(typingId).innerHTML = `❌ ${escHtml(e.message || 'Erreur réseau — vérifie ta connexion.')}`;
     chatHistory.pop();
   }
   box.scrollTop = box.scrollHeight;
