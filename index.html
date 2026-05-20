@@ -1462,7 +1462,7 @@ async function loadCourse() {
   if (txt.length < 50) { showToast('⚠️ Le cours est trop court pour être analysé.', 'error'); return; }
 
   courseText = txt;
-  exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {};
+  courseText = txt; exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
 
   // Save
   if (activeCourseId && courses[activeCourseId]) {
