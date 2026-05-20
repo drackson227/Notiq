@@ -1306,43 +1306,75 @@ async function ai(prompt, systemPrompt, retries = 3) {
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { maxOutputTokens: 2048, temperature: 0.7 }
-        })
-      }
-    );
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig: { maxOutputTokens: 2048, temperature: 0.7 }
+          })
+        }
+      );
 
-    if (r.status === 429) {
-      if (attempt < retries) {
-        const delay = attempt * 7000; // 7s, 14s, 21s
-        showToast(`⏳ Trop de requêtes — tentative ${attempt}/${retries} dans ${delay/1000}s…`);
-        await new Promise(res => setTimeout(res, delay));
-        continue;
-      } else {
-        throw new Error('Rate limit — réessaie dans quelques secondes.');
+      if (r.status === 429 || r.status === 503) {
+        throw new Error('GEMINI_UNAVAILABLE');
       }
+
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        if (r.status === 400 || r.status === 403) { openKeyModal(); throw new Error('Clé API invalide ou expirée.'); }
+        throw new Error(err.error?.message || `Erreur API (${r.status})`);
+      }
+
+      const d = await r.json();
+      const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!text) throw new Error('Réponse vide de l\'API.');
+      return text;
+
+    } catch(e) {
+      const isUnavailable = e.message === 'GEMINI_UNAVAILABLE' || e.message?.includes('high demand');
+      if (isUnavailable) {
+        if (attempt < retries) {
+          showToast(`⚠️ Gemini surchargé — tentative ${attempt}/${retries}…`);
+          await new Promise(res => setTimeout(res, attempt * 4000));
+          continue;
+        }
+        // Basculer sur DeepSeek
+        const dsKey = localStorage.getItem('notiq_deepseek_key');
+        if (dsKey) {
+          showToast('🔄 Gemini indisponible — bascule sur DeepSeek…');
+          return await aiDeepSeek(fullPrompt, dsKey);
+        }
+        throw new Error('Gemini surchargé. Ajoute une clé DeepSeek dans les paramètres pour un fallback automatique.');
+      }
+      throw e;
     }
-
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      if (r.status === 400 || r.status === 403) {
-        openKeyModal();
-        throw new Error('Clé API invalide ou expirée.');
-      }
-      throw new Error(err.error?.message || `Erreur API (${r.status})`);
-    }
-
-    const d = await r.json();
-    const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!text) throw new Error('Réponse vide de l\'API.');
-    return text;
   }
+}
+
+async function aiDeepSeek(prompt, dsKey) {
+  const r = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${dsKey}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2048,
+      temperature: 0.7
+    })
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Erreur DeepSeek (${r.status})`);
+  }
+  const d = await r.json();
+  const text = d.choices?.[0]?.message?.content || '';
+  if (!text) throw new Error('Réponse vide de DeepSeek.');
+  showToast('✅ Réponse via DeepSeek', 'success');
+  return text;
 }
 
 // Délai entre appels
