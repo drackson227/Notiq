@@ -1953,7 +1953,12 @@ function closeExam(timeout) {
 // ══════════════════════════════════════
 // EXPLAIN
 // ══════════════════════════════════════
-async function doExplain() {
+function doExplain() {
+  clearTimeout(explainDebounceTimer);
+  explainDebounceTimer = setTimeout(_doExplainNow, 400);
+}
+
+async function _doExplainNow() {
   const topic = document.getElementById('ex-topic').value.trim();
   if (!topic) return;
   const key = topic + '|' + exStyle;
