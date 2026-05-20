@@ -1510,30 +1510,7 @@ if (!response.ok) {
   }
   throw new Error(err.error?.message || `Erreur API (${response.status})`);
 }
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: 'Transcris intégralement le texte de cette image de cours. Préserve la structure, les formules, les listes. Texte brut uniquement.' },
-              { inline_data: { mime_type: mimeType, data: base64 } }
-            ]
-          }],
-          generationConfig: { maxOutputTokens: 4096, temperature: 0 }
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      if (response.status === 400 || response.status === 403) {
-        openKeyModal();
-        throw new Error('Clé API invalide.');
-      }
-      throw new Error(err.error?.message || `Erreur API (${response.status})`);
-    }
-
+      
     const d = await response.json();
     const text = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
 
