@@ -1165,6 +1165,16 @@ window.addEventListener('load', () => {
   initScrollReveal();
   initPomodoro();
   renderStats();
+
+  // Attendre que KaTeX soit prêt (scripts defer)
+  function waitKatex(cb, tries = 0) {
+    if (typeof renderMathInElement !== 'undefined') { cb(); }
+    else if (tries < 20) { setTimeout(() => waitKatex(cb, tries + 1), 200); }
+  }
+  waitKatex(() => {
+    // Rendre les éventuels éléments déjà présents dans le DOM
+    document.querySelectorAll('.explain-result, .summary-body, #exo-list, .corr-block, .chat-box').forEach(renderMath);
+  });
 });
 
 // ══════════════════════════════════════
