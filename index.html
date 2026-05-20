@@ -1723,6 +1723,7 @@ async function genSummary() {
   });
   if (inPts) html += pts + '</div>';
   el.innerHTML = html;
+  renderMath(el);
 }
 
 function copySummary() {
