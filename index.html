@@ -2597,10 +2597,18 @@ function aiJSON(prompt, system) {
 // ══════════════════════════════════════
   function renderMath(el) {
   if (!el) return;
-  // Pré-nettoyer les artefacts LaTeX courants dans le HTML
-  el.innerHTML = el.innerHTML
-    .replace(/\^\\circ\\circ/g, '^\\circ')
-    .replace(/\\circ\s*\\circ/g, '\\circ');
+  // Nettoyer les artefacts LaTeX uniquement dans les nœuds texte (pas le HTML déjà rendu)
+  function cleanTextNodes(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      node.textContent = node.textContent
+        .replace(/\^\\circ\\circ/g, '^\\circ')
+        .replace(/\\circ[ ]*\\circ/g, '\\circ');
+    } else if (node.nodeType === Node.ELEMENT_NODE &&
+               !['SCRIPT','STYLE','TEXTAREA'].includes(node.tagName)) {
+      node.childNodes.forEach(cleanTextNodes);
+    }
+  }
+  cleanTextNodes(el);
   function tryRender() {
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(el, {
