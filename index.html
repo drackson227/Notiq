@@ -1319,7 +1319,7 @@ document.getElementById('api-key-input').addEventListener('keydown', e => {
 // ══════════════════════════════════════
 // GEMINI API — avec retry automatique 429
 // ══════════════════════════════════════
-async function ai(prompt, systemPrompt, retries = 3) {
+async function ai(prompt, systemPrompt, retries = 2) {
   if (!apiKey) { openKeyModal(); throw new Error('No API key'); }
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
 
