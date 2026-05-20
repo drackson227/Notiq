@@ -1356,11 +1356,10 @@ function handleDrop(e) {
   e.preventDefault();
   document.getElementById('pdf-drop').classList.remove('drag');
   const file = e.dataTransfer.files[0];
-  if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
-    processPDF(file);
-  } else if (file) {
-    showToast('⚠️ Ce fichier n\'est pas un PDF.', 'error');
-  }
+  if (file) {
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) processPDF(file);
+  else if (file.type.startsWith('image/')) processImage(file);
+  else showToast('⚠️ Format non supporté.', 'error');
 }
 function handlePDF(input) {
   const files = Array.from(input.files);
