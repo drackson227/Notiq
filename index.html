@@ -2622,6 +2622,10 @@ function aiJSON(prompt, system) {
 // ══════════════════════════════════════
   function renderMath(el) {
   if (!el) return;
+  // Pré-nettoyer les artefacts LaTeX courants dans le HTML
+  el.innerHTML = el.innerHTML
+    .replace(/\^\\circ\\circ/g, '^\\circ')
+    .replace(/\\circ\s*\\circ/g, '\\circ');
   function tryRender() {
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(el, {
