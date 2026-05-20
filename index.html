@@ -1472,10 +1472,14 @@ async function processPDF(file) {
 
 async function processImage(file) {
   const drop = document.getElementById('pdf-drop');
-  drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
-  
-  if (!apiKey) { openKeyModal(); return; }
 
+  if (!apiKey) {
+    showToast('🔑 Entre ta clé API pour analyser des images.', 'error');
+    openKeyModal();
+    return;
+  }
+
+  drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
   try {
     const base64 = await new Promise((res, rej) => {
       const r = new FileReader();
