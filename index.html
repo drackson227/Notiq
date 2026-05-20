@@ -1576,7 +1576,7 @@ async function processImage(file) {
     });
     const mimeType = file.type || 'image/jpeg';
     const text = await ai(
-      `[IMAGE base64 mime:${mimeType}]\n${base64}\n\nTranscris intégralement le texte de cette image de cours scolaire. Instructions strictes :\n- Préserve la structure avec des titres en texte simple (ex: "Chapitre 1 : ..." sans ##)\n- Écris les formules mathématiques en notation LaTeX entre $ $ (ex: $x^2$, $\\sqrt{x}$, $\\frac{a}{b}$)\n- N'utilise PAS de markdown (pas de **, pas de ##, pas de *, pas de __)\n- Garde les listes avec des tirets simples : "- item"\n- Ne saute aucun exercice, aucune question\n- Texte structuré uniquement, pas de commentaires`
+      `[IMAGE base64 mime:${mimeType}]\n${base64}\n\nTranscris intégralement le texte de cette image de cours scolaire. Instructions strictes :\n- Préserve la structure avec des titres en texte simple (ex: "Chapitre 1 : ..." sans ##)\n- Écris les formules mathématiques en notation LaTeX entre $ $ (ex: $x^2$, $\\sqrt{x}$, $\\frac{a}{b}$, $90^\\circ$)\n- Pour les degrés, utilise UNIQUEMENT $90^\\circ$ — jamais $90^\\circ\\circ$ ni $90°$\n- Pour les angles, utilise $\\angle A$ — jamais $\\angle A$ suivi d'un second symbole\n- N'utilise PAS de markdown (pas de **, pas de ##, pas de *, pas de __)\n- Garde les listes avec des tirets simples : "- item"\n- Ne saute aucun exercice, aucune question\n- Texte structuré uniquement, pas de commentaires`
     );
     if (text.length > 5) {
       // Nettoyer les artefacts LaTeX fréquents générés par l'IA
