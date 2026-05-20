@@ -2521,6 +2521,7 @@ function renderCorrResult(d) {
   if (d.conseil) html += `<div style="margin-top:12px;padding:10px 14px;background:rgba(31,189,130,.06);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:13px;color:var(--text-dim)">💡 ${escHtml(d.conseil)}</div>`;
   html += '</div>';
   document.getElementById('corr-result').innerHTML = html;
+  renderMath(document.getElementById('corr-result'));
 }
 
 function initDrawColors() {
