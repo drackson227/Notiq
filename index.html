@@ -1901,14 +1901,20 @@ function renderQuiz() {
   quizData.forEach((q, i) => {
     html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q)}</div><div class="qopts">`;
     q.options.forEach((opt, j) => {
-      ...
+      const ans = quizAnswers[i];
+      let cls = '';
+      if (ans !== undefined) {
+        if (j === q.correct) cls = 'correct';
+        else if (j === parseInt(ans)) cls = 'wrong';
+      }
       html += `<button class="qopt ${cls}" onclick="ansQ(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${mdToHtml(opt)}</button>`;
     });
-    ...
+    html += '</div>';
     if (quizAnswers[i] !== undefined) html += `<div class="qexpl">💬 ${mdToHtml(q.explanation)}</div>`;
     html += '</div>';
   });
   document.getElementById('quiz-list').innerHTML = html;
+  renderMath(document.getElementById('quiz-list'));
 }
 // FIX: parseInt pour éviter string vs number
 function ansQ(qi, a) {
