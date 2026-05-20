@@ -1213,7 +1213,7 @@ function escHtml(s) {
 }
 
 function mdToHtml(text) {
-  return escHtml(text)
+  return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:13px">$1</code>')
