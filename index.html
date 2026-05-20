@@ -1375,7 +1375,7 @@ function handlePDF(input) {
     }
   });
 }
-async function processPDF(file) {
+  async function processPDF(file) {
   const drop = document.getElementById('pdf-drop');
   drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Extraction du texte…</p>';
   try {
@@ -1416,6 +1416,49 @@ async function processPDF(file) {
   } catch(e) {
     drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> pour importer ton cours</p>';
     showToast('❌ Erreur lors de l\'import du PDF', 'error');
+  }
+}
+
+  async function processImage(file) {
+  const drop = document.getElementById('pdf-drop');
+  drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
+  try {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const base64 = e.target.result.split(',')[1];
+      const mimeType = file.type;
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: 'Transcris intégralement le texte de cette image de cours. Préserve la structure, les formules, les listes. Texte brut uniquement.' },
+                { inline_data: { mime_type: mimeType, data: base64 } }
+              ]
+            }],
+            generationConfig: { maxOutputTokens: 4096, temperature: 0 }
+          })
+        }
+      );
+      const d = await r.json();
+      const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (text.length > 20) {
+        const current = document.getElementById('course-text').value;
+        document.getElementById('course-text').value = current ? current + '\n\n' + text : text;
+        drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit par l'IA (${Math.round(text.length/1000)}k caractères)</p>`;
+        showToast('✅ Image transcrite !', 'success');
+      } else {
+        drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> ou une <strong>image</strong></p>';
+        showToast('❌ Aucun texte détecté dans l\'image.', 'error');
+      }
+    };
+    reader.readAsDataURL(file);
+  } catch(e) {
+    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un PDF ou une image</p>';
+    showToast('❌ Erreur lors de l\'analyse de l\'image', 'error');
   }
 }
 
