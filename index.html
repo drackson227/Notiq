@@ -2518,10 +2518,14 @@ function aiJSON(prompt, system) {
   return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide, sans markdown, sans backticks.')
     .then(text => {
       const clean = text.replace(/```json\n?|```\n?/g, '').trim();
-      return JSON.parse(clean);
+      try {
+        return JSON.parse(clean);
+      } catch(e) {
+        console.error('aiJSON parse error:', e, '\nRaw:', clean.slice(0, 200));
+        throw new Error('Réponse invalide (JSON malformé) — réessaie.');
+      }
     });
 }
-
 // ══════════════════════════════════════
 // SCROLL REVEAL
 // ══════════════════════════════════════
