@@ -725,18 +725,23 @@ footer a { color: var(--green); text-decoration: none; }
 <div id="toast"></div>
 
 <!-- API KEY MODAL -->
-<div class="modal-overlay" id="key-modal">
-  <div class="modal">
-    <h3>🔑 Clé API Gemini</h3>
-    <p>Pour utiliser Notiq, entre ta clé API Google Gemini gratuite. Elle est sauvegardée uniquement dans ton navigateur.</p>
-    <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" />
-    <div class="modal-error" id="modal-error"></div>
-    <div class="modal-row">
-      <button class="btn-green" onclick="saveKey()">Connecter</button>
-      <a class="modal-link" href="https://aistudio.google.com/app/apikey" target="_blank">Obtenir une clé gratuite →</a>
-    </div>
-    <div class="modal-note">🔒 Ta clé reste dans ton navigateur et n'est jamais envoyée ailleurs que vers l'API Google.</div>
+<div class="modal">
+  <h3>🔑 Clés API</h3>
+  <p>Entre ta clé Gemini (obligatoire). DeepSeek est optionnel — utilisé automatiquement si Gemini est surchargé.</p>
+  
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Google Gemini (obligatoire)</label>
+  <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" />
+  
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">DeepSeek (optionnel — fallback automatique)</label>
+  <input class="modal-input" id="deepseek-key-input" type="password" placeholder="sk-..." autocomplete="off" />
+  
+  <div class="modal-error" id="modal-error"></div>
+  <div class="modal-row">
+    <button class="btn-green" onclick="saveKey()">Connecter</button>
+    <a class="modal-link" href="https://aistudio.google.com/app/apikey" target="_blank">Clé Gemini →</a>
+    <a class="modal-link" href="https://platform.deepseek.com/api_keys" target="_blank">Clé DeepSeek →</a>
   </div>
+  <div class="modal-note">🔒 Tes clés restent dans ton navigateur uniquement.</div>
 </div>
 
 <!-- MODE EXAMEN -->
