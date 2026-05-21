@@ -2072,10 +2072,11 @@ function renderExplain(style, text) {
     const parts = text.split(/Imagine que/i);
     let html = '';
     parts.forEach((p, i) => {
-      if (i === 0 && !text.toLowerCase().startsWith('imagine')) html += `<p style="margin-bottom:1rem;font-size:14px">${escHtml(p.trim())}</p>`;
-      else html += `<div class="analogy-block">Imagine que${escHtml(p.trim())}</div>`;
+      if (i === 0 && !text.toLowerCase().startsWith('imagine')) html += `<p style="margin-bottom:1rem;font-size:14px">${mdToHtml(p.trim())}</p>`;
+      else html += `<div class="analogy-block">Imagine que${mdToHtml(p.trim())}</div>`;
     });
-    el.innerHTML = html || `<p style="font-size:14px">${escHtml(text)}</p>`;
+    el.innerHTML = html || `<p style="font-size:14px">${mdToHtml(text)}</p>`;
+    renderMath(el);
   } else {
     el.innerHTML = lines.map(l => `<p style="margin-bottom:0.75rem;font-size:14px">${mdToHtml(l)}</p>`).join('');
     renderMath(el);
