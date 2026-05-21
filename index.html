@@ -1880,19 +1880,19 @@ async function genQuiz() {
   if (!courseText) return;
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
-  const res = await ai(
-    `Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 6 questions QCM variées et difficiles. JSON uniquement sans markdown ni backticks :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":0,"explanation":"explication détaillée"}]}\n"correct" = index 0-3 de la bonne réponse.`,
-    'Tu es un professeur expert. Réponds uniquement en JSON valide, sans markdown.'
-  );
   try {
-    const clean = res.replace(/```json\n?|```\n?/g, '').trim();
-    const parsed = JSON.parse(clean);
-    quizData = Array.isArray(parsed.questions) ? parsed.questions : [];
+    const data = await aiJSON(
+      `Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 6 questions QCM variées et difficiles :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":0,"explanation":"explication détaillée"}]}\n"correct" = index 0-3 de la bonne réponse.`,
+      'Tu es un professeur expert.'
+    );
+    quizData = Array.isArray(data.questions) ? data.questions : [];
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
   } catch(e) {
     document.getElementById('quiz-list').innerHTML = '<div class="loading-txt">❌ Erreur de génération, réessaie.</div>';
+    console.error('Quiz error:', e);
   }
+}
 }
 function renderQuiz() {
   const answered = Object.keys(quizAnswers).length;
