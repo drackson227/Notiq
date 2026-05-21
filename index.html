@@ -1324,7 +1324,7 @@ function saveKey() {
   const k = document.getElementById('api-key-input').value.trim();
   const errEl = document.getElementById('modal-error');
   if (!k) { errEl.textContent = 'Entre ta clé API.'; return; }
-  if (!k.startsWith('sk-ant-') || k.length < 20) {
+  if (!k.startsWith('AIza') || k.length < 20) {
     errEl.textContent = 'Clé invalide — elle doit commencer par "AIza".';
     return;
   }
