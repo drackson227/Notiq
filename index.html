@@ -2449,8 +2449,11 @@ async function genExos() {
   try {
     const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs liés au cours :\n{"exercices":[{"titre":"Titre court","enonce":"Énoncé complet et détaillé","aide":"Indice pour débloquer","solution":"Solution complète étape par étape"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
     exos = data.exercices || []; openAides = {}; openSols = {}; renderExos();
-  } catch(e) { showToast('Erreur génération exercices', 'error'); }
-  btn.disabled = false; btn.innerHTML = '✦ Générer des exercices'; exoLoading = false;
+  } catch(e) {
+    showToast('Erreur génération exercices', 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '✦ Générer des exercices'; exoLoading = false;
+  }
 }
 
 function renderExos() {
