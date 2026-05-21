@@ -1404,7 +1404,7 @@ async function ai(prompt, systemPrompt) {
     } catch(e) {
       if (e.message === 'RATE_LIMITED') {
         console.warn(`${model} surchargé, modèle suivant…`);
-        await new Promise(res => setTimeout(res, 1500));
+        await new Promise(res => setTimeout(res, 5000));
         continue;
       }
       throw e;
