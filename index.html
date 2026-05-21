@@ -1403,8 +1403,10 @@ async function ai(prompt, systemPrompt) {
       return result;
     } catch(e) {
       if (e.message === 'RATE_LIMITED') {
-        console.warn(`${model} surchargé, modèle suivant…`);
-        await new Promise(res => setTimeout(res, 5000));
+        const waitMs = (i + 1) * 8000; // 8s, 16s, 24s
+        showToast(`⏳ Quota dépassé, attente ${waitMs/1000}s…`);
+        console.warn(`${model} surchargé, attente ${waitMs}ms…`);
+        await new Promise(res => setTimeout(res, waitMs));
         continue;
       }
       throw e;
