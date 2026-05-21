@@ -2508,9 +2508,9 @@ function renderCorrResult(d) {
   const isOk = d.verdict==='correct', isPartial = d.verdict==='partiel';
   const cls = isOk ? 'verdict-ok' : isPartial ? 'verdict-partial' : 'verdict-nok';
   const icon = isOk ? '✅ Correct !' : isPartial ? '⚠️ Partiellement correct' : '❌ Incorrect';
-  let html = `<div class="corr-block"><div class="verdict ${cls}">${icon} — ${d.note_sur_10}/10</div><p style="margin-bottom:14px;font-size:14px">${escHtml(d.resume)}</p>`;
-  (d.etapes || []).forEach(s => { html += `<div class="corr-step"><div class="corr-sn" style="background:${s.ok===false?'var(--red)':'var(--green)'}">${s.n}</div><div style="font-size:14px;color:${s.ok===false?'var(--red)':'var(--text-dim)'}">${escHtml(s.texte)}</div></div>`; });
-  if (d.conseil) html += `<div style="margin-top:12px;padding:10px 14px;background:rgba(31,189,130,.06);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:13px;color:var(--text-dim)">💡 ${escHtml(d.conseil)}</div>`;
+  let html = `<div class="corr-block"><div class="verdict ${cls}">${icon} — ${d.note_sur_10}/10</div><p style="margin-bottom:14px;font-size:14px">${mdToHtml(d.resume)}</p>`;
+  (d.etapes || []).forEach(s => { html += `<div class="corr-step"><div class="corr-sn" style="background:${s.ok===false?'var(--red)':'var(--green)'}">${s.n}</div><div style="font-size:14px;color:${s.ok===false?'var(--red)':'var(--text-dim)'}">${mdToHtml(s.texte)}</div></div>`; });
+  if (d.conseil) html += `<div style="margin-top:12px;padding:10px 14px;background:rgba(31,189,130,.06);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:13px;color:var(--text-dim)">💡 ${mdToHtml(d.conseil)}</div>`;
   html += '</div>';
   document.getElementById('corr-result').innerHTML = html;
   renderMath(document.getElementById('corr-result'));
