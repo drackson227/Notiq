@@ -2595,17 +2595,28 @@ function undoDraw() {
 function aiJSON(prompt, system) {
   return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide, sans markdown, sans backticks.')
     .then(text => {
-      const clean = text.replace(/```json\n?|```\n?/g, '').trim();
-try {
-  // Nettoyer les caractères problématiques avant parsing
-  const sanitized = clean
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .replace(/\n/g, ' ');
-  return JSON.parse(sanitized);
+      let clean = text
+        .replace(/```json\n?|```\n?/g, '')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u00AB\u00BB]/g, '"')
+        .trim();
+
+      const jsonMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+      if (jsonMatch) clean = jsonMatch[0];
+
+      try {
+        return JSON.parse(clean);
       } catch(e) {
-        console.error('aiJSON parse error:', e, '\nRaw:', clean.slice(0, 200));
-        throw new Error('Réponse invalide (JSON malformé) — réessaie.');
+        try {
+          const recovered = clean.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) =>
+            match.replace(/\n/g, '\\n').replace(/\r/g, '')
+          );
+          return JSON.parse(recovered);
+        } catch(e2) {
+          console.error('aiJSON parse error:', e2, '\nRaw:', clean.slice(0, 300));
+          throw new Error('Réponse invalide (JSON malformé) — réessaie.');
+        }
       }
     });
 }
