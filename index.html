@@ -1425,7 +1425,7 @@ async function ai(prompt, systemPrompt) {
 }
 
 async function aiDeepSeek(prompt, dsKey) {
-  const r = await fetch('https://api.deepseek.com/chat/completions', {
+  const r = await fetch('https://corsproxy.io/?https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${dsKey}` },
     body: JSON.stringify({
