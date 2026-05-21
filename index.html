@@ -2596,10 +2596,20 @@ function aiJSON(prompt, system) {
         return JSON.parse(clean);
       } catch(e) {
         try {
-          const recovered = clean.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) =>
-            match.replace(/\n/g, '\\n').replace(/\r/g, '')
-          );
-          return JSON.parse(recovered);
+          // Échapper les sauts de ligne à l'intérieur des chaînes JSON
+          let fixed = '';
+          let inStr = false, escape = false;
+          for (let ci = 0; ci < clean.length; ci++) {
+            const ch = clean[ci];
+            if (escape) { fixed += ch; escape = false; continue; }
+            if (ch === '\\') { escape = true; fixed += ch; continue; }
+            if (ch === '"') { inStr = !inStr; fixed += ch; continue; }
+            if (inStr && ch === '\n') { fixed += '\\n'; continue; }
+            if (inStr && ch === '\r') { continue; }
+            if (inStr && ch === '\t') { fixed += '\\t'; continue; }
+            fixed += ch;
+          }
+          return JSON.parse(fixed);
         } catch(e2) {
           console.error('aiJSON parse error:', e2, '\nRaw:', clean.slice(0, 300));
           throw new Error('Réponse invalide (JSON malformé) — réessaie.');
