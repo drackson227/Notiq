@@ -1989,7 +1989,7 @@ function updateExamTimer() {
 function renderExamBody() {
   let html = '<h2 style="font-family:Syne;margin-bottom:1.5rem">Réponds à toutes les questions</h2>';
   quizData.forEach((q, i) => {
-    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${escHtml(q.q)}</div><div class="qopts">`;
+    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q)}</div><div class="qopts">`;
     q.options.forEach((opt, j) => {
       const ans = examAnswers[i];
       let cls = '';
@@ -1997,10 +1997,10 @@ function renderExamBody() {
         if (j === q.correct) cls = 'correct';
         else if (j === parseInt(ans)) cls = 'wrong';
       }
-      html += `<button class="qopt ${cls}" onclick="examAns(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${escHtml(opt)}</button>`;
+      html += `<button class="qopt ${cls}" onclick="examAns(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${mdToHtml(opt)}</button>`;
     });
     html += '</div>';
-    if (examAnswers[i] !== undefined) html += `<div class="qexpl">💬 ${escHtml(q.explanation)}</div>`;
+    if (examAnswers[i] !== undefined) html += `<div class="qexpl">💬 ${mdToHtml(q.explanation)}</div>`;
     html += '</div>';
   });
   const allDone = Object.keys(examAnswers).length === quizData.length && quizData.length > 0;
@@ -2012,6 +2012,7 @@ function renderExamBody() {
     </div>`;
   }
   document.getElementById('exam-body').innerHTML = html;
+  renderMath(document.getElementById('exam-body'));
 }
 function examAns(qi, a) {
   examAnswers[qi] = a;
