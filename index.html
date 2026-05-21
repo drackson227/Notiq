@@ -1891,7 +1891,6 @@ async function genQuiz() {
     console.error('Quiz error:', e);
   }
 }
-}
 function renderQuiz() {
   const answered = Object.keys(quizAnswers).length;
   const correct = Object.entries(quizAnswers).filter(([i,a]) => quizData[i] && parseInt(a) === quizData[i].correct).length;
