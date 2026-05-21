@@ -2201,8 +2201,6 @@ function truncate(s, n) { return s && s.length > n ? s.slice(0, n-1) + '…' : (
 // ══════════════════════════════════════
 const MAX_CHAT_HISTORY = 20;
 
-const MAX_CHAT_HISTORY = 20;
-
 async function sendChat() {
   if (isChatPending) return;
   const inp = document.getElementById('chat-in');
