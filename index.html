@@ -1372,27 +1372,25 @@ const GEMINI_MODELS = [
 ];
 
 async function callGemini(model, prompt) {
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 }
-      })
-    }
-  );
-  if (r.status === 429 || r.status === 503) throw new Error('RATE_LIMITED');
-  if (r.status === 400 || r.status === 403) { openKeyModal(); throw new Error('Clé API invalide ou expirée.'); }
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Erreur API (${r.status})`);
-  }
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  if (r.status === 429) throw new Error('RATE_LIMITED');
+  if (r.status === 401) { openKeyModal(); throw new Error('Clé API invalide.'); }
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Erreur (${r.status})`); }
   const d = await r.json();
-  const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  if (!text) throw new Error('Réponse vide.');
-  return text;
+  return d.content?.[0]?.text || '';
 }
 
 async function ai(prompt, systemPrompt) {
