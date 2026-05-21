@@ -1114,6 +1114,8 @@ let activeCourseId = null;
 let quizHistory = [];
 let pomoCompletedSessions = 0;
 const API_DELAY = 5000;
+let isChatPending = false;
+let explainDebounceTimer = null;
 
 // ── TOAST ──
 let toastTimer;
