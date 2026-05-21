@@ -1814,14 +1814,12 @@ function exportSummaryPDF() {
 async function genFlash() {
   if (!courseText) return;
   ankiScores = {};
-  const res = await ai(
-    `Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 10 flashcards JSON. Réponds UNIQUEMENT en JSON valide sans markdown ni backticks :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse complète"}]}`,
-    'Tu es un assistant pédagogique. Réponds uniquement en JSON valide, sans markdown.'
-  );
   try {
-    const clean = res.replace(/```json\n?|```\n?/g, '').trim();
-    const parsed = JSON.parse(clean);
-    flashData = Array.isArray(parsed.cards) ? parsed.cards : [];
+    const data = await aiJSON(
+      `Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 10 flashcards :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse complète"}]}`,
+      'Tu es un assistant pédagogique.'
+    );
+    flashData = Array.isArray(data.cards) ? data.cards : [];
     if (!flashData.length) throw new Error('Aucune carte');
     flashIdx = 0;
     document.getElementById('flash-empty').style.display = 'none';
