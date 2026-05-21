@@ -2106,12 +2106,10 @@ async function genMindmap() {
   ctx2d.fillText('Génération de la carte mentale…', W/2, H/2);
 
   try {
-    const res = await ai(
-      `Cours :\n\n${courseText.slice(0,5000)}\n\nGénère une carte mentale avec un nœud central et 5-7 branches principales, chacune avec 2-3 sous-nœuds. JSON uniquement sans markdown ni backticks :\n{"center":"titre principal","branches":[{"label":"branche","children":["enfant1","enfant2"]}]}`,
-      'Tu es un assistant pédagogique. Réponds uniquement en JSON valide, sans markdown.'
+    mindmapData = await aiJSON(
+      `Cours :\n\n${courseText.slice(0,5000)}\n\nGénère une carte mentale avec un nœud central et 5-7 branches principales, chacune avec 2-3 sous-nœuds :\n{"center":"titre principal","branches":[{"label":"branche","children":["enfant1","enfant2"]}]}`,
+      'Tu es un assistant pédagogique.'
     );
-    const clean = res.replace(/```json\n?|```\n?/g, '').trim();
-    mindmapData = JSON.parse(clean);
     drawMindmap(canvas, ctx2d, W, H, mindmapData);
   } catch(e) {
     ctx2d.clearRect(0, 0, W, H);
