@@ -1396,23 +1396,24 @@ async function ai(prompt, systemPrompt) {
 
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const model = GEMINI_MODELS[i];
-    try {
-      if (i > 0) showToast(`⚠️ Bascule sur ${model}…`);
-      const result = await callGemini(model, fullPrompt);
-      if (i > 0) showToast(`✅ Réponse via ${model}`, 'success');
-      return result;
-    } catch(e) {
-      if (e.message === 'RATE_LIMITED') {
-        const waitMs = (i + 1) * 8000; // 8s, 16s, 24s
-        showToast(`⏳ Quota dépassé, attente ${waitMs/1000}s…`);
-        console.warn(`${model} surchargé, attente ${waitMs}ms…`);
-        await new Promise(res => setTimeout(res, waitMs));
-        continue;
+    if (i > 0) showToast(`⚠️ Bascule sur ${model}…`);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await callGemini(model, fullPrompt);
+        if (i > 0) showToast(`✅ Réponse via ${model}`, 'success');
+        return result;
+      } catch(e) {
+        if (e.message === 'RATE_LIMITED' && attempt < 2) {
+          const waitMs = Math.pow(2, attempt + 1) * 4000; // 8s, 16s
+          showToast(`⏳ Quota dépassé (${model}), attente ${waitMs/1000}s…`);
+          await new Promise(res => setTimeout(res, waitMs));
+          continue;
+        }
+        if (e.message !== 'RATE_LIMITED') throw e;
+        break; // rate limit épuisé → modèle suivant
       }
-      throw e;
     }
   }
-
   const dsKey = localStorage.getItem('notiq_deepseek_key');
   if (dsKey) {
     showToast('🔄 Tous les modèles Gemini surchargés — bascule sur DeepSeek…');
