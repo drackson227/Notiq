@@ -1897,7 +1897,10 @@ function renderQuiz() {
     saveQuizResult(correct, total);
   }
 
-  q.options.forEach((opt, j) => {
+  let html = '';
+  quizData.forEach((q, i) => {
+    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q)}</div><div class="qopts">`;
+    q.options.forEach((opt, j) => {
       const ans = quizAnswers[i];
       let cls = '';
       if (ans !== undefined) {
