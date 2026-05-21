@@ -1402,7 +1402,7 @@ async function ai(prompt, systemPrompt) {
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const model = GEMINI_MODELS[i];
     if (i > 0) showToast(`⚠️ Bascule sur ${model}…`);
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 1; attempt++) {
       try {
         const result = await callGemini(model, fullPrompt);
         if (i > 0) showToast(`✅ Réponse via ${model}`, 'success');
