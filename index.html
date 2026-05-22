@@ -1697,7 +1697,7 @@ async function loadCourse() {
   let errors = 0;
 
   function apiDead(e) {
-    return e.message && e.message.startsWith('APIs indisponibles');
+    return e.message && (e.message.startsWith('APIs indisponibles') || e.message.startsWith('Tous les APIs'));
   }
 
   // 1. Résumé (0 → 20%)
