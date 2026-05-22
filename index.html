@@ -2578,7 +2578,7 @@ function undoDraw() {
 }
 
 function aiJSON(prompt, system) {
-  return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide, sans markdown, sans backticks.')
+  return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide. Règles strictes : utilise UNIQUEMENT des guillemets droits " pour les chaînes JSON. N\'utilise JAMAIS d\'apostrophes typographiques (\u2018\u2019) ni de guillemets courbes (\u201C\u201D) à l\'intérieur des valeurs JSON. Sans markdown, sans backticks.')
     .then(text => {
       let clean = text
         .replace(/```json\n?|```\n?/g, '')
