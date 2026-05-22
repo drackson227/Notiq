@@ -2518,7 +2518,7 @@ async function corriger() {
   const btn = document.getElementById('corr-btn'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Correction…';
   document.getElementById('corr-result').innerHTML = '';
   try {
-    const sys = `Tu es un professeur correcteur. ${courseText ? 'Cours de référence :\n' + courseText.slice(0,3000) + '\n\n' : ''}Réponds UNIQUEMENT en JSON : {"verdict":"correct|incorrect|partiel","note_sur_10":8,"resume":"résumé de la correction","etapes":[{"n":1,"texte":"description de l'étape","ok":true}],"conseil":"conseil personnalisé"}`;
+    const sys = `Tu es un professeur correcteur. ${courseText ? 'Cours de référence :\n' + courseText.slice(0,3000) + '\n\n' : ''}Réponds UNIQUEMENT en JSON : {"verdict":"correct|incorrect|partiel","note_sur_10":8,"resume":"resume de la correction","etapes":[{"n":1,"texte":"description de l etape","ok":true}],"conseil":"conseil personnalise"}`;
     const data = await aiJSON(`Énoncé : ${enonce}\n\nRéponse de l'étudiant : ${repText}\n\nCorrige étape par étape en étant précis et pédagogique.`, sys);
     renderCorrResult(data);
   } catch(e) { document.getElementById('corr-result').innerHTML = '<div style="color:var(--red);font-size:13px;margin-top:10px">❌ Erreur lors de la correction. Réessaie.</div>'; }
