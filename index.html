@@ -1434,12 +1434,6 @@ async function ai(prompt, systemPrompt) {
   }
 
   throw new Error('Gemini saturé. Ajoute une clé Groq (gratuit) dans les paramètres.');
-  if (groqKey) {
-    showToast('🔄 Bascule sur Groq…');
-    try { return await aiGroq(fullPrompt, groqKey); }
-    catch(gErr) { throw new Error('Tous les APIs surchargés. Réessaie dans 1 minute.'); }
-  }
-  throw new Error('Tous les modèles Gemini sont surchargés. Réessaie dans 1 minute.');
 }
 
 async function aiGroq(prompt, groqKey) {
