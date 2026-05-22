@@ -1339,6 +1339,8 @@ if (dsKey && !dsKey.startsWith('sk-')) {
   return;
 }
 if (dsKey) localStorage.setItem('notiq_deepseek_key', dsKey);
+const groqKey2 = document.getElementById('groq-key-input')?.value.trim();
+if (groqKey2) localStorage.setItem('notiq_groq_key', groqKey2);
   updateKeyStatus();
   closeKeyModal();
   showToast('✅ Clé API connectée !', 'success');
