@@ -1961,7 +1961,7 @@ let examRunning = false;
 function startExam() {
   if (!quizData.length) { showToast('Génère un quiz d\'abord !', 'error'); return; }
   examAnswers = {};
-  examTimeLeft = 20 * 60;
+  examTimeLeft = 45 * 60;
   examRunning = true;
   document.getElementById('exam-overlay').classList.add('open');
   renderExamBody();
