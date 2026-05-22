@@ -1430,6 +1430,19 @@ async function ai(prompt, systemPrompt) {
   throw new Error('Tous les modèles Gemini sont surchargés. Réessaie dans 1 minute.');
 }
 
+async function aiGroq(prompt, groqKey) {
+  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+    body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.7 })
+  });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Erreur Groq (${r.status})`); }
+  const d = await r.json();
+  const text = d.choices?.[0]?.message?.content || '';
+  if (!text) throw new Error('Réponse vide de Groq.');
+  showToast('✅ Réponse via Groq', 'success');
+  return text;
+}
 async function aiDeepSeek(prompt, dsKey) {
   const r = await fetch('https://corsproxy.io/?https://api.deepseek.com/chat/completions', {
     method: 'POST',
