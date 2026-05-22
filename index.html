@@ -1972,7 +1972,7 @@ function startExam() {
     examTimeLeft--;
     updateExamTimer();
     const fill = document.getElementById('exam-progress-fill');
-    fill.style.width = `${(examTimeLeft / (20*60)) * 100}%`;
+    fill.style.width = `${(examTimeLeft / (45*60)) * 100}%`;
     if (examTimeLeft <= 0) closeExam(true);
   }, 1000);
 }
