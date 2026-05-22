@@ -1402,37 +1402,35 @@ async function callGemini(model, prompt) {
 async function ai(prompt, systemPrompt) {
   if (!apiKey) { openKeyModal(); throw new Error('No API key'); }
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
+  const groqKey = localStorage.getItem('notiq_groq_key');
 
+  // Essai Groq en premier si dispo (évite d'épuiser Gemini)
+  if (groqKey) {
+    try { return await aiGroq(fullPrompt, groqKey); }
+    catch(gErr) { showToast('⚠️ Groq indisponible — bascule sur Gemini…'); }
+  }
+
+  // Cascade Gemini
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const model = GEMINI_MODELS[i];
     if (i > 0) showToast(`⚠️ Bascule sur ${model}…`);
     try {
       const result = await callGemini(model, fullPrompt);
-      if (i > 0) showToast(`✅ Réponse via ${model}`, 'success');
       return result;
     } catch(e) {
       if (e.message !== 'RATE_LIMITED') throw e;
-      // 429 → on passe au modèle suivant
     }
   }
-  const groqKey = localStorage.getItem('notiq_groq_key');
-  if (groqKey) {
-    showToast('🔄 Gemini saturé — bascule sur Groq…');
-    try { return await aiGroq(fullPrompt, groqKey); }
-    catch(gErr) { /* continue vers DeepSeek */ }
-  }
 
+  // Fallback DeepSeek
   const dsKey = localStorage.getItem('notiq_deepseek_key');
   if (dsKey) {
     showToast('🔄 Bascule sur DeepSeek…');
-    try {
-      return await aiDeepSeek(fullPrompt, dsKey);
-    } catch(dsErr) {
-      throw new Error('Tous les APIs surchargés. Réessaie dans 1 minute.');
-    }
+    try { return await aiDeepSeek(fullPrompt, dsKey); }
+    catch(dsErr) { throw new Error('Tous les APIs surchargés. Réessaie dans 1 minute.'); }
   }
 
-  throw new Error('Gemini saturé. Ajoute une clé Groq (gratuit) dans les paramètres.');
+  throw new Error('Tous les modèles saturés. Ajoute une clé Groq (gratuit) dans les paramètres.');
 }
 
 async function aiGroq(prompt, groqKey) {
