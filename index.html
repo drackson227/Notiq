@@ -1163,8 +1163,16 @@ window.addEventListener('load', () => {
   pomoCompletedSessions = parseInt(localStorage.getItem('notiq_pomo_sessions') || '0');
 
   renderCoursesBar();
-  const ids = Object.keys(courses);
-  if (ids.length > 0) selectCourse(ids[0]);
+    const ids = Object.keys(courses);
+  if (ids.length > 0) {
+    activeCourseId = ids[0];
+    if (courses[ids[0]]) {
+      document.getElementById('course-text').value = courses[ids[0]].text || '';
+      courseText = courses[ids[0]].text || '';
+    }
+    renderCoursesBar();
+    document.getElementById('saved-notice').style.display = courseText ? 'block' : 'none';
+  }
 
   if (!apiKey) openKeyModal();
   initScrollReveal();
