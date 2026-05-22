@@ -1845,7 +1845,7 @@ async function genFlash() {
   ankiScores = {};
   try {
     const data = await aiJSON(
-      `Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 10 flashcards :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse complète"}]}`,
+      `Timestamp: ${Date.now()}. Génère des flashcards COMPLÈTEMENT DIFFÉRENTES des précédentes. Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 10 flashcards variées :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse complète"}]}`,
       'Tu es un assistant pédagogique.'
     );
     flashData = Array.isArray(data.cards) ? data.cards : [];
