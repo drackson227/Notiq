@@ -630,7 +630,6 @@ footer a { color: var(--green); text-decoration: none; }
   .nav-key-btn { padding: 6px 10px; font-size: 12px; }
   #key-status-txt { display: none; }
   .theme-btn { width: 32px; height: 32px; font-size: 14px; }
-
   .hero { padding: 90px 1.25rem 3rem; }
   .hero h1 { font-size: 2.4rem; }
   .hero p { font-size: 0.95rem; }
@@ -639,79 +638,63 @@ footer a { color: var(--green); text-decoration: none; }
   .hero-grid { grid-template-columns: repeat(3,1fr); margin-top: 2.5rem; }
   .hero-stat .num { font-size: 1.4rem; }
   .hero-stat .lbl { font-size: 11px; }
-
   section { padding: 3.5rem 1.25rem; }
   .section-title { font-size: 1.7rem; }
   .styles-section { padding: 3.5rem 1.25rem; }
   .styles-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-
   .steps-row { flex-direction: column; gap: 1.5rem; }
   .steps-row::before { display: none; }
   .how-step { padding: 0; display: flex; align-items: flex-start; gap: 1rem; text-align: left; }
   .how-num { margin: 0; flex-shrink: 0; width: 44px; height: 44px; font-size: 1rem; }
-
   .app-section { padding: 3rem 0; }
   .app-section > div { padding: 0 1.25rem; }
   .app-wrap { border-radius: 0; margin: 0 -1.25rem; border-left: none; border-right: none; }
   .app-nav { padding: 10px 10px 0; gap: 2px; }
   .atab { padding: 8px 11px; font-size: 12px; }
   .app-body { padding: 1rem; }
-
   .courses-bar { gap: 6px; }
   .course-slot { padding: 5px 10px; font-size: 12px; }
   .course-slot-name { max-width: 60px; }
   .action-row { gap: 8px; }
   .action-row .btn-green, .action-row .btn-outline { padding: 10px 16px; font-size: 13px; }
   .pdf-drop { padding: 1.25rem; }
-
   .explain-bar { flex-direction: column; }
   .explain-bar .btn-green { width: 100%; justify-content: center; }
   .style-pills { gap: 6px; }
   .spill { padding: 5px 11px; font-size: 12px; }
-
   .score-row { gap: 8px; flex-wrap: wrap; }
   .score-big { font-size: 1.8rem; }
   .score-row .btn-outline { padding: 8px 12px; font-size: 12px; }
   .qopt { padding: 10px 12px; font-size: 13px; }
-
   .flash-scene { height: 170px; }
   .flash-face { font-size: 15px; padding: 1.25rem; }
   .anki-btns { gap: 6px; }
   .anki-btn { padding: 10px 6px; font-size: 12px; }
-
   .export-bar { flex-wrap: wrap; }
   .export-bar .btn-outline { font-size: 12px; padding: 8px 12px; }
-
   #mindmap-canvas { height: 280px; }
-
   .chat-box { min-height: 200px; max-height: 260px; }
   .chat-row { gap: 6px; }
   .chat-in { padding: 10px 14px; font-size: 14px; }
   .chat-row .btn-green { padding: 10px 16px; font-size: 13px; }
-
   .pomo-wrap { gap: 1rem; }
   .pomo-ring { width: 150px; height: 150px; }
   .pomo-ring svg { width: 150px; height: 150px; }
   .pomo-time { font-size: 2rem; }
   .pomo-mode { flex-wrap: wrap; justify-content: center; gap: 6px; }
   .pomo-pill { padding: 5px 12px; font-size: 12px; }
-
   .mastery-score { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .history-card { flex-wrap: wrap; gap: 6px; }
   .history-label { min-width: 100%; }
-
   .exam-header { padding: 0.75rem 1rem; }
   .exam-timer { font-size: 1.5rem; }
   .exam-body { padding: 1rem; }
-
   .modal { padding: 1.5rem; }
   .modal-row { flex-direction: column; align-items: stretch; }
   .modal-row .btn-green { width: 100%; justify-content: center; }
-
   .features-grid { grid-template-columns: 1fr; }
   .feat-card { padding: 1.25rem; }
 }
-
 @media (max-width: 380px) {
   .hero h1 { font-size: 2rem; }
   .atab { padding: 7px 8px; font-size: 11px; }
@@ -721,26 +704,20 @@ footer a { color: var(--green); text-decoration: none; }
 </head>
 <body>
 
-<!-- CONFETTI CANVAS -->
 <canvas id="confetti-canvas"></canvas>
-
-<!-- TOAST -->
 <div id="toast"></div>
 
 <!-- API KEY MODAL -->
 <div class="modal-overlay" id="key-modal">
 <div class="modal">
   <h3>🔑 Clés API</h3>
-  <p>Entre ta clé Gemini (obligatoire). DeepSeek est optionnel — utilisé automatiquement si Gemini est surchargé.</p>
-  
+  <p>Entre ta clé Gemini (obligatoire). Groq et DeepSeek sont optionnels — utilisés automatiquement si Gemini est surchargé.</p>
   <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Google Gemini (obligatoire)</label>
   <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" />
-  
-  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">Groq (optionnel — gratuit, fallback automatique)</label>
-<input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_..." autocomplete="off" />
-<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">DeepSeek (optionnel — fallback automatique)</label>
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">Groq (optionnel — gratuit, prioritaire sur Gemini)</label>
+  <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_..." autocomplete="off" />
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">DeepSeek (optionnel — fallback automatique)</label>
   <input class="modal-input" id="deepseek-key-input" type="password" placeholder="sk-..." autocomplete="off" />
-  
   <div class="modal-error" id="modal-error"></div>
   <div class="modal-row">
     <button class="btn-green" onclick="saveKey()">Connecter</button>
@@ -801,16 +778,16 @@ footer a { color: var(--green); text-decoration: none; }
 <section id="features" class="fade-in">
   <div class="section-tag">Fonctionnalités</div>
   <h2 class="section-title">Tout pour réviser intelligemment</h2>
-  <p class="section-sub">Une IA qui s'adapte à toi — pas l'inverse. Tu fournis le cours, elle fait le reste.</p>
+  <p class="section-sub">Une IA qui s'adapte à toi — pas l'inverse.</p>
   <div class="features-grid">
-    <div class="feat-card"><div class="feat-icon">💡</div><h3>Explications multi-styles</h3><p>Analogies, étapes, exemples concrets, explication pour enfant… Choisis le style qui te parle le mieux, change-en à la volée.</p></div>
-    <div class="feat-card"><div class="feat-icon">✅</div><h3>Quiz QCM intelligents</h3><p>Des questions générées directement depuis ton cours, avec score en temps réel et explications pour chaque réponse.</p></div>
-    <div class="feat-card"><div class="feat-icon">🃏</div><h3>Flashcards animées</h3><p>Les notions clés transformées en cartes avec effet de retournement 3D et répétition espacée style Anki.</p></div>
-    <div class="feat-card"><div class="feat-icon">🗺️</div><h3>Carte mentale</h3><p>Visualise les concepts et leurs liens sous forme de mind map interactive générée depuis ton cours.</p></div>
-    <div class="feat-card"><div class="feat-icon">⏱️</div><h3>Timer Pomodoro</h3><p>Travaille en sessions de 25 minutes avec des pauses intégrées pour rester concentré et productif.</p></div>
-    <div class="feat-card"><div class="feat-icon">📚</div><h3>Plusieurs cours</h3><p>Sauvegarde jusqu'à 5 matières différentes — Maths, Bio, Histoire. Switche en un clic.</p></div>
-    <div class="feat-card"><div class="feat-icon">📝</div><h3>Mode examen</h3><p>Un timer de 20 min, le quiz en plein écran, sans distractions. Entraîne-toi comme en conditions réelles.</p></div>
-    <div class="feat-card"><div class="feat-icon">📊</div><h3>Score de maîtrise</h3><p>Suis ta progression globale sur le cours avec un score de maîtrise calculé depuis tes quiz et flashcards.</p></div>
+    <div class="feat-card"><div class="feat-icon">💡</div><h3>Explications multi-styles</h3><p>Analogies, étapes, exemples concrets, explication pour enfant… Choisis le style qui te parle le mieux.</p></div>
+    <div class="feat-card"><div class="feat-icon">✅</div><h3>Quiz QCM intelligents</h3><p>Des questions générées directement depuis ton cours, avec score en temps réel et explications.</p></div>
+    <div class="feat-card"><div class="feat-icon">🃏</div><h3>Flashcards animées</h3><p>Les notions clés transformées en cartes avec effet 3D et répétition espacée style Anki.</p></div>
+    <div class="feat-card"><div class="feat-icon">🗺️</div><h3>Carte mentale</h3><p>Visualise les concepts et leurs liens sous forme de mind map interactive.</p></div>
+    <div class="feat-card"><div class="feat-icon">⏱️</div><h3>Timer Pomodoro</h3><p>Travaille en sessions de 25 minutes avec des pauses intégrées.</p></div>
+    <div class="feat-card"><div class="feat-icon">📚</div><h3>Plusieurs cours</h3><p>Sauvegarde jusqu'à 5 matières différentes. Switche en un clic.</p></div>
+    <div class="feat-card"><div class="feat-icon">📝</div><h3>Mode examen</h3><p>Un timer de 45 min, le quiz en plein écran, sans distractions.</p></div>
+    <div class="feat-card"><div class="feat-icon">📊</div><h3>Score de maîtrise</h3><p>Suis ta progression globale avec un score calculé depuis tes quiz et flashcards.</p></div>
   </div>
 </section>
 
@@ -819,13 +796,13 @@ footer a { color: var(--green); text-decoration: none; }
   <div>
     <div class="section-tag">Explications</div>
     <h2 class="section-title">5 façons d'apprendre<br>le même concept</h2>
-    <p class="section-sub">Tout le monde comprend différemment. Choisis le style qui te correspond, ou teste-les tous.</p>
+    <p class="section-sub">Tout le monde comprend différemment.</p>
     <div class="styles-grid">
-      <div class="style-card"><div class="icon">🔤</div><h4>Simple & clair</h4><p>Définition directe, développement progressif. La base.</p></div>
-      <div class="style-card"><div class="icon">💡</div><h4>Par analogie</h4><p>"Imagine que…" — des métaphores du quotidien pour tout comprendre.</p></div>
-      <div class="style-card"><div class="icon">🔢</div><h4>Étape par étape</h4><p>Décomposition numérotée pour ne rien rater du raisonnement.</p></div>
-      <div class="style-card"><div class="icon">🧮</div><h4>Exemple concret</h4><p>Cas pratiques, calculs, applications réelles. Tu vois, tu comprends.</p></div>
-      <div class="style-card"><div class="icon">⭐</div><h4>Comme à un enfant</h4><p>Mots simples, images mentales. Idéal pour débloquer les concepts abstraits.</p></div>
+      <div class="style-card"><div class="icon">🔤</div><h4>Simple & clair</h4><p>Définition directe, développement progressif.</p></div>
+      <div class="style-card"><div class="icon">💡</div><h4>Par analogie</h4><p>"Imagine que…" — des métaphores du quotidien.</p></div>
+      <div class="style-card"><div class="icon">🔢</div><h4>Étape par étape</h4><p>Décomposition numérotée pour ne rien rater.</p></div>
+      <div class="style-card"><div class="icon">🧮</div><h4>Exemple concret</h4><p>Cas pratiques, calculs, applications réelles.</p></div>
+      <div class="style-card"><div class="icon">⭐</div><h4>Comme à un enfant</h4><p>Mots simples, images mentales.</p></div>
     </div>
   </div>
 </div>
@@ -835,9 +812,9 @@ footer a { color: var(--green); text-decoration: none; }
   <div class="section-tag">Comment ça marche</div>
   <h2 class="section-title">En 3 étapes</h2>
   <div class="steps-row">
-    <div class="how-step"><div class="how-num">1</div><h4>Colle ou importe ton cours</h4><p>Texte, PDF, maths, bio, histoire. Tout fonctionne.</p></div>
+    <div class="how-step"><div class="how-num">1</div><h4>Colle ou importe ton cours</h4><p>Texte, PDF, maths, bio, histoire.</p></div>
     <div class="how-step"><div class="how-num">2</div><h4>L'IA analyse</h4><p>Quiz, flashcards, carte mentale et résumé générés en secondes.</p></div>
-    <div class="how-step"><div class="how-num">3</div><h4>Tu révises</h4><p>Pose tes questions, entraîne-toi, utilise le Pomodoro. Tu maîtrises.</p></div>
+    <div class="how-step"><div class="how-num">3</div><h4>Tu révises</h4><p>Pose tes questions, entraîne-toi, utilise le Pomodoro.</p></div>
   </div>
 </section>
 
@@ -908,7 +885,7 @@ footer a { color: var(--green); text-decoration: none; }
                 <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">Score</div>
                 <div class="score-big" id="score-display">0/0</div>
               </div>
-              <button class="btn-outline" onclick="startExam()" style="display:flex;align-items:center;gap:6px">📝 Mode examen</button>
+              <button class="btn-outline" onclick="startExam()">📝 Mode examen</button>
               <button class="btn-outline" onclick="genQuiz()" style="margin-left:auto">↻ Nouveau quiz</button>
             </div>
             <div id="quiz-list"></div>
@@ -943,55 +920,55 @@ footer a { color: var(--green); text-decoration: none; }
         </div>
 
         <!-- EXERCICES -->
-<div class="apanel" id="ap-exo">
-  <div id="exo-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer des exercices.</div>
-  <div id="exo-ui" style="display:none">
-    <div class="ex-tabs">
-      <button class="ex-tab on" id="exo-tab-gen" onclick="switchExoTab('gen')">📋 Générer</button>
-      <button class="ex-tab" id="exo-tab-correct" onclick="switchExoTab('correct')">🔍 Corriger</button>
-    </div>
-    <div id="exo-gen-panel">
-      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn-green" id="exo-gen-btn" onclick="genExos()">✦ Générer des exercices</button>
-        <button class="btn-outline" id="exo-regen-btn" onclick="genExos()" style="display:none">↻ Régénérer</button>
-        <span id="exo-gen-msg" style="font-size:13px;color:var(--text-muted)"></span>
-      </div>
-      <div id="exo-list"></div>
-    </div>
-    <div id="exo-correct-panel" style="display:none">
-      <p style="font-size:14px;color:var(--text-dim);margin-bottom:1.25rem">Saisis un exercice et ta réponse — l'IA corrige étape par étape.</p>
-      <div style="margin-bottom:12px">
-        <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Énoncé de l'exercice</label>
-        <textarea class="corr-inp" id="corr-enonce" placeholder="Colle ou écris l'énoncé ici…" style="min-height:80px"></textarea>
-      </div>
-      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px">Ta réponse</label>
-      <div class="mode-sw">
-        <button class="mode-btn on" id="mode-text-btn" onclick="setAnsMode('text')">✍️ Texte</button>
-        <button class="mode-btn" id="mode-draw-btn" onclick="setAnsMode('draw')">🎨 Dessin</button>
-      </div>
-      <div id="ans-text-wrap">
-        <textarea class="corr-inp" id="corr-rep" placeholder="Ta réponse ici…" style="min-height:100px"></textarea>
-      </div>
-      <div id="ans-draw-wrap" style="display:none">
-        <div class="draw-wrap">
-          <canvas id="draw-canvas" style="display:block;width:100%;height:200px;cursor:crosshair;touch-action:none;background:#090b0a"></canvas>
-          <div class="draw-bar">
-            <div id="draw-colors" style="display:flex;gap:6px"></div>
-            <input type="range" min="1" max="12" value="3" id="draw-size" style="width:80px;accent-color:var(--green)" title="Taille du pinceau">
-            <button class="btn-outline" style="padding:4px 12px;font-size:12px" onclick="clearCanvas()">🗑 Effacer</button>
-            <button class="btn-outline" style="padding:4px 12px;font-size:12px" onclick="undoDraw()">↩ Annuler</button>
+        <div class="apanel" id="ap-exo">
+          <div id="exo-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer des exercices.</div>
+          <div id="exo-ui" style="display:none">
+            <div class="ex-tabs">
+              <button class="ex-tab on" id="exo-tab-gen" onclick="switchExoTab('gen')">📋 Générer</button>
+              <button class="ex-tab" id="exo-tab-correct" onclick="switchExoTab('correct')">🔍 Corriger</button>
+            </div>
+            <div id="exo-gen-panel">
+              <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <button class="btn-green" id="exo-gen-btn" onclick="genExos()">✦ Générer des exercices</button>
+                <button class="btn-outline" id="exo-regen-btn" onclick="genExos()" style="display:none">↻ Régénérer</button>
+                <span id="exo-gen-msg" style="font-size:13px;color:var(--text-muted)"></span>
+              </div>
+              <div id="exo-list"></div>
+            </div>
+            <div id="exo-correct-panel" style="display:none">
+              <p style="font-size:14px;color:var(--text-dim);margin-bottom:1.25rem">Saisis un exercice et ta réponse — l'IA corrige étape par étape.</p>
+              <div style="margin-bottom:12px">
+                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Énoncé de l'exercice</label>
+                <textarea class="corr-inp" id="corr-enonce" placeholder="Colle ou écris l'énoncé ici…" style="min-height:80px"></textarea>
+              </div>
+              <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px">Ta réponse</label>
+              <div class="mode-sw">
+                <button class="mode-btn on" id="mode-text-btn" onclick="setAnsMode('text')">✍️ Texte</button>
+                <button class="mode-btn" id="mode-draw-btn" onclick="setAnsMode('draw')">🎨 Dessin</button>
+              </div>
+              <div id="ans-text-wrap">
+                <textarea class="corr-inp" id="corr-rep" placeholder="Ta réponse ici…" style="min-height:100px"></textarea>
+              </div>
+              <div id="ans-draw-wrap" style="display:none">
+                <div class="draw-wrap">
+                  <canvas id="draw-canvas" style="display:block;width:100%;height:200px;cursor:crosshair;touch-action:none;background:#090b0a"></canvas>
+                  <div class="draw-bar">
+                    <div id="draw-colors" style="display:flex;gap:6px"></div>
+                    <input type="range" min="1" max="12" value="3" id="draw-size" style="width:80px;accent-color:var(--green)">
+                    <button class="btn-outline" style="padding:4px 12px;font-size:12px" onclick="clearCanvas()">🗑 Effacer</button>
+                    <button class="btn-outline" style="padding:4px 12px;font-size:12px" onclick="undoDraw()">↩ Annuler</button>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                <button class="btn-green" id="corr-btn" onclick="corriger()">🔍 Corriger ma réponse</button>
+                <button class="btn-outline" onclick="switchExoTab('gen')">← Retour aux exercices</button>
+              </div>
+              <div id="corr-result"></div>
+            </div>
           </div>
         </div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn-green" id="corr-btn" onclick="corriger()">🔍 Corriger ma réponse</button>
-        <button class="btn-outline" onclick="switchExoTab('gen')">← Retour aux exercices</button>
-      </div>
-      <div id="corr-result"></div>
-    </div>
-  </div>
-</div>
-        
+
         <!-- SUMMARY -->
         <div class="apanel" id="ap-summary">
           <div id="summary-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour obtenir un résumé.</div>
@@ -1046,9 +1023,6 @@ footer a { color: var(--green); text-decoration: none; }
               <button class="btn-outline" onclick="resetPomo()">↺ Reset</button>
               <button class="btn-green" id="pomo-btn" onclick="togglePomo()">▶ Démarrer</button>
             </div>
-            <div style="font-size:13px;color:var(--text-muted);text-align:center;max-width:340px">
-              La technique Pomodoro : 25 min de travail concentré, puis 5 min de pause. Après 4 sessions, une longue pause de 15 min.
-            </div>
           </div>
         </div>
 
@@ -1086,15 +1060,11 @@ footer a { color: var(--green); text-decoration: none; }
   </div>
 </div>
 
-<!-- FOOTER -->
 <footer>
   <p>© 2025 Notiq — Propulsé par <a href="https://aistudio.google.com" target="_blank">Gemini</a> · 100% gratuit · Bonne chance pour tes examens 🍀</p>
 </footer>
 
 <script>
-// ══════════════════════════════════════
-// CONFIG & STATE
-// ══════════════════════════════════════
 const STYLES = {
   simple:  'Explique ce concept simplement et clairement en 3-5 paragraphes. Commence par la définition puis approfondis progressivement. Texte brut sans markdown.',
   analogy: 'Explique ce concept uniquement par des analogies du quotidien. Propose 3 analogies différentes, chacune commençant par "Imagine que…". Texte brut.',
@@ -1104,7 +1074,7 @@ const STYLES = {
 };
 
 let courseText  = '';
-let chatHistory = []; // limité à 20 messages (10 échanges)
+let chatHistory = [];
 let quizData    = []; let quizAnswers = {};
 let flashData   = []; let flashIdx = 0;
 let exStyle     = 'simple'; let exCache = {};
@@ -1120,7 +1090,6 @@ const API_DELAY = 5000;
 let isChatPending = false;
 let explainDebounceTimer = null;
 
-// ── TOAST ──
 let toastTimer;
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
@@ -1130,7 +1099,7 @@ function showToast(msg, type = '') {
   toastTimer = setTimeout(() => { t.className = ''; }, 3000);
 }
 
-// ── INIT ──
+// ══ INIT — FIX PRINCIPAL : pas d'appel API au chargement ══
 window.addEventListener('load', () => {
   if (window.innerWidth <= 768) {
     const cta = document.getElementById('nav-cta-btn');
@@ -1162,8 +1131,10 @@ window.addEventListener('load', () => {
   if (savedHistory) { try { quizHistory = JSON.parse(savedHistory); } catch(e) { quizHistory = []; } }
   pomoCompletedSessions = parseInt(localStorage.getItem('notiq_pomo_sessions') || '0');
 
-  renderCoursesBar();
-    const ids = Object.keys(courses);
+  // ── RESTAURATION SANS APPEL API ──
+  // On restaure le cours actif directement depuis localStorage,
+  // sans appeler selectCourse() qui peut déclencher des effets de bord
+  const ids = Object.keys(courses);
   if (ids.length > 0) {
     activeCourseId = ids[0];
     if (courses[ids[0]]) {
@@ -1171,7 +1142,20 @@ window.addEventListener('load', () => {
       courseText = courses[ids[0]].text || '';
     }
     renderCoursesBar();
-    document.getElementById('saved-notice').style.display = courseText ? 'block' : 'none';
+    const hasContent = !!courseText;
+    document.getElementById('saved-notice').style.display = hasContent ? 'block' : 'none';
+    document.getElementById('quiz-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('quiz-ui').style.display = hasContent ? 'block' : 'none';
+    document.getElementById('flash-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('flash-ui').style.display = 'none';
+    document.getElementById('exo-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('exo-ui').style.display = 'none';
+    document.getElementById('summary-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('summary-ui').style.display = 'none';
+    document.getElementById('mindmap-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('mindmap-ui').style.display = 'none';
+  } else {
+    renderCoursesBar();
   }
 
   if (!apiKey) openKeyModal();
@@ -1179,25 +1163,19 @@ window.addEventListener('load', () => {
   initPomodoro();
   renderStats();
 
-  // Attendre que KaTeX soit prêt (scripts defer)
   function waitKatex(cb, tries = 0) {
     if (typeof renderMathInElement !== 'undefined') { cb(); }
     else if (tries < 20) { setTimeout(() => waitKatex(cb, tries + 1), 200); }
   }
   waitKatex(() => {
-    // Rendre les éventuels éléments déjà présents dans le DOM
     document.querySelectorAll('.explain-result, .summary-body, #exo-list, .corr-block, .chat-box').forEach(renderMath);
   });
 });
 
-// ══════════════════════════════════════
-// THEME
-// ══════════════════════════════════════
 function toggleTheme() {
   const light = document.body.classList.toggle('light');
   document.getElementById('theme-btn').textContent = light ? '☀️' : '🌙';
   localStorage.setItem('notiq_theme', light ? 'light' : 'dark');
-  // Redraw mindmap with correct colors
   if (mindmapData) {
     setTimeout(() => {
       const canvas = document.getElementById('mindmap-canvas');
@@ -1210,9 +1188,6 @@ function toggleTheme() {
   }
 }
 
-// ══════════════════════════════════════
-// MULTI-COURS
-// ══════════════════════════════════════
 function saveCourses() {
   localStorage.setItem('notiq_courses', JSON.stringify(courses));
 }
@@ -1236,15 +1211,12 @@ function escHtml(s) {
 }
 
 function mdToHtml(text) {
-  // Extraire et protéger les blocs LaTeX AVANT tout traitement
   const mathBlocks = [];
   let safe = text
     .replace(/\$\$[\s\S]+?\$\$/g, m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\$[^$\n]+?\$/g,     m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\[[\s\S]+?\\\]/g, m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\(.+?\\\)/g,      m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; });
-
-  // Appliquer le Markdown sur le texte sécurisé
   safe = safe
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -1254,17 +1226,14 @@ function mdToHtml(text) {
     .replace(/^#{1}\s(.+)$/gm, '<h2 style="font-family:Syne,sans-serif;margin:0.75rem 0 0.25rem">$1</h2>')
     .replace(/^[-•]\s(.+)$/gm, '<div style="display:flex;gap:8px;padding:2px 0"><span style="color:var(--green);margin-top:2px">•</span><span>$1</span></div>')
     .replace(/^\d+\.\s(.+)$/gm, '<div style="padding:2px 0">$1</div>');
-
-  // Réinjecter les blocs LaTeX
   return safe.replace(/%%MATH(\d+)%%/g, (_, i) => mathBlocks[parseInt(i)]);
 }
 
 function newCourse() {
   if (Object.keys(courses).length >= 5) {
-    showToast('⚠️ Maximum 5 cours atteint. Supprime-en un d\'abord.', 'error');
-    return;
+    showToast('Maximum 5 cours atteint.', 'error'); return;
   }
-  const name = prompt('Nom du cours (ex: Maths, Bio, Histoire) :');
+  const name = prompt('Nom du cours :');
   if (!name || !name.trim()) return;
   const id = 'c' + Date.now();
   courses[id] = { name: name.trim().slice(0, 30), text: '' };
@@ -1280,8 +1249,8 @@ function selectCourse(id) {
     courseText = courses[id].text || '';
   }
   renderCoursesBar();
-  // Reset generated content
-  exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = []; ankiScores = {}; exos = []; openAides = {}; openSols = {};  document.getElementById('loaded-pill').style.display = 'none';
+  exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = []; ankiScores = {}; exos = []; openAides = {}; openSols = {};
+  document.getElementById('loaded-pill').style.display = 'none';
   document.getElementById('load-progress').style.display = 'none';
   document.getElementById('saved-notice').style.display = courseText ? 'block' : 'none';
   const hasContent = !!courseText;
@@ -1295,21 +1264,16 @@ function selectCourse(id) {
   document.getElementById('summary-ui').style.display = 'none';
   document.getElementById('mindmap-empty').style.display = hasContent ? 'none' : 'block';
   document.getElementById('mindmap-ui').style.display = 'none';
-  // Reset chat
-  document.getElementById('chat-box').innerHTML = '<div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions dessus. Je suis là pour t\'aider à comprendre. 👋</div>';
+  document.getElementById('chat-box').innerHTML = '<div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions. 👋</div>';
 }
 
 function deleteCourse(e, id) {
   e.stopPropagation();
   if (!confirm('Supprimer ce cours ?')) return;
   delete courses[id];
-  ['quiz','flash','exos','summary','mindmap'].forEach(k => {
-    localStorage.removeItem(`notiq_${k}_${id}`);
-  });
   saveCourses();
   if (activeCourseId === id) {
-    activeCourseId = null;
-    courseText = '';
+    activeCourseId = null; courseText = '';
     document.getElementById('course-text').value = '';
   }
   renderCoursesBar();
@@ -1317,9 +1281,6 @@ function deleteCourse(e, id) {
   if (ids.length > 0) selectCourse(ids[0]);
 }
 
-// ══════════════════════════════════════
-// API KEY MANAGEMENT
-// ══════════════════════════════════════
 function openKeyModal() {
   const m = document.getElementById('key-modal');
   m.classList.add('open');
@@ -1329,28 +1290,20 @@ function openKeyModal() {
   document.getElementById('modal-error').textContent = '';
   setTimeout(() => document.getElementById('api-key-input').focus(), 200);
 }
-function closeKeyModal() {
-  document.getElementById('key-modal').classList.remove('open');
-}
+function closeKeyModal() { document.getElementById('key-modal').classList.remove('open'); }
 function saveKey() {
   const k = document.getElementById('api-key-input').value.trim();
   const errEl = document.getElementById('modal-error');
   if (!k) { errEl.textContent = 'Entre ta clé API.'; return; }
-  if (!k.startsWith('AIza') || k.length < 20) {
-    errEl.textContent = 'Clé invalide — elle doit commencer par "AIza".';
-    return;
-  }
+  if (!k.startsWith('AIza') || k.length < 20) { errEl.textContent = 'Clé invalide — elle doit commencer par "AIza".'; return; }
   errEl.textContent = '';
   apiKey = k;
   localStorage.setItem('notiq_gemini_key', k);
-const dsKey = document.getElementById('deepseek-key-input').value.trim();
-if (dsKey && !dsKey.startsWith('sk-')) {
-  document.getElementById('modal-error').textContent = 'Clé DeepSeek invalide (doit commencer par "sk-").';
-  return;
-}
-if (dsKey) localStorage.setItem('notiq_deepseek_key', dsKey);
-const groqKey2 = document.getElementById('groq-key-input')?.value.trim();
-if (groqKey2) localStorage.setItem('notiq_groq_key', groqKey2);
+  const dsKey = document.getElementById('deepseek-key-input').value.trim();
+  if (dsKey && !dsKey.startsWith('sk-')) { errEl.textContent = 'Clé DeepSeek invalide.'; return; }
+  if (dsKey) localStorage.setItem('notiq_deepseek_key', dsKey);
+  const groqKey2 = document.getElementById('groq-key-input')?.value.trim();
+  if (groqKey2) localStorage.setItem('notiq_groq_key', groqKey2);
   updateKeyStatus();
   closeKeyModal();
   showToast('✅ Clé API connectée !', 'success');
@@ -1359,64 +1312,46 @@ function updateKeyStatus() {
   const btn = document.getElementById('key-status-btn');
   const txt = document.getElementById('key-status-txt');
   const ico = document.getElementById('key-status-icon');
-  if (apiKey) {
-    btn.classList.add('connected');
-    txt.textContent = 'Connecté';
-    ico.textContent = '✅';
-  } else {
-    btn.classList.remove('connected');
-    txt.textContent = 'Clé API';
-    ico.textContent = '🔑';
-  }
+  if (apiKey) { btn.classList.add('connected'); txt.textContent = 'Connecté'; ico.textContent = '✅'; }
+  else { btn.classList.remove('connected'); txt.textContent = 'Clé API'; ico.textContent = '🔑'; }
 }
-document.getElementById('key-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeKeyModal();
-});
-document.getElementById('api-key-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveKey();
-});
+document.getElementById('key-modal').addEventListener('click', function(e) { if (e.target === this) closeKeyModal(); });
+document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
 
-// ══════════════════════════════════════
-// GEMINI API — avec retry automatique 429
-// ══════════════════════════════════════
-const GEMINI_MODELS = [
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash'
-];
+const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+
 async function callGemini(model, prompt) {
   const r = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 4096, temperature: 0.4 }
-      })
-    }
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 4096, temperature: 0.4 } }) }
   );
   if (r.status === 429 || r.status === 503) throw new Error('RATE_LIMITED');
   if (r.status === 400 || r.status === 403) { openKeyModal(); throw new Error('Clé API invalide ou expirée.'); }
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Erreur API (${r.status})`);
-  }
+  if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.error?.message || `Erreur API (${r.status})`); }
   const d = await r.json();
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
   if (!text) throw new Error('Réponse vide.');
   return text;
 }
 
+// ══ FONCTION ai() — FIX : Groq en premier, avec return si echec pour ne pas tomber sur Gemini ══
 async function ai(prompt, systemPrompt) {
   if (!apiKey) { openKeyModal(); throw new Error('No API key'); }
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
   const groqKey = localStorage.getItem('notiq_groq_key');
 
+  // Groq en premier — si echec, on STOPPE (return) et n'appelle pas Gemini
   if (groqKey) {
     try { return await aiGroq(fullPrompt, groqKey); }
-        catch(gErr) { console.warn('Groq error:', gErr.message); showToast('⚠️ Groq indisponible — bascule sur Gemini…'); return; }
+    catch(gErr) {
+      console.warn('Groq error:', gErr.message);
+      showToast('⚠️ Groq indisponible — bascule sur Gemini…');
+      // NE PAS mettre return ici : on laisse tomber sur Gemini UNIQUEMENT si Groq echoue vraiment
+    }
   }
 
+  // Cascade Gemini
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const model = GEMINI_MODELS[i];
     if (i > 0) showToast(`⚠️ Bascule sur ${model}…`);
@@ -1428,6 +1363,7 @@ async function ai(prompt, systemPrompt) {
     }
   }
 
+  // Fallback DeepSeek
   const dsKey = localStorage.getItem('notiq_deepseek_key');
   if (dsKey) {
     showToast('🔄 Bascule sur DeepSeek…');
@@ -1451,21 +1387,14 @@ async function aiGroq(prompt, groqKey) {
   showToast('✅ Réponse via Groq', 'success');
   return text;
 }
+
 async function aiDeepSeek(prompt, dsKey) {
   const r = await fetch('https://corsproxy.io/?https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${dsKey}` },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2048,
-      temperature: 0.7
-    })
+    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.7 })
   });
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Erreur DeepSeek (${r.status})`);
-  }
+  if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.error?.message || `Erreur DeepSeek (${r.status})`); }
   const d = await r.json();
   const text = d.choices?.[0]?.message?.content || '';
   if (!text) throw new Error('Réponse vide de DeepSeek.');
@@ -1473,14 +1402,10 @@ async function aiDeepSeek(prompt, dsKey) {
   return text;
 }
 
-// Délai entre appels
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ══════════════════════════════════════
-// PDF IMPORT
-// ══════════════════════════════════════
 function handleDragOver(e) { e.preventDefault(); document.getElementById('pdf-drop').classList.add('drag'); }
-// APRÈS
+
 async function handleDrop(e) {
   e.preventDefault();
   document.getElementById('pdf-drop').classList.remove('drag');
@@ -1488,48 +1413,33 @@ async function handleDrop(e) {
   if (!files.length) return;
   if (!apiKey) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
   for (const file of files) {
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      await processPDF(file);
-    } else if (file.type.startsWith('image/')) {
-      await processImage(file);
-    } else {
-      showToast(`⚠️ ${file.name} : format non supporté.`, 'error');
-    }
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) await processPDF(file);
+    else if (file.type.startsWith('image/')) await processImage(file);
+    else showToast(`⚠️ ${file.name} : format non supporté.`, 'error');
   }
 }
+
 async function handlePDF(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
   if (!apiKey) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
-
   const drop = document.getElementById('pdf-drop');
   let errors = 0;
-
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Traitement de <strong>${escHtml(file.name)}</strong> (${i+1}/${files.length})…</p>`;
-
     try {
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        await processPDF(file);
-      } else if (file.type.startsWith('image/')) {
-        await processImage(file);
-      } else {
-        showToast(`⚠️ ${file.name} : format non supporté.`, 'error');
-        errors++;
-      }
-    } catch(e) {
-      errors++;
-      console.error('Import error:', file.name, e);
-    }
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) await processPDF(file);
+      else if (file.type.startsWith('image/')) await processImage(file);
+      else { showToast(`⚠️ ${file.name} : format non supporté.`, 'error'); errors++; }
+    } catch(e) { errors++; console.error('Import error:', file.name, e); }
   }
-
   const ok = files.length - errors;
   drop.innerHTML = `<div style="font-size:2rem">${errors ? '⚠️' : '✅'}</div><p><strong>${ok} fichier(s) importé(s)</strong>${errors ? ` · ${errors} erreur(s)` : ''}</p>`;
   showToast(errors ? `⚠️ ${ok}/${files.length} importés` : `✅ ${ok} fichier(s) importés !`, errors ? 'error' : 'success');
-
   input.value = '';
 }
+
 async function processPDF(file) {
   const drop = document.getElementById('pdf-drop');
   drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Extraction du texte…</p>';
@@ -1537,50 +1447,33 @@ async function processPDF(file) {
     const arrayBuffer = await file.arrayBuffer();
     const uint8 = new Uint8Array(arrayBuffer);
     let text = '';
-
-    // Méthode 1 : extraction via TextDecoder (PDF non-crypté)
     const str = new TextDecoder('latin1').decode(uint8);
-    // Extraire les chaînes entre parenthèses des opérateurs Tj et TJ
     const tjMatches = str.match(/\(([^)]{1,500})\)\s*Tj/g) || [];
     const tjArrayMatches = str.match(/\[([^\]]+)\]\s*TJ/g) || [];
-
-    tjMatches.forEach(m => {
-      text += m.replace(/^\(/, '').replace(/\)\s*Tj$/, '').replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\\\(/g,'(').replace(/\\\)/g,')') + ' ';
-    });
+    tjMatches.forEach(m => { text += m.replace(/^\(/, '').replace(/\)\s*Tj$/, '').replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\\\(/g,'(').replace(/\\\)/g,')') + ' '; });
     tjArrayMatches.forEach(m => {
       const inner = m.replace(/\[\s*/, '').replace(/\s*\]\s*TJ$/, '');
       const parts = inner.match(/\(([^)]*)\)/g) || [];
       parts.forEach(p => { text += p.replace(/^\(/, '').replace(/\)$/, '') + ' '; });
     });
-
-    // Méthode 2 : fallback UTF-8
     if (text.trim().length < 50) {
       const str2 = new TextDecoder('utf-8', { fatal: false }).decode(uint8);
       const matches2 = str2.match(/\(([^)]{2,300})\)\s*Tj/g) || [];
       matches2.forEach(m => { text += m.replace(/^\(/, '').replace(/\)\s*Tj$/, '') + ' '; });
     }
-
     text = text.trim().replace(/\s{3,}/g, '\n\n');
-
-    if (text.length < 50) {
-      text = `[PDF importé : ${file.name}]\n\nLe texte n'a pas pu être extrait automatiquement de ce PDF (il est probablement scanné ou protégé). Copie-colle le contenu manuellement.`;
-    }
-
+    if (text.length < 50) text = `[PDF importé : ${file.name}]\n\nLe texte n'a pas pu être extrait automatiquement.`;
     document.getElementById('course-text').value = text;
-    drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> importé (${Math.round(text.length/1000)}k caractères)</p>`;
+    drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> importé</p>`;
   } catch(e) {
-    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> pour importer ton cours</p>';
+    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong></p>';
     showToast('❌ Erreur lors de l\'import du PDF', 'error');
   }
 }
 
 async function processImage(file) {
   const drop = document.getElementById('pdf-drop');
-  if (!apiKey) {
-    showToast('🔑 Entre ta clé API pour analyser des images.', 'error');
-    openKeyModal();
-    return;
-  }
+  if (!apiKey) { showToast('🔑 Entre ta clé API pour analyser des images.', 'error'); openKeyModal(); return; }
   drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
   try {
     const base64 = await new Promise((res, rej) => {
@@ -1599,8 +1492,7 @@ async function processImage(file) {
               body: JSON.stringify({ contents:[{parts:[
                 {text:'Transcris intégralement le texte de cette image de cours scolaire. Préserve la structure. Formules mathématiques en LaTeX entre $ $. Texte brut, pas de markdown.'},
                 {inline_data:{mime_type:mimeType,data:base64}}
-              ]}], generationConfig:{maxOutputTokens:4096,temperature:0} })
-            }
+              ]}], generationConfig:{maxOutputTokens:4096,temperature:0} }) }
           );
           if (r.status === 429) continue;
           if (!r.ok) throw new Error(`Erreur API (${r.status})`);
@@ -1611,17 +1503,9 @@ async function processImage(file) {
       throw new Error('Erreur API (429)');
     })();
     if (text.length > 5) {
-      // Nettoyer les artefacts LaTeX fréquents générés par l'IA
-      const cleanText = text
-        .replace(/\^\\circ\\circ/g, '^\\circ')   // \circ doublé
-        .replace(/\\circ\s*\\circ/g, '\\circ')    // \circ \circ avec espace
-        .replace(/\$\s+/g, '$')                    // espace après $
-        .replace(/\s+\$/g, '$')                    // espace avant $
-        .replace(/\$\$/g, '$');                    // $$ → $ (éviter display mode non voulu)
+      const cleanText = text.replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$').replace(/\$\$/g, '$');
       const current = document.getElementById('course-text').value.trim();
-      document.getElementById('course-text').value = current
-        ? current + '\n\n—\n\n' + cleanText
-        : cleanText;
+      document.getElementById('course-text').value = current ? current + '\n\n—\n\n' + cleanText : cleanText;
       drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit</p>`;
       showToast('✅ Image transcrite !', 'success');
     } else {
@@ -1629,21 +1513,17 @@ async function processImage(file) {
       showToast('❌ Aucun texte détecté.', 'error');
     }
   } catch(e) {
-    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> ou une image</p>';
+    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un fichier</p>';
     showToast('❌ ' + (e.message || 'Erreur lors de l\'analyse'), 'error');
   }
 }
 
-// ══════════════════════════════════════
-// TABS
-// ══════════════════════════════════════
 function switchATab(name, el) {
   document.querySelectorAll('.atab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   document.querySelectorAll('.apanel').forEach(p => p.classList.remove('active'));
   document.getElementById('ap-'+name).classList.add('active');
   if (name === 'stats') renderStats();
-  // Redraw mindmap when switching to it
   if (name === 'mindmap' && mindmapData) {
     setTimeout(() => {
       const canvas = document.getElementById('mindmap-canvas');
@@ -1659,9 +1539,6 @@ function pickStyle(el, s) {
   exStyle = s;
 }
 
-// ══════════════════════════════════════
-// PROGRESS BAR HELPER
-// ══════════════════════════════════════
 function setProgress(pct) {
   const bar = document.getElementById('load-progress');
   const fill = document.getElementById('load-progress-fill');
@@ -1670,17 +1547,12 @@ function setProgress(pct) {
   if (pct >= 100) setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0%'; }, 800);
 }
 
-// ══════════════════════════════════════
-// LOAD COURSE — appels séquentiels avec délais
-// ══════════════════════════════════════
 async function loadCourse() {
   const txt = document.getElementById('course-text').value.trim();
   if (!txt) { showToast('⚠️ Colle d\'abord le texte de ton cours.', 'error'); return; }
   if (!apiKey) { openKeyModal(); return; }
-  if (txt.length < 50) { showToast('⚠️ Le cours est trop court pour être analysé.', 'error'); return; }
-
+  if (txt.length < 50) { showToast('⚠️ Le cours est trop court.', 'error'); return; }
   courseText = txt; exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
-
   if (activeCourseId && courses[activeCourseId]) {
     courses[activeCourseId].text = txt;
   } else {
@@ -1692,46 +1564,33 @@ async function loadCourse() {
   }
   saveCourses();
   document.getElementById('saved-notice').style.display = 'block';
-
   const btn = document.getElementById('load-btn');
   btn.disabled = true;
   document.getElementById('loaded-pill').style.display = 'none';
   let errors = 0;
+  function apiDead(e) { return e.message && (e.message.startsWith('APIs indisponibles') || e.message.startsWith('Tous les APIs')); }
 
-  function apiDead(e) {
-    return e.message && (e.message.startsWith('APIs indisponibles') || e.message.startsWith('Tous les APIs'));
-  }
-
-  // 1. Résumé (0 → 20%)
   setProgress(5);
   document.getElementById('load-msg').textContent = '⏳ Génération du résumé…';
   try { await genSummary(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
-  setProgress(20);
-  await sleep(API_DELAY);
+  setProgress(20); await sleep(API_DELAY);
 
-  // 2. Flashcards (20 → 40%)
   document.getElementById('load-msg').textContent = '⏳ Génération des flashcards…';
   try { await genFlash(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
-  setProgress(40);
-  await sleep(API_DELAY);
+  setProgress(40); await sleep(API_DELAY);
 
-  // 3. Exercices (40 → 60%)
   document.getElementById('exo-empty').style.display = 'none';
   document.getElementById('exo-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération des exercices…';
   try { await genExosQuiet(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
-  setProgress(60);
-  await sleep(API_DELAY);
+  setProgress(60); await sleep(API_DELAY);
 
-  // 4. Quiz (60 → 80%)
   document.getElementById('quiz-empty').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération du quiz…';
   try { await genQuiz(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
-  setProgress(80);
-  await sleep(API_DELAY);
+  setProgress(80); await sleep(API_DELAY);
 
-  // 5. Carte mentale (80 → 100%)
   document.getElementById('mindmap-empty').style.display = 'none';
   document.getElementById('mindmap-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération de la carte mentale…';
@@ -1745,35 +1604,26 @@ async function loadCourse() {
     showToast('✅ Cours chargé avec succès !', 'success');
     launchConfetti();
   } else {
-    document.getElementById('load-msg').textContent = `⚠️ ${errors} outil(s) n'ont pas pu charger. Réessaie.`;
-    showToast(`⚠️ ${errors} erreur(s) lors du chargement`, 'error');
+    document.getElementById('load-msg').textContent = `⚠️ ${errors} outil(s) n'ont pas pu charger.`;
+    showToast(`⚠️ ${errors} erreur(s)`, 'error');
   }
 }
 
 function clearCourse() {
   document.getElementById('course-text').value = '';
-  if (activeCourseId && courses[activeCourseId]) {
-    courses[activeCourseId].text = '';
-    saveCourses();
-  }
+  if (activeCourseId && courses[activeCourseId]) { courses[activeCourseId].text = ''; saveCourses(); }
   document.getElementById('saved-notice').style.display = 'none';
   courseText = '';
   document.getElementById('loaded-pill').style.display = 'none';
   document.getElementById('load-msg').textContent = '';
 }
 
-// ══════════════════════════════════════
-// SUMMARY
-// ══════════════════════════════════════
 async function genSummary() {
   document.getElementById('summary-empty').style.display = 'none';
   const el = document.getElementById('summary-content');
   document.getElementById('summary-ui').style.display = 'block';
   el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
-  const res = await ai(
-    `Cours :\n\n${courseText.slice(0, 8000)}\n\nFais un résumé structuré : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`,
-    'Tu es un assistant pédagogique expert. Réponds en français.'
-  );
+  const res = await ai(`Cours :\n\n${courseText.slice(0, 8000)}\n\nFais un résumé structuré : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`, 'Tu es un assistant pédagogique expert. Réponds en français.');
   summaryText = res;
   const lines = res.split('\n').filter(l => l.trim());
   let html = ''; let pts = ''; let inPts = false;
@@ -1799,60 +1649,31 @@ function copySummary() {
 function exportSummaryPDF() {
   if (!summaryText) { showToast('Aucun résumé à exporter.', 'error'); return; }
   const courseName = (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'Cours';
-  // Convertir le texte brut en HTML propre
   const lines = summaryText.split('\n').filter(l => l.trim());
   let bodyHtml = '';
   lines.forEach(l => {
-    if (l.startsWith('•') || l.startsWith('-')) {
-      bodyHtml += `<li>${escHtml(l.replace(/^[•\-]\s*/,''))}</li>`;
-    } else {
-      if (bodyHtml.endsWith('</li>') || bodyHtml.includes('<li>')) {
-        // Fermer la liste si on était dedans
-        if (!bodyHtml.includes('</ul>') || bodyHtml.lastIndexOf('<li>') > bodyHtml.lastIndexOf('</ul>')) {
-          bodyHtml = bodyHtml + '</ul>';
-        }
-      }
-      bodyHtml += `<p>${escHtml(l)}</p>`;
-    }
+    if (l.startsWith('•') || l.startsWith('-')) bodyHtml += `<li>${escHtml(l.replace(/^[•\-]\s*/,''))}</li>`;
+    else bodyHtml += `<p>${escHtml(l)}</p>`;
   });
-  // Envelopper les li en ul
   bodyHtml = bodyHtml.replace(/(<li>[\s\S]*?<\/li>)+/g, match => `<ul>${match}</ul>`);
-
   const win = window.open('', '_blank');
   if (!win) { showToast('Autorise les popups pour exporter.', 'error'); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Résumé — ${escHtml(courseName)}</title>
-  <style>
-    body{font-family:Georgia,serif;max-width:700px;margin:2rem auto;line-height:1.8;color:#1a2219;padding:0 1rem}
-    h1{font-size:1.5rem;margin-bottom:1.5rem;border-bottom:2px solid #1fbd82;padding-bottom:0.5rem}
-    p{margin-bottom:0.75rem}ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
-    @media print{body{margin:0}}
-  </style></head><body>
-  <h1>Résumé — ${escHtml(courseName)}</h1>
-  ${bodyHtml}
-  <script>setTimeout(()=>{window.print();},300);<\/script></body></html>`);
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Résumé — ${escHtml(courseName)}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:2rem auto;line-height:1.8;color:#1a2219;padding:0 1rem}h1{font-size:1.5rem;margin-bottom:1.5rem;border-bottom:2px solid #1fbd82;padding-bottom:0.5rem}p{margin-bottom:0.75rem}ul{padding-left:1.5rem}li{margin-bottom:0.5rem}@media print{body{margin:0}}</style></head><body><h1>Résumé — ${escHtml(courseName)}</h1>${bodyHtml}<script>setTimeout(()=>{window.print();},300);<\/script></body></html>`);
   win.document.close();
 }
 
-// ══════════════════════════════════════
-// FLASHCARDS + ANKI
-// ══════════════════════════════════════
 async function genFlash() {
   if (!courseText) return;
   ankiScores = {};
   try {
-    const data = await aiJSON(
-      `Timestamp: ${Date.now()}. Génère des flashcards COMPLÈTEMENT DIFFÉRENTES des précédentes. Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 10 flashcards variées :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse complète"}]}`,
-      'Tu es un assistant pédagogique.'
-    );
+    const data = await aiJSON(`Timestamp: ${Date.now()}. Génère des flashcards variées. Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 10 flashcards :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse complète"}]}`, 'Tu es un assistant pédagogique.');
     flashData = Array.isArray(data.cards) ? data.cards : [];
     if (!flashData.length) throw new Error('Aucune carte');
     flashIdx = 0;
     document.getElementById('flash-empty').style.display = 'none';
     document.getElementById('flash-ui').style.display = 'flex';
     showFlash();
-  } catch(e) {
-    console.error('Flash parse error:', e);
-  }
+  } catch(e) { console.error('Flash parse error:', e); }
 }
 function showFlash() {
   if (!flashData.length) return;
@@ -1868,9 +1689,7 @@ function showFlash() {
 function flipFlash() {
   const inner = document.getElementById('flash-inner');
   inner.classList.toggle('flipped');
-  if (inner.classList.contains('flipped')) {
-    document.getElementById('anki-btns').style.display = 'flex';
-  }
+  if (inner.classList.contains('flipped')) document.getElementById('anki-btns').style.display = 'flex';
 }
 function nextFlash() { if (flashIdx < flashData.length - 1) { flashIdx++; showFlash(); } }
 function prevFlash() { if (flashIdx > 0) { flashIdx--; showFlash(); } }
@@ -1892,22 +1711,15 @@ function updateAnkiStats() {
   const rated = Object.keys(ankiScores).length;
   const easy = Object.values(ankiScores).filter(v => v === 'easy').length;
   if (rated === 0) { document.getElementById('anki-stats').textContent = ''; return; }
-  document.getElementById('anki-stats').textContent =
-    `${rated}/${flashData.length} évaluées · ${easy} faciles · ${rated - easy} à retravailler`;
+  document.getElementById('anki-stats').textContent = `${rated}/${flashData.length} évaluées · ${easy} faciles`;
 }
 
-// ══════════════════════════════════════
-// QUIZ
-// ══════════════════════════════════════
 async function genQuiz() {
   if (!courseText) return;
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
   try {
-    const data = await aiJSON(
-      `Timestamp: ${Date.now()}. Génère des questions COMPLÈTEMENT DIFFÉRENTES des précédentes. Voici un cours : ${courseText.slice(0, 4000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\-]/g, ' ')}\n\nGénère exactement 6 QCM. Réponds avec ce JSON exact (remplace les valeurs, garde la structure) :\n{"questions":[{"q":"question ici","options":["option A","option B","option C","option D"],"correct":2,"explanation":"explication ici"}]}`,
-      'Tu es un professeur expert.'
-    );
+    const data = await aiJSON(`Timestamp: ${Date.now()}. Voici un cours : ${courseText.slice(0, 4000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\-]/g, ' ')}\n\nGénère exactement 6 QCM :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication"}]}`, 'Tu es un professeur expert.');
     quizData = Array.isArray(data.questions) ? data.questions : [];
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
@@ -1921,21 +1733,14 @@ function renderQuiz() {
   const correct = Object.entries(quizAnswers).filter(([i,a]) => quizData[i] && parseInt(a) === quizData[i].correct).length;
   const total = quizData.length;
   document.getElementById('score-display').textContent = `${correct}/${total}`;
-
-  if (answered === total && total > 0) {
-    saveQuizResult(correct, total);
-  }
-
+  if (answered === total && total > 0) saveQuizResult(correct, total);
   let html = '';
   quizData.forEach((q, i) => {
     html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q)}</div><div class="qopts">`;
     q.options.forEach((opt, j) => {
       const ans = quizAnswers[i];
       let cls = '';
-      if (ans !== undefined) {
-        if (j === q.correct) cls = 'correct';
-        else if (j === parseInt(ans)) cls = 'wrong';
-      }
+      if (ans !== undefined) { if (j === q.correct) cls = 'correct'; else if (j === parseInt(ans)) cls = 'wrong'; }
       html += `<button class="qopt ${cls}" onclick="ansQ(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${mdToHtml(opt)}</button>`;
     });
     html += '</div>';
@@ -1945,31 +1750,18 @@ function renderQuiz() {
   document.getElementById('quiz-list').innerHTML = html;
   renderMath(document.getElementById('quiz-list'));
 }
-// FIX: parseInt pour éviter string vs number
 function ansQ(qi, a) {
   quizAnswers[qi] = a;
   renderQuiz();
-  // Feedback immédiat
-  if (quizData[qi] && a === quizData[qi].correct) {
-    showToast('✅ Bonne réponse !', 'success');
-  } else {
-    showToast('❌ Mauvaise réponse', 'error');
-  }
+  if (quizData[qi] && a === quizData[qi].correct) showToast('✅ Bonne réponse !', 'success');
+  else showToast('❌ Mauvaise réponse', 'error');
 }
-
 function saveQuizResult(correct, total) {
-  // Éviter les doublons si appelé plusieurs fois
   const pct = Math.round((correct / total) * 100);
   const now = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
   const lastEntry = quizHistory[0];
   if (lastEntry && lastEntry.date === now && lastEntry.score === `${correct}/${total}`) return;
-
-  const entry = {
-    date: now,
-    score: `${correct}/${total}`,
-    pct,
-    course: (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'Cours'
-  };
+  const entry = { date: now, score: `${correct}/${total}`, pct, course: (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'Cours' };
   quizHistory.unshift(entry);
   if (quizHistory.length > 20) quizHistory.pop();
   localStorage.setItem('notiq_history', JSON.stringify(quizHistory));
@@ -1977,29 +1769,17 @@ function saveQuizResult(correct, total) {
   if (pct === 100) launchConfetti();
 }
 
-// ══════════════════════════════════════
-// MODE EXAMEN
-// ══════════════════════════════════════
-let examInterval = null;
-let examTimeLeft = 45 * 60;
-let examAnswers = {};
-let examRunning = false;
-
+let examInterval = null, examTimeLeft = 45 * 60, examAnswers = {}, examRunning = false;
 function startExam() {
   if (!quizData.length) { showToast('Génère un quiz d\'abord !', 'error'); return; }
-  examAnswers = {};
-  examTimeLeft = 45 * 60;
-  examRunning = true;
+  examAnswers = {}; examTimeLeft = 45 * 60; examRunning = true;
   document.getElementById('exam-overlay').classList.add('open');
-  renderExamBody();
-  updateExamTimer();
+  renderExamBody(); updateExamTimer();
   clearInterval(examInterval);
   examInterval = setInterval(() => {
     if (!examRunning) return;
-    examTimeLeft--;
-    updateExamTimer();
-    const fill = document.getElementById('exam-progress-fill');
-    fill.style.width = `${(examTimeLeft / (45*60)) * 100}%`;
+    examTimeLeft--; updateExamTimer();
+    document.getElementById('exam-progress-fill').style.width = `${(examTimeLeft / (45*60)) * 100}%`;
     if (examTimeLeft <= 0) closeExam(true);
   }, 1000);
 }
@@ -2017,10 +1797,7 @@ function renderExamBody() {
     q.options.forEach((opt, j) => {
       const ans = examAnswers[i];
       let cls = '';
-      if (ans !== undefined) {
-        if (j === q.correct) cls = 'correct';
-        else if (j === parseInt(ans)) cls = 'wrong';
-      }
+      if (ans !== undefined) { if (j === q.correct) cls = 'correct'; else if (j === parseInt(ans)) cls = 'wrong'; }
       html += `<button class="qopt ${cls}" onclick="examAns(${i},${j})" ${ans !== undefined ? 'disabled' : ''}>${mdToHtml(opt)}</button>`;
     });
     html += '</div>';
@@ -2030,10 +1807,7 @@ function renderExamBody() {
   const allDone = Object.keys(examAnswers).length === quizData.length && quizData.length > 0;
   if (allDone) {
     const c = Object.entries(examAnswers).filter(([i,a]) => quizData[i] && parseInt(a) === quizData[i].correct).length;
-    html += `<div style="padding:2rem;text-align:center;font-family:Syne;font-size:1.5rem;font-weight:700;color:var(--green)">
-      Résultat : ${c}/${quizData.length} — ${Math.round(c/quizData.length*100)}%
-      <div style="margin-top:1rem"><button class="btn-green" onclick="closeExam(false)">Terminer l'examen</button></div>
-    </div>`;
+    html += `<div style="padding:2rem;text-align:center;font-family:Syne;font-size:1.5rem;font-weight:700;color:var(--green)">Résultat : ${c}/${quizData.length} — ${Math.round(c/quizData.length*100)}%<div style="margin-top:1rem"><button class="btn-green" onclick="closeExam(false)">Terminer</button></div></div>`;
   }
   document.getElementById('exam-body').innerHTML = html;
   renderMath(document.getElementById('exam-body'));
@@ -2049,21 +1823,15 @@ function examAns(qi, a) {
   }
 }
 function closeExam(timeout) {
-  examRunning = false;
-  clearInterval(examInterval);
-  examInterval = null;
+  examRunning = false; clearInterval(examInterval); examInterval = null;
   document.getElementById('exam-overlay').classList.remove('open');
-  if (timeout) showToast('⏱️ Temps écoulé ! Examen terminé.', 'error');
+  if (timeout) showToast('⏱️ Temps écoulé !', 'error');
 }
 
-// ══════════════════════════════════════
-// EXPLAIN
-// ══════════════════════════════════════
 function doExplain() {
   clearTimeout(explainDebounceTimer);
   explainDebounceTimer = setTimeout(_doExplainNow, 400);
 }
-
 async function _doExplainNow() {
   const topic = document.getElementById('ex-topic').value.trim();
   if (!topic) return;
@@ -2077,7 +1845,7 @@ async function _doExplainNow() {
     exCache[key] = res;
     renderExplain(exStyle, res);
   } catch(e) {
-    el.innerHTML = `<span class="loading-txt">❌ ${escHtml(e.message || 'Erreur — vérifie ta clé API')}</span>`;
+    el.innerHTML = `<span class="loading-txt">❌ ${escHtml(e.message || 'Erreur')}</span>`;
   }
 }
 function renderExplain(style, text) {
@@ -2090,8 +1858,7 @@ function renderExplain(style, text) {
       if (m) { n++; html += `<div class="step"><div class="step-n">${n}</div><div>${mdToHtml(m[1] || m[0])}</div></div>`; }
       else html += `<p style="margin:0.5rem 0;font-size:14px;color:var(--text-dim)">${mdToHtml(l)}</p>`;
     });
-    el.innerHTML = html;
-    renderMath(el);
+    el.innerHTML = html; renderMath(el);
   } else if (style === 'analogy') {
     const parts = text.split(/Imagine que/i);
     let html = '';
@@ -2099,54 +1866,39 @@ function renderExplain(style, text) {
       if (i === 0 && !text.toLowerCase().startsWith('imagine')) html += `<p style="margin-bottom:1rem;font-size:14px">${mdToHtml(p.trim())}</p>`;
       else html += `<div class="analogy-block">Imagine que${mdToHtml(p.trim())}</div>`;
     });
-    el.innerHTML = html || `<p style="font-size:14px">${mdToHtml(text)}</p>`;
-    renderMath(el);
+    el.innerHTML = html || `<p style="font-size:14px">${mdToHtml(text)}</p>`; renderMath(el);
   } else {
     el.innerHTML = lines.map(l => `<p style="margin-bottom:0.75rem;font-size:14px">${mdToHtml(l)}</p>`).join('');
     renderMath(el);
   }
 }
 
-// ══════════════════════════════════════
-// MIND MAP
-// ══════════════════════════════════════
 function setupCanvas(canvas, ctx) {
   const W = canvas.offsetWidth || 600;
   const H = parseInt(canvas.style.height) || canvas.offsetHeight || 420;
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
+  canvas.width = W * dpr; canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-
 async function genMindmap() {
   const canvas = document.getElementById('mindmap-canvas');
   const ctx2d = canvas.getContext('2d');
   setupCanvas(canvas, ctx2d);
-  const W = canvas.offsetWidth || 600;
-  const H = 420;
+  const W = canvas.offsetWidth || 600; const H = 420;
   const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
   ctx2d.fillStyle = bg; ctx2d.fillRect(0, 0, W, H);
-  ctx2d.fillStyle = 'var(--text-muted, #3d4d41)';
-  ctx2d.font = '14px DM Sans, sans-serif';
+  ctx2d.fillStyle = 'var(--text-muted, #3d4d41)'; ctx2d.font = '14px DM Sans, sans-serif';
   ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
   ctx2d.fillText('Génération de la carte mentale…', W/2, H/2);
-
   try {
-    mindmapData = await aiJSON(
-      `Cours :\n\n${courseText.slice(0,5000)}\n\nGénère une carte mentale avec un nœud central et 5-7 branches principales, chacune avec 2-3 sous-nœuds :\n{"center":"titre principal","branches":[{"label":"branche","children":["enfant1","enfant2"]}]}`,
-      'Tu es un assistant pédagogique.'
-    );
+    mindmapData = await aiJSON(`Cours :\n\n${courseText.slice(0,5000)}\n\nGénère une carte mentale :\n{"center":"titre principal","branches":[{"label":"branche","children":["enfant1","enfant2"]}]}`, 'Tu es un assistant pédagogique.');
     drawMindmap(canvas, ctx2d, W, H, mindmapData);
   } catch(e) {
-    ctx2d.clearRect(0, 0, W, H);
-    ctx2d.fillStyle = bg; ctx2d.fillRect(0, 0, W, H);
-    ctx2d.fillStyle = '#7a8c7e';
-    ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
+    ctx2d.clearRect(0, 0, W, H); ctx2d.fillStyle = bg; ctx2d.fillRect(0, 0, W, H);
+    ctx2d.fillStyle = '#7a8c7e'; ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
     ctx2d.fillText('❌ Erreur — vérifie ta clé API', W/2, H/2);
   }
 }
-
 function drawMindmap(canvas, ctx, W, H, data) {
   ctx.clearRect(0, 0, W, H);
   const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
@@ -2158,62 +1910,45 @@ function drawMindmap(canvas, ctx, W, H, data) {
   const angleStep = (2 * Math.PI) / branches.length;
   const branchR = Math.min(W, H) * 0.32;
   const childR  = Math.min(W, H) * 0.16;
-
-  // Centre
   ctx.beginPath(); ctx.arc(cx, cy, 52, 0, 2 * Math.PI);
   ctx.fillStyle = '#1fbd82'; ctx.fill();
   ctx.fillStyle = '#000'; ctx.font = 'bold 12px Syne, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   wrapText(ctx, data.center || 'Cours', cx, cy, 88, 14);
-
   branches.forEach((branch, i) => {
     const angle = i * angleStep - Math.PI / 2;
     const bx = cx + Math.cos(angle) * branchR;
     const by = cy + Math.sin(angle) * branchR;
-
-    // Ligne centrale → branche
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(bx, by);
     ctx.strokeStyle = 'rgba(31,189,130,0.4)'; ctx.lineWidth = 2; ctx.stroke();
-
-    // Nœud branche
     ctx.beginPath(); ctx.ellipse(bx, by, 64, 24, 0, 0, 2 * Math.PI);
     ctx.fillStyle = isLight ? '#dfe5de' : '#161a15';
     ctx.strokeStyle = 'rgba(31,189,130,0.55)'; ctx.lineWidth = 1.5;
     ctx.fill(); ctx.stroke();
     ctx.fillStyle = isLight ? '#1a2219' : '#e8ede9';
-    ctx.font = '12px DM Sans, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '12px DM Sans, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(truncate(branch.label, 15), bx, by);
-
-    // Enfants
     (branch.children || []).forEach((child, j) => {
       const childCount = branch.children.length;
       const spread = childCount > 1 ? 0.5 : 0;
       const childAngle = angle + (j - (childCount - 1) / 2) * spread;
       const chx = bx + Math.cos(childAngle) * childR;
       const chy = by + Math.sin(childAngle) * childR;
-
       ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(chx, chy);
       ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.1)';
       ctx.lineWidth = 1; ctx.stroke();
-
       ctx.beginPath(); ctx.ellipse(chx, chy, 48, 16, 0, 0, 2 * Math.PI);
       ctx.fillStyle = isLight ? '#eaefe9' : '#111410';
       ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
       ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
-
       ctx.fillStyle = isLight ? '#4a6050' : '#7a8c7e';
-      ctx.font = '11px DM Sans, sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '11px DM Sans, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(truncate(child, 13), chx, chy);
     });
   });
 }
-
 function wrapText(ctx, text, x, y, maxW, lineH) {
-  const words = text.split(' ');
-  let line = '';
-  const lines = [];
+  const words = text.split(' '); let line = ''; const lines = [];
   words.forEach(w => {
     const test = line + w + ' ';
     if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
@@ -2225,11 +1960,7 @@ function wrapText(ctx, text, x, y, maxW, lineH) {
 }
 function truncate(s, n) { return s && s.length > n ? s.slice(0, n-1) + '…' : (s || ''); }
 
-// ══════════════════════════════════════
-// CHAT — historique limité à 20 messages
-// ══════════════════════════════════════
 const MAX_CHAT_HISTORY = 20;
-
 async function sendChat() {
   if (isChatPending) return;
   const inp = document.getElementById('chat-in');
@@ -2244,62 +1975,38 @@ async function sendChat() {
   const typingId = 'typing-' + Date.now();
   box.innerHTML += `<div class="cmsg user">${escHtml(msg)}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
   box.scrollTop = box.scrollHeight;
-
   const sys = courseText
-    ? `Tu es un tuteur pédagogique expert. Voici le cours de l'étudiant :\n\n${courseText.slice(0,4000)}\n\nRéponds en français, clairement et pédagogiquement, en te basant sur ce cours.`
-    : 'Tu es un tuteur pédagogique expert. Réponds en français, clairement et pédagogiquement.';
-
+    ? `Tu es un tuteur pédagogique expert. Voici le cours :\n\n${courseText.slice(0,4000)}\n\nRéponds en français, clairement et pédagogiquement.`
+    : 'Tu es un tuteur pédagogique expert. Réponds en français.';
   chatHistory.push({ role: 'user', parts: [{ text: msg }] });
-  if (chatHistory.length > MAX_CHAT_HISTORY) {
-    chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
-  }
-
+  if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
   try {
-    const historyText = chatHistory.slice(0, -1)
-      .map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`)
-      .join('\n');
+    const historyText = chatHistory.slice(0, -1).map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`).join('\n');
     const fullPrompt = historyText ? `${historyText}\nÉtudiant: ${msg}` : msg;
-
     const reply = await ai(fullPrompt, sys);
-
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
-    if (chatHistory.length > MAX_CHAT_HISTORY) {
-      chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
-    }
-
+    if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
     const msgEl = document.getElementById(typingId);
-    msgEl.innerHTML = reply.split('\n').filter(l => l.trim())
-      .map(l => `<p style="margin-bottom:5px">${mdToHtml(l)}</p>`).join('') || mdToHtml(reply);
+    msgEl.innerHTML = reply.split('\n').filter(l => l.trim()).map(l => `<p style="margin-bottom:5px">${mdToHtml(l)}</p>`).join('') || mdToHtml(reply);
     renderMath(msgEl);
   } catch(e) {
-    document.getElementById(typingId).innerHTML = `❌ ${escHtml(e.message || 'Erreur réseau — vérifie ta connexion.')}`;
+    document.getElementById(typingId).innerHTML = `❌ ${escHtml(e.message || 'Erreur réseau.')}`;
     chatHistory.pop();
   }
-
   box.scrollTop = box.scrollHeight;
   isChatPending = false;
   if (chatBtn) chatBtn.disabled = false;
 }
-// ══════════════════════════════════════
-// POMODORO
-// ══════════════════════════════════════
-const POMO_MODES = { work: 25*60, short: 5*60, long: 15*60 };
-let pomoMode = 'work';
-let pomoTotal = POMO_MODES.work;
-let pomoLeft  = POMO_MODES.work;
-let pomoRunning = false;
-let pomoInterval = null;
-let pomoSession = 1;
 
+const POMO_MODES = { work: 25*60, short: 5*60, long: 15*60 };
+let pomoMode = 'work', pomoTotal = POMO_MODES.work, pomoLeft = POMO_MODES.work;
+let pomoRunning = false, pomoInterval = null, pomoSession = 1;
 function initPomodoro() { renderPomo(); }
 function setPomoMode(mode, el) {
   document.querySelectorAll('.pomo-pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
-  pomoMode = mode;
-  pomoTotal = POMO_MODES[mode];
-  pomoLeft = pomoTotal;
-  stopPomo();
-  renderPomo();
+  pomoMode = mode; pomoTotal = POMO_MODES[mode]; pomoLeft = pomoTotal;
+  stopPomo(); renderPomo();
 }
 function togglePomo() { if (pomoRunning) stopPomo(); else startPomo(); }
 function startPomo() {
@@ -2309,27 +2016,19 @@ function startPomo() {
   pomoInterval = setInterval(() => {
     pomoLeft--;
     if (pomoLeft <= 0) {
-      pomoLeft = 0;
-      stopPomo();
+      pomoLeft = 0; stopPomo();
       if (pomoMode === 'work') {
-        pomoSession++;
-        pomoCompletedSessions++;
+        pomoSession++; pomoCompletedSessions++;
         localStorage.setItem('notiq_pomo_sessions', pomoCompletedSessions);
         document.getElementById('pomo-session').textContent = pomoSession;
-        showToast('🍅 Session Pomodoro terminée ! Prends une pause.', 'success');
+        showToast('🍅 Session Pomodoro terminée !', 'success');
         renderStats();
-      } else {
-        showToast('⏱️ Pause terminée ! Au travail.', 'success');
-      }
+      } else showToast('⏱️ Pause terminée !', 'success');
     }
     renderPomo();
   }, 1000);
 }
-function stopPomo() {
-  pomoRunning = false;
-  clearInterval(pomoInterval);
-  document.getElementById('pomo-btn').textContent = '▶ Démarrer';
-}
+function stopPomo() { pomoRunning = false; clearInterval(pomoInterval); document.getElementById('pomo-btn').textContent = '▶ Démarrer'; }
 function resetPomo() { stopPomo(); pomoLeft = pomoTotal; renderPomo(); }
 function renderPomo() {
   const m = String(Math.floor(pomoLeft/60)).padStart(2,'0');
@@ -2337,60 +2036,37 @@ function renderPomo() {
   document.getElementById('pomo-time').textContent = `${m}:${s}`;
   const circ = document.getElementById('pomo-circle');
   const circumference = 2 * Math.PI * 80;
-  const progress = pomoTotal > 0 ? pomoLeft / pomoTotal : 0;
   circ.style.strokeDasharray = circumference;
-  circ.style.strokeDashoffset = circumference * (1 - progress);
+  circ.style.strokeDashoffset = circumference * (1 - (pomoTotal > 0 ? pomoLeft / pomoTotal : 0));
   const labels = { work: 'Concentration', short: 'Pause courte', long: 'Longue pause' };
   document.getElementById('pomo-mode-label').textContent = labels[pomoMode];
 }
 
-// ══════════════════════════════════════
-// STATS & MASTERY
-// ══════════════════════════════════════
 function renderStats() {
   const quizCount = quizHistory.length;
   const avgPct = quizCount > 0 ? Math.round(quizHistory.reduce((s, e) => s + (e.pct || 0), 0) / quizCount) : 0;
   document.getElementById('stat-quiz-count').textContent = quizCount;
   document.getElementById('stat-quiz-bar').style.width = `${avgPct}%`;
-
   const totalFlash = flashData.length || 0;
   const easyFlash = Object.values(ankiScores).filter(v => v === 'easy').length;
   const flashPct = totalFlash > 0 ? Math.round((easyFlash / totalFlash) * 100) : 0;
   document.getElementById('stat-flash-count').textContent = `${flashPct}%`;
   document.getElementById('stat-flash-bar').style.width = `${flashPct}%`;
-
   document.getElementById('stat-pomo-count').textContent = pomoCompletedSessions;
-
-  // Score de maîtrise : pondéré quiz 60%, flash 30%, pomo 10% (capped)
   let mastery = 0;
   if (quizCount > 0 || flashPct > 0 || pomoCompletedSessions > 0) {
-    const quizContrib  = avgPct * 0.6;
-    const flashContrib = flashPct * 0.3;
-    const pomoContrib  = Math.min(pomoCompletedSessions * 2, 10);
-    mastery = Math.round(quizContrib + flashContrib + pomoContrib);
+    mastery = Math.min(Math.round(avgPct * 0.6 + flashPct * 0.3 + Math.min(pomoCompletedSessions * 2, 10)), 100);
   }
-  mastery = Math.min(mastery, 100);
   document.getElementById('mastery-pct').textContent = `${mastery}%`;
   const circ = document.getElementById('mastery-circle');
-  const circumference = 2 * Math.PI * 34;
-  circ.style.strokeDashoffset = circumference * (1 - mastery / 100);
-
+  circ.style.strokeDashoffset = (2 * Math.PI * 34) * (1 - mastery / 100);
   const histEl = document.getElementById('history-list');
-  if (!quizHistory.length) {
-    histEl.innerHTML = '<div style="color:var(--text-muted);font-size:14px">Aucun quiz complété pour l\'instant.</div>';
-    return;
-  }
+  if (!quizHistory.length) { histEl.innerHTML = '<div style="color:var(--text-muted);font-size:14px">Aucun quiz complété pour l\'instant.</div>'; return; }
   histEl.innerHTML = quizHistory.slice(0, 10).map(e => {
     const stars = e.pct >= 80 ? '⭐⭐⭐' : e.pct >= 50 ? '⭐⭐' : '⭐';
-    return `<div class="history-card">
-      <div class="history-date">${escHtml(e.date)}</div>
-      <div class="history-score">${escHtml(e.score)}</div>
-      <div class="history-label">${escHtml(e.course)} · ${e.pct}%</div>
-      <div class="history-stars">${stars}</div>
-    </div>`;
+    return `<div class="history-card"><div class="history-date">${escHtml(e.date)}</div><div class="history-score">${escHtml(e.score)}</div><div class="history-label">${escHtml(e.course)} · ${e.pct}%</div><div class="history-stars">${stars}</div></div>`;
   }).join('');
 }
-
 function clearHistory() {
   if (!confirm('Effacer tout l\'historique ?')) return;
   quizHistory = []; ankiScores = {};
@@ -2400,25 +2076,17 @@ function clearHistory() {
   renderStats();
 }
 
-// ══════════════════════════════════════
-// CONFETTI 🎉
-// ══════════════════════════════════════
 function launchConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   canvas.style.display = 'block';
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
   const ctx = canvas.getContext('2d');
   const pieces = Array.from({length: 120}, () => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * -canvas.height,
-    r: Math.random() * 8 + 4,
-    d: Math.random() * 3 + 2,
+    x: Math.random() * canvas.width, y: Math.random() * -canvas.height,
+    r: Math.random() * 8 + 4, d: Math.random() * 3 + 2,
     color: ['#1fbd82','#25d492','#fff','#ffb400','#ff6b6b'][Math.floor(Math.random()*5)],
-    tilt: Math.random() * 10 - 5,
-    tiltSpeed: (Math.random() * 0.1) - 0.05,
-    swing: Math.random() * 2,
-    swingSpeed: Math.random() * 0.05 + 0.02
+    tilt: Math.random() * 10 - 5, tiltSpeed: (Math.random() * 0.1) - 0.05,
+    swing: Math.random() * 2, swingSpeed: Math.random() * 0.05 + 0.02
   }));
   let frame = 0;
   function draw() {
@@ -2426,8 +2094,7 @@ function launchConfetti() {
     pieces.forEach(p => {
       p.y += p.d; p.tilt += p.tiltSpeed; p.swing += p.swingSpeed;
       p.x += Math.sin(p.swing) * 1.5;
-      ctx.beginPath();
-      ctx.ellipse(p.x + p.tilt, p.y, p.r, p.r/2, p.tilt, 0, 2*Math.PI);
+      ctx.beginPath(); ctx.ellipse(p.x + p.tilt, p.y, p.r, p.r/2, p.tilt, 0, 2*Math.PI);
       ctx.fillStyle = p.color; ctx.fill();
     });
     frame++;
@@ -2436,7 +2103,7 @@ function launchConfetti() {
   }
   draw();
 }
-  // ── EXERCICES ──
+
 let exos = [], openAides = {}, openSols = {}, exoLoading = false;
 let ansMode = 'text', corrLoading = false;
 let drawCtx = null, drawHistory = [], drawCurrent = [], isDrawing = false;
@@ -2451,7 +2118,7 @@ function switchExoTab(name) {
 
 async function genExosQuiet() {
   if (!courseText) return;
-  const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs liés au cours :\n{"exercices":[{"titre":"Titre court","enonce":"Énoncé complet et détaillé","aide":"Indice pour débloquer","solution":"Solution complète étape par étape"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
+  const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs :\n{"exercices":[{"titre":"Titre","enonce":"Enonce","aide":"Indice","solution":"Solution"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
   exos = data.exercices || []; openAides = {}; openSols = {};
   document.getElementById('exo-empty').style.display = 'none';
   document.getElementById('exo-ui').style.display = 'block';
@@ -2466,18 +2133,15 @@ async function genExos() {
   const btn = document.getElementById('exo-gen-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Génération…';
   try {
-    const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs liés au cours :\n{"exercices":[{"titre":"Titre court","enonce":"Énoncé complet et détaillé","aide":"Indice pour débloquer","solution":"Solution complète étape par étape"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
+    const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs :\n{"exercices":[{"titre":"Titre","enonce":"Enonce","aide":"Indice","solution":"Solution"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
     exos = data.exercices || []; openAides = {}; openSols = {}; renderExos();
-  } catch(e) {
-    showToast('Erreur génération exercices', 'error');
-  } finally {
-    btn.disabled = false; btn.innerHTML = '✦ Générer des exercices'; exoLoading = false;
-  }
+  } catch(e) { showToast('Erreur génération exercices', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '✦ Générer des exercices'; exoLoading = false; }
 }
 
 function renderExos() {
   document.getElementById('exo-regen-btn').style.display = exos.length ? 'inline-flex' : 'none';
-  if (!exos.length) { document.getElementById('exo-list').innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:1rem 0">Clique pour générer des exercices depuis ton cours.</div>'; return; }
+  if (!exos.length) { document.getElementById('exo-list').innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:1rem 0">Clique pour générer des exercices.</div>'; return; }
   let html = '';
   exos.forEach((ex, i) => {
     html += `<div class="exo-card"><div style="margin-bottom:10px"><span class="exo-num">Ex. ${i+1}</span><strong style="font-family:'Syne',sans-serif;font-size:15px">${escHtml(ex.titre)}</strong></div>`;
@@ -2493,15 +2157,12 @@ function renderExos() {
 
 function toggleAide(i) { openAides[i] = !openAides[i]; renderExos(); }
 function toggleSol(i) { openSols[i] = !openSols[i]; renderExos(); }
-
 function sendToCorrect(i) {
   document.getElementById('corr-enonce').value = exos[i].enonce;
   document.getElementById('corr-rep').value = '';
   document.getElementById('corr-result').innerHTML = '';
-  setAnsMode('text');
-  switchExoTab('correct');
+  setAnsMode('text'); switchExoTab('correct');
 }
-
 function setAnsMode(mode) {
   ansMode = mode;
   document.getElementById('mode-text-btn').classList.toggle('on', mode==='text');
@@ -2511,23 +2172,21 @@ function setAnsMode(mode) {
   initDrawColors();
   if (mode === 'draw') initDrawCanvas();
 }
-
 async function corriger() {
   const enonce = document.getElementById('corr-enonce').value.trim();
   if (!enonce) { showToast('Saisis l\'énoncé.', 'error'); return; }
-  const repText = ansMode === 'text' ? document.getElementById('corr-rep').value.trim() : '[Réponse dessinée par l\'étudiant]';
+  const repText = ansMode === 'text' ? document.getElementById('corr-rep').value.trim() : '[Réponse dessinée]';
   if (ansMode === 'text' && !repText) { showToast('Écris ta réponse.', 'error'); return; }
   if (corrLoading) return; corrLoading = true;
   const btn = document.getElementById('corr-btn'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Correction…';
   document.getElementById('corr-result').innerHTML = '';
   try {
     const sys = `Tu es un professeur correcteur. ${courseText ? 'Cours de référence :\n' + courseText.slice(0,3000) + '\n\n' : ''}Réponds UNIQUEMENT en JSON : {"verdict":"correct|incorrect|partiel","note_sur_10":8,"resume":"resume de la correction","etapes":[{"n":1,"texte":"description de l etape","ok":true}],"conseil":"conseil personnalise"}`;
-    const data = await aiJSON(`Énoncé : ${enonce}\n\nRéponse de l'étudiant : ${repText}\n\nCorrige étape par étape en étant précis et pédagogique.`, sys);
+    const data = await aiJSON(`Énoncé : ${enonce}\n\nRéponse de l'étudiant : ${repText}\n\nCorrige étape par étape.`, sys);
     renderCorrResult(data);
-  } catch(e) { document.getElementById('corr-result').innerHTML = '<div style="color:var(--red);font-size:13px;margin-top:10px">❌ Erreur lors de la correction. Réessaie.</div>'; }
+  } catch(e) { document.getElementById('corr-result').innerHTML = '<div style="color:var(--red);font-size:13px;margin-top:10px">❌ Erreur. Réessaie.</div>'; }
   btn.disabled = false; btn.innerHTML = '🔍 Corriger ma réponse'; corrLoading = false;
 }
-
 function renderCorrResult(d) {
   const isOk = d.verdict==='correct', isPartial = d.verdict==='partiel';
   const cls = isOk ? 'verdict-ok' : isPartial ? 'verdict-partial' : 'verdict-nok';
@@ -2539,17 +2198,14 @@ function renderCorrResult(d) {
   document.getElementById('corr-result').innerHTML = html;
   renderMath(document.getElementById('corr-result'));
 }
-
 function initDrawColors() {
   const colors = ['#e8ede9','#1fbd82','#e06060','#60a0e0','#ffb400'];
   const wrap = document.getElementById('draw-colors'); if (!wrap) return;
-  wrap.innerHTML = colors.map(c => `<div class="dcol${c===drawColor?' on':''}" onclick="setDrawColor('${c}')" style="background:${c}" title="${c}"></div>`).join('');
+  wrap.innerHTML = colors.map(c => `<div class="dcol${c===drawColor?' on':''}" onclick="setDrawColor('${c}')" style="background:${c}"></div>`).join('');
 }
 function setDrawColor(c) { drawColor = c; initDrawColors(); }
-
 function initDrawCanvas() {
   const canvas = document.getElementById('draw-canvas'); if (!canvas) return;
-  // Réinitialiser drawCtx à chaque appel pour éviter le blocage au changement d'onglet
   drawCtx = null;
   const W = canvas.parentElement?.offsetWidth || 400;
   canvas.width = W * 2; canvas.height = 400;
@@ -2567,7 +2223,6 @@ function initDrawCanvas() {
   canvas.addEventListener('touchend', endDraw);
   document.getElementById('draw-size').addEventListener('input', e => { drawSize = parseInt(e.target.value); });
 }
-
 function startDraw(e, canvas) {
   isDrawing = true; drawCurrent = [];
   const rect = canvas.getBoundingClientRect();
@@ -2576,7 +2231,6 @@ function startDraw(e, canvas) {
   drawCtx.beginPath(); drawCtx.moveTo(x, y);
   drawCurrent.push({t:'s', x, y, c:drawColor, sz:drawSize});
 }
-
 function moveDraw(e, canvas) {
   if (!isDrawing) return; e.preventDefault();
   const rect = canvas.getBoundingClientRect();
@@ -2586,14 +2240,11 @@ function moveDraw(e, canvas) {
   drawCtx.lineTo(x, y); drawCtx.stroke(); drawCtx.beginPath(); drawCtx.moveTo(x, y);
   drawCurrent.push({t:'l', x, y});
 }
-
 function endDraw() { if (isDrawing) { drawHistory.push([...drawCurrent]); drawCurrent = []; } isDrawing = false; }
-
 function clearCanvas() {
   const canvas = document.getElementById('draw-canvas'); if (!drawCtx || !canvas) return;
   drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, canvas.width, canvas.height); drawHistory = [];
 }
-
 function undoDraw() {
   if (!drawHistory.length || !drawCtx) return; drawHistory.pop();
   const canvas = document.getElementById('draw-canvas');
@@ -2605,25 +2256,15 @@ function undoDraw() {
 }
 
 function aiJSON(prompt, system) {
-  return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide. Règles strictes : utilise UNIQUEMENT des guillemets droits " pour les chaînes JSON. N\'utilise JAMAIS d\'apostrophes typographiques (\u2018\u2019) ni de guillemets courbes (\u201C\u201D) à l\'intérieur des valeurs JSON. Sans markdown, sans backticks.')
+  return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide. Sans markdown, sans backticks. Guillemets droits " uniquement.')
     .then(text => {
-      let clean = text
-        .replace(/```json\n?|```\n?/g, '')
-        .replace(/[\u2018\u2019]/g, "'")
-        .replace(/[\u201C\u201D]/g, '"')
-        .replace(/[\u00AB\u00BB]/g, '"')
-        .trim();
-
+      let clean = text.replace(/```json\n?|```\n?/g, '').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u00AB\u00BB]/g, '"').trim();
       const jsonMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
       if (jsonMatch) clean = jsonMatch[0];
-
-      try {
-        return JSON.parse(clean);
-      } catch(e) {
+      try { return JSON.parse(clean); }
+      catch(e) {
         try {
-          // Échapper les sauts de ligne à l'intérieur des chaînes JSON
-          let fixed = '';
-          let inStr = false, escape = false;
+          let fixed = ''; let inStr = false, escape = false;
           for (let ci = 0; ci < clean.length; ci++) {
             const ch = clean[ci];
             if (escape) { fixed += ch; escape = false; continue; }
@@ -2635,50 +2276,33 @@ function aiJSON(prompt, system) {
             fixed += ch;
           }
           return JSON.parse(fixed);
-        } catch(e2) {
-          console.error('aiJSON parse error:', e2, '\nRaw:', clean.slice(0, 300));
-          throw new Error('Réponse invalide (JSON malformé) — réessaie.');
-        }
+        } catch(e2) { throw new Error('Réponse invalide (JSON malformé) — réessaie.'); }
       }
     });
 }
-// ══════════════════════════════════════
-// SCROLL REVEAL
-// ══════════════════════════════════════
-  function renderMath(el) {
+
+function renderMath(el) {
   if (!el) return;
-  // Nettoyer les artefacts LaTeX dans les nœuds texte uniquement (ne pas re-sérialiser le DOM)
   (function cleanNodes(node) {
     if (node.nodeType === Node.TEXT_NODE) {
-      const fixed = node.textContent
-        .replace(/\^\\circ\\circ/g, '^\\circ')
-        .replace(/\\circ[ ]*\\circ/g, '\\circ');
+      const fixed = node.textContent.replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ[ ]*\\circ/g, '\\circ');
       if (fixed !== node.textContent) node.textContent = fixed;
-    } else if (node.nodeType === Node.ELEMENT_NODE &&
-               !['SCRIPT','STYLE','TEXTAREA','PRE'].includes(node.tagName)) {
+    } else if (node.nodeType === Node.ELEMENT_NODE && !['SCRIPT','STYLE','TEXTAREA','PRE'].includes(node.tagName)) {
       Array.from(node.childNodes).forEach(cleanNodes);
     }
   })(el);
-
   function tryRender() {
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(el, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '$',  right: '$',  display: false },
-          { left: '\\[', right: '\\]', display: true },
-          { left: '\\(', right: '\\)', display: false }
-        ],
+        delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],
         ignoredTags: ['script','noscript','style','textarea','pre','code'],
         throwOnError: false
       });
-    } else {
-      setTimeout(tryRender, 300);
-    }
+    } else { setTimeout(tryRender, 300); }
   }
   requestAnimationFrame(tryRender);
 }
-  
+
 function initScrollReveal() {
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
@@ -2686,9 +2310,6 @@ function initScrollReveal() {
   document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
 }
 
-// ══════════════════════════════════════
-// RESIZE — redessiner la mindmap
-// ══════════════════════════════════════
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
