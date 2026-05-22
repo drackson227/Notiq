@@ -1878,7 +1878,7 @@ async function genQuiz() {
   quizAnswers = {};
   try {
     const data = await aiJSON(
-      `Voici un cours : ${courseText.slice(0, 4000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\-]/g, ' ')}\n\nGénère exactement 6 QCM. Réponds avec ce JSON exact (remplace les valeurs, garde la structure) :\n{"questions":[{"q":"question ici","options":["option A","option B","option C","option D"],"correct":2,"explanation":"explication ici"}]}`,
+      `Voici un cours (session ${Math.floor(Math.random()*9000)+1000}) : ${courseText.slice(0, 4000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\-]/g, ' ')}\n\nGénère exactement 6 QCM. Réponds avec ce JSON exact (remplace les valeurs, garde la structure) :\n{"questions":[{"q":"question ici","options":["option A","option B","option C","option D"],"correct":2,"explanation":"explication ici"}]}`,
       'Tu es un professeur expert.'
     );
     quizData = Array.isArray(data.questions) ? data.questions : [];
