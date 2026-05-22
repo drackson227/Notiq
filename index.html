@@ -1981,7 +1981,7 @@ function updateExamTimer() {
   const s = String(examTimeLeft%60).padStart(2,'0');
   const el = document.getElementById('exam-timer');
   el.textContent = `${m}:${s}`;
-  el.classList.toggle('warning', examTimeLeft < 120);
+  el.classList.toggle('warning', examTimeLeft < 300);
 }
 function renderExamBody() {
   let html = '<h2 style="font-family:Syne;margin-bottom:1.5rem">Réponds à toutes les questions</h2>';
