@@ -1415,17 +1415,24 @@ async function ai(prompt, systemPrompt) {
       // 429 → on passe au modèle suivant
     }
   }
+  const groqKey = localStorage.getItem('notiq_groq_key');
+  if (groqKey) {
+    showToast('🔄 Gemini saturé — bascule sur Groq…');
+    try { return await aiGroq(fullPrompt, groqKey); }
+    catch(gErr) { /* continue vers DeepSeek */ }
+  }
+
   const dsKey = localStorage.getItem('notiq_deepseek_key');
   if (dsKey) {
-    showToast('🔄 Tous les modèles Gemini surchargés — bascule sur DeepSeek…');
+    showToast('🔄 Bascule sur DeepSeek…');
     try {
       return await aiDeepSeek(fullPrompt, dsKey);
     } catch(dsErr) {
-      throw new Error('APIs indisponibles (Gemini saturé, DeepSeek : ' + (dsErr.message || 'erreur') + '). Réessaie dans quelques minutes.');
+      throw new Error('Tous les APIs surchargés. Réessaie dans 1 minute.');
     }
   }
 
-  const groqKey = localStorage.getItem('notiq_groq_key');
+  throw new Error('Gemini saturé. Ajoute une clé Groq (gratuit) dans les paramètres.');
   if (groqKey) {
     showToast('🔄 Bascule sur Groq…');
     try { return await aiGroq(fullPrompt, groqKey); }
