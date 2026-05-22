@@ -1406,7 +1406,7 @@ async function ai(prompt, systemPrompt) {
 
   if (groqKey) {
     try { return await aiGroq(fullPrompt, groqKey); }
-    catch(gErr) { showToast('⚠️ Groq indisponible — bascule sur Gemini…'); }
+        catch(gErr) { console.warn('Groq error:', gErr.message); showToast('⚠️ Groq indisponible — bascule sur Gemini…'); return; }
   }
 
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
