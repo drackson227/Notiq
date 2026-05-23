@@ -1189,10 +1189,18 @@ window.addEventListener('load', () => {
   // On restaure le cours actif directement depuis localStorage,
   // sans appeler selectCourse() qui peut déclencher des effets de bord
   const ids = Object.keys(courses);
+  Object.keys(courses).forEach(id => {
+    const g = courses[id].generated;
+    if (g && (g.loaded || g.summaryText || g.quizData?.length) && !localStorage.getItem(genStorageKey(id))) {
+      try { localStorage.setItem(genStorageKey(id), JSON.stringify({ ...g, loaded: true })); } catch(e) {}
+    }
+  });
+
   if (ids.length > 0) {
     const savedActive = localStorage.getItem('notiq_active_course');
     const firstId = (savedActive && courses[savedActive]) ? savedActive : ids[0];
-    selectCourse(firstId);
+    const restored = selectCourse(firstId);
+    if (restored) showToast('✅ Cours et outils restaurés', 'success');
   } else {
     renderCoursesBar();
   }
@@ -1275,11 +1283,49 @@ function updateCharCount() {
   }
 }
 
+function genStorageKey(id) { return 'notiq_gen_' + id; }
+
+function syncActiveCourseText() {
+  const ta = document.getElementById('course-text');
+  const fromTa = (ta?.value || '').trim();
+  if (fromTa) {
+    courseText = fromTa;
+    if (activeCourseId && courses[activeCourseId]) courses[activeCourseId].text = fromTa;
+    return courseText;
+  }
+  if (activeCourseId && courses[activeCourseId]?.text) {
+    courseText = courses[activeCourseId].text.trim();
+    if (ta) ta.value = courses[activeCourseId].text;
+    return courseText;
+  }
+  courseText = '';
+  return '';
+}
+
+function getSavedGenerated(course, id) {
+  if (!course) return null;
+  const cid = id || activeCourseId;
+  const ext = cid ? localStorage.getItem(genStorageKey(cid)) : null;
+  if (ext) {
+    try {
+      const g = JSON.parse(ext);
+      const hasData = !!(g.summaryText || g.quizData?.length || g.flashData?.length || g.exos?.length || g.mindmapData);
+      if (g.loaded || hasData) return { ...g, loaded: true };
+    } catch(e) {}
+  }
+  const g = course.generated;
+  if (!g) return null;
+  const hasData = !!(g.summaryText || g.quizData?.length || g.flashData?.length || g.exos?.length || g.mindmapData);
+  if (g.loaded || hasData) return { ...g, loaded: true };
+  return null;
+}
+
 function saveCourseGenerated() {
   if (!activeCourseId || !courses[activeCourseId]) return;
+  syncActiveCourseText();
   const hasAny = !!(summaryText || quizData.length || flashData.length || exos.length || mindmapData);
   if (!hasAny) return;
-  courses[activeCourseId].generated = {
+  const payload = {
     loaded: true,
     summaryText,
     quizData,
@@ -1289,14 +1335,23 @@ function saveCourseGenerated() {
     exos,
     mindmapData,
     ankiScores,
+    courseText,
     savedAt: Date.now()
   };
+  try {
+    localStorage.setItem(genStorageKey(activeCourseId), JSON.stringify(payload));
+  } catch(e) {
+    showToast('⚠️ Sauvegarde partielle — stockage plein', 'error');
+  }
+  courses[activeCourseId].generated = { loaded: true, savedAt: payload.savedAt };
+  if (courseText) courses[activeCourseId].text = courseText;
   saveCourses();
 }
 
 function restoreCourseGenerated() {
-  const g = (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].generated : null;
-  const hasContent = !!courseText;
+  syncActiveCourseText();
+  const g = activeCourseId ? getSavedGenerated(courses[activeCourseId], activeCourseId) : null;
+  const hasContent = courseText.length >= 50;
 
   exCache = {}; chatHistory = []; openAides = {}; openSols = {};
   summaryText = ''; quizData = []; quizAnswers = {}; flashData = []; exos = [];
@@ -1311,6 +1366,11 @@ function restoreCourseGenerated() {
     mindmapData = g.mindmapData || null;
     ankiScores = g.ankiScores || {};
     flashMode = g.flashMode || 'extract';
+    if (g.courseText && g.courseText.length > (courseText?.length || 0)) {
+      courseText = g.courseText;
+      document.getElementById('course-text').value = courseText;
+      if (activeCourseId && courses[activeCourseId]) courses[activeCourseId].text = courseText;
+    }
   }
 
   document.getElementById('flash-mode-extract')?.classList.toggle('on', flashMode === 'extract');
@@ -1375,6 +1435,8 @@ function restoreCourseGenerated() {
   }
 
   document.getElementById('chat-box').innerHTML = '<div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions. 👋</div>';
+  updateCharCount();
+  return !!g?.loaded;
 }
 
 function exportCourseText() {
@@ -1455,13 +1517,13 @@ function selectCourse(id) {
   renderCoursesBar();
   localStorage.setItem('notiq_active_course', id);
   document.getElementById('load-progress').style.display = 'none';
-  restoreCourseGenerated();
-  updateCharCount();
+  return restoreCourseGenerated();
 }
 
 function deleteCourse(e, id) {
   e.stopPropagation();
   if (!confirm('Supprimer ce cours ?')) return;
+  localStorage.removeItem(genStorageKey(id));
   delete courses[id];
   saveCourses();
   if (activeCourseId === id) {
@@ -1764,6 +1826,7 @@ async function loadCourse() {
   if (activeCourseId && courses[activeCourseId]) {
     courses[activeCourseId].text = txt;
     delete courses[activeCourseId].generated;
+    localStorage.removeItem(genStorageKey(activeCourseId));
   } else {
     const id = 'c' + Date.now();
     const name = prompt('Nom de ce cours ?') || 'Mon cours';
@@ -1837,6 +1900,7 @@ function clearCourse() {
   if (activeCourseId && courses[activeCourseId]) {
     courses[activeCourseId].text = '';
     delete courses[activeCourseId].generated;
+    localStorage.removeItem(genStorageKey(activeCourseId));
     saveCourses();
   }
   courseText = '';
@@ -1920,7 +1984,7 @@ function cleanFlashText(txt) {
 }
 
 async function genFlash() {
-  if (!courseText) return;
+  if (!syncActiveCourseText() || courseText.length < 50) return;
   ankiScores = {};
   document.getElementById('flash-empty').style.display = 'none';
   document.getElementById('flash-ui').style.display = 'flex';
@@ -2000,7 +2064,7 @@ function updateAnkiStats() {
 }
 
 async function genQuiz() {
-  if (!courseText) return;
+  if (!syncActiveCourseText() || courseText.length < 50) return;
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
   try {
@@ -2061,7 +2125,7 @@ let examInterval = null, examTimeLeft = 20 * 60, examAnswers = {}, examRunning =
 let examQuizData = [];
 
 async function startExam() {
-  if (!courseText) { showToast('Charge un cours d\'abord !', 'error'); return; }
+  if (!syncActiveCourseText() || courseText.length < 50) { showToast('Charge un cours d\'abord !', 'error'); return; }
   examAnswers = {}; examTimeLeft = 20 * 60; examRunning = false;
   document.getElementById('exam-overlay').classList.add('open');
   document.getElementById('exam-body').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:1.5rem"><div class="spinner" style="width:40px;height:40px;border-width:3px"></div><p style="color:var(--text-dim);font-size:15px">Génération de 15 questions en cours…</p></div>';
@@ -2501,6 +2565,7 @@ function initMindmapInteractions() {
 }
 
 async function genMindmap() {
+  if (!syncActiveCourseText() || courseText.length < 50) return;
   const canvas = document.getElementById('mindmap-canvas');
   const ctx2d = canvas.getContext('2d');
   const { W, H } = setupCanvas(canvas, ctx2d);
@@ -2688,7 +2753,7 @@ function switchExoTab(name) {
 }
 
 async function genExosQuiet() {
-  if (!courseText) return;
+  if (!syncActiveCourseText() || courseText.length < 50) return;
   const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs :\n{"exercices":[{"titre":"Titre","enonce":"Enonce","aide":"Indice","solution":"Solution"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
   exos = data.exercices || []; openAides = {}; openSols = {};
   document.getElementById('exo-empty').style.display = 'none';
@@ -2698,7 +2763,7 @@ async function genExosQuiet() {
 }
 
 async function genExos() {
-  if (!courseText) { showToast('Charge un cours d\'abord.', 'error'); return; }
+  if (!syncActiveCourseText() || courseText.length < 50) { showToast('Charge un cours d\'abord.', 'error'); return; }
   if (exoLoading) return; exoLoading = true;
   document.getElementById('exo-empty').style.display = 'none';
   document.getElementById('exo-ui').style.display = 'block';
