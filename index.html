@@ -1271,6 +1271,7 @@ let isLoadingCourse = false;
 let toastTimer;
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg;
   t.className = 'show' + (type ? ' ' + type : '');
   clearTimeout(toastTimer);
@@ -1289,7 +1290,8 @@ window.addEventListener('load', () => {
 
   if (localStorage.getItem('notiq_theme') === 'light') {
     document.body.classList.add('light');
-    document.getElementById('theme-btn').textContent = '☀️';
+    const themeBtn = document.getElementById('theme-btn');
+    if (themeBtn) themeBtn.textContent = '☀️';
   }
 
   const savedCourses = localStorage.getItem('notiq_courses');
@@ -1330,17 +1332,21 @@ window.addEventListener('load', () => {
   }
 
   const courseTa = document.getElementById('course-text');
-  courseTa.addEventListener('input', () => {
-    updateCharCount();
-    clearTimeout(persistDebounceTimer);
-    persistDebounceTimer = setTimeout(persistCourseTextarea, 800);
-  });
+  if (courseTa) {
+    courseTa.addEventListener('input', () => {
+      updateCharCount();
+      clearTimeout(persistDebounceTimer);
+      persistDebounceTimer = setTimeout(persistCourseTextarea, 800);
+    });
+  }
   updateCharCount();
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (document.getElementById('key-modal').classList.contains('open')) closeKeyModal();
-    if (document.getElementById('exam-overlay').classList.contains('open')) closeExam();
+    const keyModal = document.getElementById('key-modal');
+    if (keyModal && keyModal.classList.contains('open')) closeKeyModal();
+    const examOverlay = document.getElementById('exam-overlay');
+    if (examOverlay && examOverlay.classList.contains('open')) closeExam();
   });
 
   if (!hasAnyApiKey()) openKeyModal();
