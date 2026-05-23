@@ -786,7 +786,7 @@ footer a { color: var(--green); text-decoration: none; }
     <div class="feat-card"><div class="feat-icon">🗺️</div><h3>Carte mentale</h3><p>Visualise les concepts et leurs liens sous forme de mind map interactive.</p></div>
     <div class="feat-card"><div class="feat-icon">⏱️</div><h3>Timer Pomodoro</h3><p>Travaille en sessions de 25 minutes avec des pauses intégrées.</p></div>
     <div class="feat-card"><div class="feat-icon">📚</div><h3>Plusieurs cours</h3><p>Sauvegarde jusqu'à 5 matières différentes. Switche en un clic.</p></div>
-    <div class="feat-card"><div class="feat-icon">📝</div><h3>Mode examen</h3><p>Un timer de 20 min, 20 questions en plein écran, sans distractions. Conditions réelles.</p></div>
+    <div class="feat-card"><div class="feat-icon">📝</div><h3>Mode examen</h3><p>Un timer de 20 min, 15 questions en plein écran, sans distractions. Conditions réelles.</p></div>
     <div class="feat-card"><div class="feat-icon">📊</div><h3>Score de maîtrise</h3><p>Suis ta progression globale avec un score calculé depuis tes quiz et flashcards.</p></div>
   </div>
 </section>
@@ -1208,6 +1208,14 @@ function saveCourses() {
   localStorage.setItem('notiq_courses', JSON.stringify(courses));
 }
 
+function persistCourseTextarea() {
+  const txt = document.getElementById('course-text').value;
+  if (activeCourseId && courses[activeCourseId]) {
+    courses[activeCourseId].text = txt;
+    saveCourses();
+  }
+}
+
 function renderCoursesBar() {
   const bar = document.getElementById('courses-bar');
   let html = '';
@@ -1227,12 +1235,14 @@ function escHtml(s) {
 }
 
 function mdToHtml(text) {
+  if (!text) return '';
   const mathBlocks = [];
-  let safe = text
+  let safe = String(text)
     .replace(/\$\$[\s\S]+?\$\$/g, m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\$[^$\n]+?\$/g,     m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\[[\s\S]+?\\\]/g, m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; })
     .replace(/\\\(.+?\\\)/g,      m => { mathBlocks.push(m); return `%%MATH${mathBlocks.length-1}%%`; });
+  safe = escHtml(safe);
   safe = safe
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -1259,6 +1269,9 @@ function newCourse() {
 }
 
 function selectCourse(id) {
+  if (activeCourseId && courses[activeCourseId] && activeCourseId !== id) {
+    persistCourseTextarea();
+  }
   activeCourseId = id;
   if (courses[id]) {
     document.getElementById('course-text').value = courses[id].text || '';
@@ -1295,6 +1308,26 @@ function deleteCourse(e, id) {
   renderCoursesBar();
   const ids = Object.keys(courses);
   if (ids.length > 0) selectCourse(ids[0]);
+  else resetEmptyCourseUI();
+}
+
+function resetEmptyCourseUI() {
+  activeCourseId = null;
+  courseText = '';
+  document.getElementById('course-text').value = '';
+  document.getElementById('saved-notice').style.display = 'none';
+  document.getElementById('loaded-pill').style.display = 'none';
+  document.getElementById('load-msg').textContent = '';
+  document.getElementById('quiz-empty').style.display = 'block';
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('flash-empty').style.display = 'block';
+  document.getElementById('flash-ui').style.display = 'none';
+  document.getElementById('exo-empty').style.display = 'block';
+  document.getElementById('exo-ui').style.display = 'none';
+  document.getElementById('summary-empty').style.display = 'block';
+  document.getElementById('summary-ui').style.display = 'none';
+  document.getElementById('mindmap-empty').style.display = 'block';
+  document.getElementById('mindmap-ui').style.display = 'none';
 }
 
 function openKeyModal() {
@@ -1480,6 +1513,8 @@ async function processPDF(file) {
     text = text.trim().replace(/\s{3,}/g, '\n\n');
     if (text.length < 50) text = `[PDF importé : ${file.name}]\n\nLe texte n'a pas pu être extrait automatiquement.`;
     document.getElementById('course-text').value = text;
+    persistCourseTextarea();
+    document.getElementById('saved-notice').style.display = 'block';
     drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> importé</p>`;
   } catch(e) {
     drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong></p>';
@@ -1519,9 +1554,11 @@ async function processImage(file) {
       throw new Error('Erreur API (429)');
     })();
     if (text.length > 5) {
-      const cleanText = text.replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$').replace(/\$\$/g, '$');
+      const cleanText = text.replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$');
       const current = document.getElementById('course-text').value.trim();
       document.getElementById('course-text').value = current ? current + '\n\n—\n\n' + cleanText : cleanText;
+      persistCourseTextarea();
+      document.getElementById('saved-notice').style.display = 'block';
       drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit</p>`;
       showToast('✅ Image transcrite !', 'success');
     } else {
@@ -1584,7 +1621,10 @@ async function loadCourse() {
   btn.disabled = true;
   document.getElementById('loaded-pill').style.display = 'none';
   let errors = 0;
-  function apiDead(e) { return e.message && (e.message.startsWith('APIs indisponibles') || e.message.startsWith('Tous les APIs')); }
+  function apiDead(e) {
+    const m = e?.message || '';
+    return m.includes('satur') || m.includes('indisponible') || m.includes('No API key') || m.startsWith('Tous les');
+  }
 
   setProgress(5);
   document.getElementById('load-msg').textContent = '⏳ Génération du résumé…';
@@ -1646,7 +1686,7 @@ async function genSummary() {
   lines.forEach(l => {
     if (l.startsWith('•') || l.startsWith('-')) {
       if (!inPts) { inPts = true; pts = '<div style="margin:1rem 0">'; }
-      html += `<div class="kp"><div class="kp-dot"></div><span>${mdToHtml(l.replace(/^[•\-]\s*/, ''))}</span></div>`;
+      pts += `<div class="kp"><div class="kp-dot"></div><span>${mdToHtml(l.replace(/^[•\-]\s*/, ''))}</span></div>`;
     } else {
       if (inPts) { html += pts + '</div>'; inPts = false; pts = ''; }
       html += `<p style="margin-bottom:0.75rem">${mdToHtml(l)}</p>`;
@@ -1691,7 +1731,7 @@ function setFlashMode(mode) {
   } else {
     desc.textContent = "L'IA reformule et invente des questions — jamais copiées du cours";
   }
-  genFlash();
+  if (courseText && flashData.length) showToast('Mode changé — clique ↻ pour régénérer', '');
 }
 
 // Nettoie un texte : retire les numéros de type "1)", "8.", "10)" en début de chaîne
@@ -1799,8 +1839,9 @@ function renderQuiz() {
   if (answered === total && total > 0) saveQuizResult(correct, total);
   let html = '';
   quizData.forEach((q, i) => {
-    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q)}</div><div class="qopts">`;
-    q.options.forEach((opt, j) => {
+    const opts = Array.isArray(q.options) ? q.options : [];
+    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q || '')}</div><div class="qopts">`;
+    opts.forEach((opt, j) => {
       const ans = quizAnswers[i];
       let cls = '';
       if (ans !== undefined) { if (j === q.correct) cls = 'correct'; else if (j === parseInt(ans)) cls = 'wrong'; }
@@ -1839,7 +1880,7 @@ async function startExam() {
   if (!courseText) { showToast('Charge un cours d\'abord !', 'error'); return; }
   examAnswers = {}; examTimeLeft = 20 * 60; examRunning = false;
   document.getElementById('exam-overlay').classList.add('open');
-  document.getElementById('exam-body').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:1.5rem"><div class="spinner" style="width:40px;height:40px;border-width:3px"></div><p style="color:var(--text-dim);font-size:15px">Génération de 20 questions en cours…</p></div>';
+  document.getElementById('exam-body').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:1.5rem"><div class="spinner" style="width:40px;height:40px;border-width:3px"></div><p style="color:var(--text-dim);font-size:15px">Génération de 15 questions en cours…</p></div>';
   updateExamTimer();
   try {
     const data = await aiJSON(
@@ -1880,8 +1921,9 @@ function renderExamBody() {
   const eqd = examQuizData.length ? examQuizData : quizData;
   let html = `<h2 style="font-family:Syne;margin-bottom:1.5rem">📝 ${eqd.length} questions — réponds à toutes</h2>`;
   eqd.forEach((q, i) => {
-    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q)}</div><div class="qopts">`;
-    q.options.forEach((opt, j) => {
+    const opts = Array.isArray(q.options) ? q.options : [];
+    html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q || '')}</div><div class="qopts">`;
+    opts.forEach((opt, j) => {
       const ans = examAnswers[i];
       let cls = '';
       if (ans !== undefined) { if (j === q.correct) cls = 'correct'; else if (j === parseInt(ans)) cls = 'wrong'; }
@@ -1906,8 +1948,8 @@ function examAns(qi, a) {
   const allDone = Object.keys(examAnswers).length === eqd2.length && eqd2.length > 0;
   if (allDone) {
     const c = Object.entries(examAnswers).filter(([i,ans]) => eqd2[i] && parseInt(ans) === eqd2[i].correct).length;
-    saveQuizResult(c, quizData.length);
-    if (c === quizData.length) launchConfetti();
+    saveQuizResult(c, eqd2.length);
+    if (c === eqd2.length) launchConfetti();
   }
 }
 function closeExam(timeout) {
@@ -2196,6 +2238,7 @@ let exos = [], openAides = {}, openSols = {}, exoLoading = false;
 let ansMode = 'text', corrLoading = false;
 let drawCtx = null, drawHistory = [], drawCurrent = [], isDrawing = false;
 let drawColor = '#e8ede9', drawSize = 3;
+let drawLogicalW = 400, drawLogicalH = 200, drawCanvasInited = false;
 
 function switchExoTab(name) {
   document.getElementById('exo-tab-gen').classList.toggle('on', name==='gen');
@@ -2273,7 +2316,7 @@ async function corriger() {
     const data = await aiJSON(`Énoncé : ${enonce}\n\nRéponse de l'étudiant : ${repText}\n\nCorrige étape par étape.`, sys);
     renderCorrResult(data);
   } catch(e) { document.getElementById('corr-result').innerHTML = '<div style="color:var(--red);font-size:13px;margin-top:10px">❌ Erreur. Réessaie.</div>'; }
-  btn.disabled = false; btn.innerHTML = '🔍 Corriger ma réponse'; corrLoading = false;
+  finally { btn.disabled = false; btn.innerHTML = '🔍 Corriger ma réponse'; corrLoading = false; }
 }
 function renderCorrResult(d) {
   const isOk = d.verdict==='correct', isPartial = d.verdict==='partiel';
@@ -2294,22 +2337,27 @@ function initDrawColors() {
 function setDrawColor(c) { drawColor = c; initDrawColors(); }
 function initDrawCanvas() {
   const canvas = document.getElementById('draw-canvas'); if (!canvas) return;
-  drawCtx = null;
-  const W = canvas.parentElement?.offsetWidth || 400;
-  canvas.width = W * 2; canvas.height = 400;
-  canvas.style.width = '100%'; canvas.style.height = '200px';
-  drawCtx = canvas.getContext('2d'); drawCtx.scale(2, 2);
-  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, W, 200);
+  drawLogicalW = canvas.parentElement?.offsetWidth || 400;
+  drawLogicalH = 200;
+  canvas.width = drawLogicalW * 2; canvas.height = drawLogicalH * 2;
+  canvas.style.width = '100%'; canvas.style.height = drawLogicalH + 'px';
+  drawCtx = canvas.getContext('2d');
+  drawCtx.setTransform(1, 0, 0, 1, 0, 0);
+  drawCtx.scale(2, 2);
+  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, drawLogicalW, drawLogicalH);
   drawCtx.lineJoin = 'round'; drawCtx.lineCap = 'round';
   drawHistory = []; drawCurrent = [];
-  canvas.addEventListener('mousedown', e => startDraw(e, canvas));
-  canvas.addEventListener('mousemove', e => moveDraw(e, canvas));
-  canvas.addEventListener('mouseup', endDraw);
-  canvas.addEventListener('mouseleave', endDraw);
-  canvas.addEventListener('touchstart', e => startDraw(e, canvas), {passive:false});
-  canvas.addEventListener('touchmove', e => moveDraw(e, canvas), {passive:false});
-  canvas.addEventListener('touchend', endDraw);
-  document.getElementById('draw-size').addEventListener('input', e => { drawSize = parseInt(e.target.value); });
+  if (!drawCanvasInited) {
+    drawCanvasInited = true;
+    canvas.addEventListener('mousedown', e => startDraw(e, canvas));
+    canvas.addEventListener('mousemove', e => moveDraw(e, canvas));
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', e => startDraw(e, canvas), {passive:false});
+    canvas.addEventListener('touchmove', e => moveDraw(e, canvas), {passive:false});
+    canvas.addEventListener('touchend', endDraw);
+    document.getElementById('draw-size').addEventListener('input', e => { drawSize = parseInt(e.target.value, 10) || 3; });
+  }
 }
 function startDraw(e, canvas) {
   isDrawing = true; drawCurrent = [];
@@ -2330,13 +2378,12 @@ function moveDraw(e, canvas) {
 }
 function endDraw() { if (isDrawing) { drawHistory.push([...drawCurrent]); drawCurrent = []; } isDrawing = false; }
 function clearCanvas() {
-  const canvas = document.getElementById('draw-canvas'); if (!drawCtx || !canvas) return;
-  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, canvas.width, canvas.height); drawHistory = [];
+  if (!drawCtx) return;
+  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, drawLogicalW, drawLogicalH); drawHistory = [];
 }
 function undoDraw() {
   if (!drawHistory.length || !drawCtx) return; drawHistory.pop();
-  const canvas = document.getElementById('draw-canvas');
-  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, canvas.width, canvas.height);
+  drawCtx.fillStyle = '#090b0a'; drawCtx.fillRect(0, 0, drawLogicalW, drawLogicalH);
   drawHistory.forEach(stroke => {
     drawCtx.beginPath();
     stroke.forEach(pt => { if (pt.t==='s') { drawCtx.strokeStyle=pt.c; drawCtx.lineWidth=pt.sz; drawCtx.moveTo(pt.x,pt.y); } else { drawCtx.lineTo(pt.x,pt.y); drawCtx.stroke(); drawCtx.beginPath(); drawCtx.moveTo(pt.x,pt.y); } });
