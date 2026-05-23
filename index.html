@@ -1832,13 +1832,13 @@ async function tryAllGemini(fullPrompt, maxTok) {
 const NOTIQ_BUILD = 'v8-bulk';
 const EXAM_QUESTION_COUNT = 15;
 const OCR_MAX_FILES = 200;
-const OCR_BATCH_SIZE_OR = 1;
-const OCR_BATCH_SIZE_GEMINI = 1;
-const OCR_BATCH_DELAY_MS = 3000;
-const OCR_IMAGE_DELAY_MS = 2000;
+const OCR_BATCH_SIZE_OR = 8;
+const OCR_BATCH_SIZE_GEMINI = 6;
+const OCR_BATCH_DELAY_MS = 500;
+const OCR_IMAGE_DELAY_MS = 300;
 const OCR_BULK_COMPRESS_W = 680;
 const OCR_COMPRESS_POOL = 4;
-const OCR_FALLBACK_PARALLEL = 1;
+const OCR_FALLBACK_PARALLEL = 4;
 const FAST_VISION_MODELS = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free'];
 const OPENROUTER_FALLBACK_TEXT = ['openrouter/free', 'meta-llama/llama-3.2-3b-instruct:free', 'deepseek/deepseek-v4-flash:free'];
 const OPENROUTER_FALLBACK_VISION = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free', 'google/gemma-4-26b-a4b-it:free'];
@@ -2298,6 +2298,50 @@ async function transcribeImageBatchOpenRouter(orKey, items) {
   return splitBatchOcrByPage(raw, items.length);
 }
 
+async function transcribeImageBatchGemini(items, batchSize) {
+  if (isGeminiVisionBlocked()) throw new Error('Gemini Vision bloqué');
+  const visionModels = ['gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+  const cap = isCompactMode() ? 4096 : 8192;
+  
+  for (const gKey of getGeminiKeys()) {
+    for (const model of visionModels) {
+      try {
+        const chunks = [];
+        for (let i = 0; i < items.length; i += batchSize) {
+          const chunk = items.slice(i, i + batchSize);
+          const parts = [{ text: ocrBatchPromptIndexed(chunk.length) }];
+          for (const it of chunk) {
+            parts.push({ inline_data: { mime_type: it.mimeType, data: it.base64 } });
+          }
+          
+          const r = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gKey}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts }], generationConfig: { maxOutputTokens: cap, temperature: 0 } }) }
+          );
+          if (r.status === 429 || r.status === 503) {
+            const resetMs = parseRateLimitReset(r.headers);
+            const blockTime = resetMs ? Math.max(resetMs, 60000) : 90000;
+            geminiVisionBlockedUntil = Date.now() + blockTime;
+            localStorage.setItem('notiq_gemini_vision_blocked', String(geminiVisionBlockedUntil));
+            throw new Error('Gemini saturé');
+          }
+          if (!r.ok) throw new Error(`Gemini error ${r.status}`);
+          const d = await r.json();
+          const raw = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const texts = splitBatchOcrByPage(raw, chunk.length);
+          chunks.push(...texts);
+        }
+        return chunks;
+      } catch(e) {
+        console.warn('Gemini batch error:', e.message);
+        continue;
+      }
+    }
+  }
+  throw new Error('Gemini batch échoué');
+}
+
 async function transcribeImageViaGemini(base64, mimeType, prompt) {
   if (isGeminiVisionBlocked()) return null;
   const visionModels = ['gemini-2.5-flash-lite', 'gemini-2.0-flash'];
@@ -2394,8 +2438,39 @@ async function ocrItemsIndividually(items, orKey) {
 
 async function processOcrChunk(items, orKey, batchSize) {
   const startPage = items[0].page;
+  const geminiKeys = getGeminiKeys();
+  
+  if (geminiKeys.length > 0 && items.length > 1) {
+    ocrJob.status = `Lot ${items.length} photos Gemini (pages ${startPage}–${items[items.length - 1].page})…`;
+    updateOcrUi();
+    try {
+      const texts = await transcribeImageBatchGemini(items, Math.min(items.length, OCR_BATCH_SIZE_GEMINI));
+      for (let i = 0; i < items.length; i++) {
+        if (ocrJob?.cancelled) return;
+        const text = texts[i];
+        if (text && appendCourseText(text, items[i].name, items[i].page)) {
+          ocrJob.ok++;
+        } else {
+          try {
+            const solo = await transcribeOneItem(items[i], orKey);
+            if (appendCourseText(solo, items[i].name, items[i].page)) ocrJob.ok++;
+            else { ocrJob.fail++; ocrJob.failedItems.push(items[i]); }
+          } catch(e) {
+            ocrJob.fail++;
+            ocrJob.failedItems.push(items[i]);
+          }
+        }
+        ocrJob.done++;
+        updateOcrUi();
+      }
+      return;
+    } catch(e) {
+      console.warn('Lot Gemini OCR:', e.message);
+    }
+  }
+  
   if (orKey && items.length > 1 && batchSize > 1) {
-    ocrJob.status = `Lot ${items.length} photos (pages ${startPage}–${items[items.length - 1].page})…`;
+    ocrJob.status = `Lot ${items.length} photos OpenRouter (pages ${startPage}–${items[items.length - 1].page})…`;
     updateOcrUi();
     try {
       const texts = await transcribeImageBatchOpenRouter(orKey, items);
