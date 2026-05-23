@@ -1832,13 +1832,13 @@ async function tryAllGemini(fullPrompt, maxTok) {
 const NOTIQ_BUILD = 'v8-bulk';
 const EXAM_QUESTION_COUNT = 15;
 const OCR_MAX_FILES = 200;
-const OCR_BATCH_SIZE_OR = 8;
+const OCR_BATCH_SIZE_OR = 4;
 const OCR_BATCH_SIZE_GEMINI = 1;
-const OCR_BATCH_DELAY_MS = 2200;
-const OCR_IMAGE_DELAY_MS = 1400;
+const OCR_BATCH_DELAY_MS = 3500;
+const OCR_IMAGE_DELAY_MS = 2500;
 const OCR_BULK_COMPRESS_W = 680;
 const OCR_COMPRESS_POOL = 4;
-const OCR_FALLBACK_PARALLEL = 2;
+const OCR_FALLBACK_PARALLEL = 1;
 const FAST_VISION_MODELS = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free'];
 const OPENROUTER_FALLBACK_TEXT = ['openrouter/free', 'meta-llama/llama-3.2-3b-instruct:free', 'deepseek/deepseek-v4-flash:free'];
 const OPENROUTER_FALLBACK_VISION = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free', 'google/gemma-4-26b-a4b-it:free'];
@@ -1901,7 +1901,13 @@ async function callOpenRouterChat(orKey, body, models) {
     if (r.status === 401) throw new Error('Clé OpenRouter invalide — régénère-la sur openrouter.ai/keys');
     if (r.status === 402) { lastErr = await parseOpenRouterError(r); continue; }
     if (r.status === 404) { lastErr = await parseOpenRouterError(r) || `Modèle ${model} indisponible`; continue; }
-    if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé — réessaie dans 1 min'; await sleep(2000); continue; }
+    if (r.status === 429 || r.status === 503) {
+      const resetMs = parseRateLimitReset(r.headers);
+      const delay = resetMs ? Math.max(resetMs, 3000) : 5000;
+      lastErr = `OpenRouter saturé — réessaie dans ${Math.ceil(delay/1000)}s`;
+      await sleep(delay);
+      continue;
+    }
     if (!r.ok) { lastErr = await parseOpenRouterError(r); continue; }
     const d = await r.json();
     const text = (typeof d.choices?.[0]?.message?.content === 'string')
@@ -1997,6 +2003,36 @@ async function aiGroq(prompt, groqKey, maxTok) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function parseRateLimitReset(headers) {
+  const resetAfter = headers.get('x-ratelimit-reset-requests') || headers.get('retry-after') || headers.get('x-ratelimit-reset');
+  if (resetAfter) {
+    const seconds = parseInt(resetAfter, 10);
+    if (!isNaN(seconds)) return seconds * 1000;
+  }
+  const resetTime = headers.get('x-ratelimit-reset');
+  if (resetTime) {
+    const epoch = parseInt(resetTime, 10);
+    if (!isNaN(epoch)) return Math.max(0, epoch * 1000 - Date.now());
+  }
+  return null;
+}
+
+async function retryWithBackoff(fn, maxRetries = 5, baseDelay = 1000) {
+  let lastErr;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch(e) {
+      lastErr = e;
+      if (attempt === maxRetries) throw e;
+      
+      const delay = Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 500, 30000);
+      await sleep(delay);
+    }
+  }
+  throw lastErr;
+}
 
 const IMAGE_IMPORT_DELAY = 800;
 let geminiVisionBlockedUntil = parseInt(localStorage.getItem('notiq_gemini_vision_blocked') || '0', 10);
@@ -2226,11 +2262,13 @@ async function transcribeViaOpenRouter(orKey, contentParts, maxTok, models) {
   let lastErr = '';
   for (const model of modelList) {
     try {
-      const raw = await callOpenRouterChat(orKey, {
-        messages: [{ role: 'user', content: contentParts }],
-        max_tokens: cap,
-        temperature: 0
-      }, [model]);
+      const raw = await retryWithBackoff(async () => {
+        return await callOpenRouterChat(orKey, {
+          messages: [{ role: 'user', content: contentParts }],
+          max_tokens: cap,
+          temperature: 0
+        }, [model]);
+      }, 3, 1500);
       const text = sanitizeOcrText(raw);
       if (isValidOcrText(text)) return text;
       lastErr = 'Réponse OCR invalide';
@@ -2272,7 +2310,13 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
               { inline_data: { mime_type: mimeType, data: base64 } }
             ] }], generationConfig: { maxOutputTokens: cap, temperature: 0 } }) }
         );
-        if (r.status === 429 || r.status === 503) { markGeminiVisionBlocked(); continue; }
+        if (r.status === 429 || r.status === 503) {
+          const resetMs = parseRateLimitReset(r.headers);
+          const blockTime = resetMs ? Math.max(resetMs, 60000) : 90000;
+          geminiVisionBlockedUntil = Date.now() + blockTime;
+          localStorage.setItem('notiq_gemini_vision_blocked', String(geminiVisionBlockedUntil));
+          continue;
+        }
         if (!r.ok) continue;
         const d = await r.json();
         const t = sanitizeOcrText(d.candidates?.[0]?.content?.parts?.[0]?.text || '');
@@ -2309,16 +2353,22 @@ async function loadImagePayload(file, bulk) {
 }
 
 async function transcribeOneItem(item, orKey) {
+  let lastErr = '';
   if (orKey) {
     try {
       return await transcribeImageViaOpenRouter(orKey, item.base64, item.mimeType, OCR_PROMPT);
-    } catch(e) { /* repli */ }
+    } catch(e) { 
+      lastErr = e.message;
+      if (lastErr.includes('saturé') || lastErr.includes('429')) {
+        await sleep(3000);
+      }
+    }
   }
   if (!isGeminiVisionBlocked()) {
     const t = await transcribeImageViaGemini(item.base64, item.mimeType, OCR_PROMPT);
     if (t) return t;
   }
-  throw new Error('OCR impossible (quota ou image illisible)');
+  throw new Error(lastErr || 'OCR impossible (quota ou image illisible)');
 }
 
 async function ocrItemsIndividually(items, orKey) {
