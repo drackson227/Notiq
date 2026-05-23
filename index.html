@@ -734,7 +734,7 @@ footer a { color: var(--green); text-decoration: none; }
   <div class="exam-progress-bar"><div class="exam-progress-fill" id="exam-progress-fill"></div></div>
   <div class="exam-header">
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem">📝 Mode Examen</div>
-    <div class="exam-timer" id="exam-timer">45:00</div>
+    <div class="exam-timer" id="exam-timer">20:00</div>
     <button class="btn-outline" onclick="closeExam()">✕ Quitter</button>
   </div>
   <div class="exam-body" id="exam-body"></div>
@@ -786,7 +786,7 @@ footer a { color: var(--green); text-decoration: none; }
     <div class="feat-card"><div class="feat-icon">🗺️</div><h3>Carte mentale</h3><p>Visualise les concepts et leurs liens sous forme de mind map interactive.</p></div>
     <div class="feat-card"><div class="feat-icon">⏱️</div><h3>Timer Pomodoro</h3><p>Travaille en sessions de 25 minutes avec des pauses intégrées.</p></div>
     <div class="feat-card"><div class="feat-icon">📚</div><h3>Plusieurs cours</h3><p>Sauvegarde jusqu'à 5 matières différentes. Switche en un clic.</p></div>
-    <div class="feat-card"><div class="feat-icon">📝</div><h3>Mode examen</h3><p>Un timer de 45 min, le quiz en plein écran, sans distractions.</p></div>
+    <div class="feat-card"><div class="feat-icon">📝</div><h3>Mode examen</h3><p>Un timer de 20 min, 20 questions en plein écran, sans distractions. Conditions réelles.</p></div>
     <div class="feat-card"><div class="feat-icon">📊</div><h3>Score de maîtrise</h3><p>Suis ta progression globale avec un score calculé depuis tes quiz et flashcards.</p></div>
   </div>
 </section>
@@ -1719,7 +1719,7 @@ async function genQuiz() {
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
   try {
-    const data = await aiJSON(`Timestamp: ${Date.now()}. Voici un cours : ${courseText.slice(0, 4000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\-]/g, ' ')}\n\nGénère exactement 6 QCM :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication"}]}`, 'Tu es un professeur expert.');
+    const data = await aiJSON(`Timestamp: ${Date.now()}. Voici un cours : ${courseText.slice(0, 6000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\nGénère exactement 20 QCM variés couvrant tout le cours, du plus simple au plus complexe :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication"}]}`, 'Tu es un professeur expert.');
     quizData = Array.isArray(data.questions) ? data.questions : [];
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
@@ -1769,17 +1769,40 @@ function saveQuizResult(correct, total) {
   if (pct === 100) launchConfetti();
 }
 
-let examInterval = null, examTimeLeft = 45 * 60, examAnswers = {}, examRunning = false;
-function startExam() {
-  if (!quizData.length) { showToast('Génère un quiz d\'abord !', 'error'); return; }
-  examAnswers = {}; examTimeLeft = 45 * 60; examRunning = true;
+let examInterval = null, examTimeLeft = 20 * 60, examAnswers = {}, examRunning = false;
+let examQuizData = [];
+
+async function startExam() {
+  if (!courseText) { showToast('Charge un cours d\'abord !', 'error'); return; }
+  examAnswers = {}; examTimeLeft = 20 * 60; examRunning = false;
   document.getElementById('exam-overlay').classList.add('open');
-  renderExamBody(); updateExamTimer();
+  document.getElementById('exam-body').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:1.5rem"><div class="spinner" style="width:40px;height:40px;border-width:3px"></div><p style="color:var(--text-dim);font-size:15px">Génération de 20 questions en cours…</p></div>';
+  updateExamTimer();
+  try {
+    const data = await aiJSON(
+      `Timestamp: ${Date.now()}. Cours : ${courseText.slice(0, 7000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\/\-]/g, ' ')}\n\nGénère exactement 20 QCM variés couvrant tout le cours, progression du simple au complexe :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication precise"}]}`,
+      'Tu es un professeur expert. Génère exactement 20 questions QCM de niveaux variés. EXACTEMENT 20, pas moins.'
+    );
+    examQuizData = Array.isArray(data.questions) ? data.questions.slice(0, 20) : [];
+    if (!examQuizData.length) throw new Error('Aucune question générée');
+  } catch(e) {
+    // Fallback : utiliser les questions du quiz normal si dispo
+    if (quizData.length) {
+      examQuizData = quizData;
+      showToast('⚠️ Utilisation du quiz existant (' + quizData.length + ' questions)', 'error');
+    } else {
+      document.getElementById('exam-overlay').classList.remove('open');
+      showToast('❌ Erreur : ' + (e.message || 'Impossible de générer les questions'), 'error');
+      return;
+    }
+  }
+  examRunning = true;
+  renderExamBody();
   clearInterval(examInterval);
   examInterval = setInterval(() => {
     if (!examRunning) return;
     examTimeLeft--; updateExamTimer();
-    document.getElementById('exam-progress-fill').style.width = `${(examTimeLeft / (45*60)) * 100}%`;
+    document.getElementById('exam-progress-fill').style.width = `${(examTimeLeft / (20*60)) * 100}%`;
     if (examTimeLeft <= 0) closeExam(true);
   }, 1000);
 }
@@ -1791,8 +1814,9 @@ function updateExamTimer() {
   el.classList.toggle('warning', examTimeLeft < 300);
 }
 function renderExamBody() {
-  let html = '<h2 style="font-family:Syne;margin-bottom:1.5rem">Réponds à toutes les questions</h2>';
-  quizData.forEach((q, i) => {
+  const eqd = examQuizData.length ? examQuizData : quizData;
+  let html = `<h2 style="font-family:Syne;margin-bottom:1.5rem">📝 ${eqd.length} questions — réponds à toutes</h2>`;
+  eqd.forEach((q, i) => {
     html += `<div class="quiz-card-ui"><div class="quiz-q-text">${i+1}. ${mdToHtml(q.q)}</div><div class="qopts">`;
     q.options.forEach((opt, j) => {
       const ans = examAnswers[i];
@@ -1804,10 +1828,10 @@ function renderExamBody() {
     if (examAnswers[i] !== undefined) html += `<div class="qexpl">💬 ${mdToHtml(q.explanation)}</div>`;
     html += '</div>';
   });
-  const allDone = Object.keys(examAnswers).length === quizData.length && quizData.length > 0;
+  const allDone = Object.keys(examAnswers).length === eqd.length && eqd.length > 0;
   if (allDone) {
-    const c = Object.entries(examAnswers).filter(([i,a]) => quizData[i] && parseInt(a) === quizData[i].correct).length;
-    html += `<div style="padding:2rem;text-align:center;font-family:Syne;font-size:1.5rem;font-weight:700;color:var(--green)">Résultat : ${c}/${quizData.length} — ${Math.round(c/quizData.length*100)}%<div style="margin-top:1rem"><button class="btn-green" onclick="closeExam(false)">Terminer</button></div></div>`;
+    const c = Object.entries(examAnswers).filter(([i,a]) => eqd[i] && parseInt(a) === eqd[i].correct).length;
+    html += `<div style="padding:2rem;text-align:center;font-family:Syne;font-size:1.5rem;font-weight:700;color:var(--green)">Résultat : ${c}/${eqd.length} — ${Math.round(c/eqd.length*100)}%<div style="margin-top:1rem"><button class="btn-green" onclick="closeExam(false)">Terminer</button></div></div>`;
   }
   document.getElementById('exam-body').innerHTML = html;
   renderMath(document.getElementById('exam-body'));
@@ -1815,9 +1839,10 @@ function renderExamBody() {
 function examAns(qi, a) {
   examAnswers[qi] = a;
   renderExamBody();
-  const allDone = Object.keys(examAnswers).length === quizData.length && quizData.length > 0;
+  const eqd2 = examQuizData.length ? examQuizData : quizData;
+  const allDone = Object.keys(examAnswers).length === eqd2.length && eqd2.length > 0;
   if (allDone) {
-    const c = Object.entries(examAnswers).filter(([i,ans]) => quizData[i] && parseInt(ans) === quizData[i].correct).length;
+    const c = Object.entries(examAnswers).filter(([i,ans]) => eqd2[i] && parseInt(ans) === eqd2[i].correct).length;
     saveQuizResult(c, quizData.length);
     if (c === quizData.length) launchConfetti();
   }
