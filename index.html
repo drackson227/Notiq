@@ -6,8 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Notiq — Révise plus vite, comprends mieux</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=5">
 <meta name="theme-color" content="#121816">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
@@ -69,7 +68,7 @@ nav {
 }
 body.light nav { background: rgba(244,247,244,0.92); }
 .nav-logo { display: flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
-.nav-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
+.nav-logo .logo-mark { width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; box-shadow: 0 0 16px rgba(31,189,130,0.25); }
 .nav-links { display: flex; gap: 2rem; list-style: none; }
 .nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color 0.2s; }
 .nav-links a:hover { color: var(--text); }
@@ -780,7 +779,14 @@ footer a { color: var(--green); text-decoration: none; }
 
 <!-- NAV -->
 <nav>
-  <a href="#" class="nav-logo"><div class="dot"></div> Notiq</a>
+  <a href="#" class="nav-logo" aria-label="Notiq">
+    <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="#121816"/>
+      <path d="M9 23V9h3.4l5.6 9.3V9H21v14h-3.3l-5.7-9.4V23H9z" fill="#1fbd82"/>
+      <circle cx="24" cy="8" r="2" fill="#1fbd82"/>
+    </svg>
+    Notiq
+  </a>
   <ul class="nav-links">
     <li><a href="#features">Fonctionnalités</a></li>
     <li><a href="#how">Comment ça marche</a></li>
@@ -1128,7 +1134,7 @@ footer a { color: var(--green); text-decoration: none; }
 </div>
 
 <footer>
-  <p>© 2025 Notiq — Propulsé par <a href="https://aistudio.google.com" target="_blank">Gemini</a> · 100% gratuit · Bonne chance pour tes examens 🍀</p>
+  <p>© 2026 Notiq — Propulsé par <a href="https://aistudio.google.com" target="_blank">Gemini</a> · 100% gratuit · Bonne chance pour tes examens 🍀</p>
 </footer>
 
 <script>
@@ -1161,6 +1167,8 @@ let mindmapView = { scale: 1, panX: 0, panY: 0 };
 let mindmapHitAreas = [];
 let mindmapDrag = null;
 let mindmapInited = false;
+let flashMode = 'extract';
+let exos = [], openAides = {}, openSols = {}, exoLoading = false;
 let apiKey      = '';
 let summaryText = '';
 let ankiScores  = {};
@@ -1398,7 +1406,7 @@ function restoreCourseGenerated() {
 
   if (g?.loaded) {
     summaryText = g.summaryText || '';
-    quizData = g.quizData || [];
+    quizData = normalizeQuizQuestions(g.quizData);
     quizAnswers = g.quizAnswers || {};
     flashData = g.flashData || [];
     exos = g.exos || [];
@@ -1665,7 +1673,9 @@ function updateKeyStatus() {
   }
 }
 document.getElementById('key-modal').addEventListener('click', function(e) { if (e.target === this) closeKeyModal(); });
-document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
+['api-key-input', 'api-key-input2', 'openrouter-key-input', 'groq-key-input'].forEach(id => {
+  document.getElementById(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
+});
 
 const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
 const GROQ_MODELS = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'];
@@ -1733,6 +1743,7 @@ async function tryAllGemini(fullPrompt, maxTok) {
 }
 
 const NOTIQ_BUILD = 'v7';
+const EXAM_QUESTION_COUNT = 15;
 const OCR_BATCH_SIZE = 5;
 const OCR_BATCH_DELAY_MS = 400;
 const FAST_VISION_MODELS = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free'];
@@ -2311,8 +2322,11 @@ async function loadCourse() {
   if (!hasAnyApiKey()) { openKeyModal(); return; }
   if (txt.length < 50) { showToast('⚠️ Le cours est trop court (50 min.).', 'error'); return; }
   isLoadingCourse = true;
-  courseText = txt; exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
+  courseText = txt; exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
   mindmapData = null; summaryText = '';
+  document.getElementById('quiz-empty').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'block';
+  document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Analyse en cours…</div>';
   if (activeCourseId && courses[activeCourseId]) {
     courses[activeCourseId].text = txt;
     delete courses[activeCourseId].generated;
@@ -2454,7 +2468,6 @@ function exportSummaryPDF() {
   win.document.close();
 }
 
-let flashMode = 'extract';
 let flashGenCount = 0; // increments each regen to force variety
 
 function setFlashMode(mode) {
@@ -2474,6 +2487,15 @@ function setFlashMode(mode) {
 // Nettoie un texte : retire les numéros de type "1)", "8.", "10)" en début de chaîne
 function cleanFlashText(txt) {
   return (txt || '').replace(/^\s*\d+[\)\.]\s*/, '').trim();
+}
+
+function normalizeQuizQuestions(questions) {
+  return (Array.isArray(questions) ? questions : []).map(q => ({
+    q: q.q || '',
+    options: Array.isArray(q.options) ? q.options : [],
+    correct: typeof q.correct === 'number' ? q.correct : (parseInt(q.correct, 10) || 0),
+    explanation: q.explanation || ''
+  })).filter(q => q.q && q.options.length >= 2);
 }
 
 async function genFlash() {
@@ -2565,7 +2587,7 @@ async function genQuiz() {
       `Cours : ${courseSlice(3500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\n${nQ} QCM. "explanation" = max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
       'Professeur. JSON uniquement.' + compactSuffix()
     );
-    quizData = Array.isArray(data.questions) ? data.questions : [];
+    quizData = normalizeQuizQuestions(data.questions);
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
     saveCourseGenerated();
@@ -2603,7 +2625,7 @@ function ansQ(qi, a) {
   quizAnswers[qi] = a;
   renderQuiz();
   saveCourseGenerated();
-  if (quizData[qi] && a === quizData[qi].correct) showToast('✅ Bonne réponse !', 'success');
+  if (quizData[qi] && parseInt(a, 10) === quizData[qi].correct) showToast('✅ Bonne réponse !', 'success');
   else showToast('❌ Mauvaise réponse', 'error');
 }
 function saveQuizResult(correct, total) {
@@ -2630,16 +2652,16 @@ async function startExam() {
   updateExamTimer();
   try {
     const data = await aiJSON(
-      `Cours : ${courseSlice(3500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\/\-]/g, ' ')}\n\n12 QCM. "explanation" max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
-      'Professeur. 12 questions. JSON uniquement.' + compactSuffix()
+      `Cours : ${courseSlice(3500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\/\-]/g, ' ')}\n\n${EXAM_QUESTION_COUNT} QCM. "explanation" max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
+      `Professeur. ${EXAM_QUESTION_COUNT} questions. JSON uniquement.` + compactSuffix()
     );
-    examQuizData = Array.isArray(data.questions) ? data.questions.slice(0, 20) : [];
+    examQuizData = normalizeQuizQuestions(data.questions).slice(0, EXAM_QUESTION_COUNT);
     if (!examQuizData.length) throw new Error('Aucune question générée');
   } catch(e) {
     // Fallback : utiliser les questions du quiz normal si dispo
     if (quizData.length) {
-      examQuizData = quizData;
-      showToast('⚠️ Utilisation du quiz existant (' + quizData.length + ' questions)', 'error');
+      examQuizData = normalizeQuizQuestions(quizData).slice(0, EXAM_QUESTION_COUNT);
+      showToast('⚠️ Utilisation du quiz existant (' + examQuizData.length + ' questions)', 'error');
     } else {
       document.getElementById('exam-overlay').classList.remove('open');
       showToast('❌ Erreur : ' + (e.message || 'Impossible de générer les questions'), 'error');
@@ -2700,7 +2722,11 @@ function examAns(qi, a) {
 }
 function closeExam(timeout) {
   examRunning = false; clearInterval(examInterval); examInterval = null;
+  examAnswers = {};
   document.getElementById('exam-overlay').classList.remove('open');
+  document.getElementById('exam-progress-fill').style.width = '100%';
+  examTimeLeft = 20 * 60;
+  updateExamTimer();
   if (timeout) showToast('⏱️ Temps écoulé !', 'error');
 }
 
@@ -3237,7 +3263,6 @@ function launchConfetti() {
   draw();
 }
 
-let exos = [], openAides = {}, openSols = {}, exoLoading = false;
 let ansMode = 'text', corrLoading = false;
 let drawCtx = null, drawHistory = [], drawCurrent = [], isDrawing = false;
 let drawColor = '#e8ede9', drawSize = 3;
@@ -3314,19 +3339,51 @@ function setAnsMode(mode) {
   initDrawColors();
   if (mode === 'draw') initDrawCanvas();
 }
+const DRAW_ANSWER_PROMPT = 'Transcris la réponse manuscrite ou le schéma de l\'élève (maths, français). Équations en LaTeX $...$ si besoin. Texte brut uniquement.';
+
+async function transcribeDrawingAnswer() {
+  if (!drawHistory.length) return '';
+  const canvas = document.getElementById('draw-canvas');
+  if (!canvas) return '';
+  const base64 = canvas.toDataURL('image/jpeg', 0.88).split(',')[1];
+  if (!hasVisionApiKey()) throw new Error('Clé Gemini ou OpenRouter requise pour corriger un dessin.');
+  const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
+  if (orKey) {
+    try {
+      const t = await transcribeImageViaOpenRouter(orKey, base64, 'image/jpeg', DRAW_ANSWER_PROMPT);
+      if (t.trim()) return t.trim();
+    } catch(e) { /* repli Gemini */ }
+  }
+  if (!isGeminiVisionBlocked()) {
+    const t = await transcribeImageViaGemini(base64, 'image/jpeg', DRAW_ANSWER_PROMPT);
+    if (t && t.trim()) return t.trim();
+  }
+  throw new Error('Lecture du dessin impossible — réessaie ou passe en mode texte.');
+}
+
 async function corriger() {
   const enonce = document.getElementById('corr-enonce').value.trim();
   if (!enonce) { showToast('Saisis l\'énoncé.', 'error'); return; }
-  const repText = ansMode === 'text' ? document.getElementById('corr-rep').value.trim() : '[Réponse dessinée]';
-  if (ansMode === 'text' && !repText) { showToast('Écris ta réponse.', 'error'); return; }
-  if (corrLoading) return; corrLoading = true;
+  if (corrLoading) return;
+  let repText = '';
+  if (ansMode === 'text') {
+    repText = document.getElementById('corr-rep').value.trim();
+    if (!repText) { showToast('Écris ta réponse.', 'error'); return; }
+  } else {
+    if (!drawHistory.length) { showToast('Dessine ta réponse sur le canevas.', 'error'); return; }
+    if (!hasVisionApiKey()) { showToast('Clé Gemini ou OpenRouter requise pour le mode dessin.', 'error'); openKeyModal(); return; }
+  }
+  corrLoading = true;
   const btn = document.getElementById('corr-btn'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Correction…';
   document.getElementById('corr-result').innerHTML = '';
   try {
+    if (ansMode === 'draw') repText = await transcribeDrawingAnswer();
     const sys = `Correcteur.${courseText ? ' Cours:\n' + courseSlice(2000) : ''} JSON: {"verdict":"correct|incorrect|partiel","note_sur_10":8,"resume":"1 phrase","etapes":[{"n":1,"texte":"…","ok":true}],"conseil":"1 phrase"}` + compactSuffix();
     const data = await aiJSON(`Énoncé : ${enonce}\nRéponse : ${repText}`, sys);
     renderCorrResult(data);
-  } catch(e) { document.getElementById('corr-result').innerHTML = '<div style="color:var(--red);font-size:13px;margin-top:10px">❌ Erreur. Réessaie.</div>'; }
+  } catch(e) {
+    document.getElementById('corr-result').innerHTML = `<div style="color:var(--red);font-size:13px;margin-top:10px">❌ ${escHtml(e.message || 'Erreur. Réessaie.')}</div>`;
+  }
   finally { btn.disabled = false; btn.innerHTML = '🔍 Corriger ma réponse'; corrLoading = false; }
 }
 function renderCorrResult(d) {
