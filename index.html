@@ -739,12 +739,17 @@ footer a { color: var(--green); text-decoration: none; }
   <input class="modal-input" id="openrouter-key-input" type="password" placeholder="sk-or-..." autocomplete="off" />
   <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">Groq (optionnel)</label>
   <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_..." autocomplete="off" />
-  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;margin-top:12px">Vitesse d'analyse</label>
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;margin-top:12px">Moteur IA</label>
   <div class="mode-sw" id="ai-mode-sw">
     <button type="button" class="mode-btn on" id="ai-mode-auto" onclick="setAiMode('auto')">🔄 Auto</button>
-    <button type="button" class="mode-btn" id="ai-mode-fast" onclick="setAiMode('fast')">⚡ Rapide</button>
+    <button type="button" class="mode-btn" id="ai-mode-or" onclick="setAiMode('openrouter')">🌐 OpenRouter</button>
+    <button type="button" class="mode-btn" id="ai-mode-fast" onclick="setAiMode('fast')">⚡ Groq</button>
   </div>
-  <p style="font-size:11px;color:var(--text-muted);margin-top:6px">Rapide = Groq en premier. Auto = Gemini puis secours.</p>
+  <p style="font-size:11px;color:var(--text-muted);margin-top:6px">OpenRouter = sk-or en premier. Auto = Gemini → OpenRouter → Groq.</p>
+  <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;cursor:pointer">
+    <input type="checkbox" id="compact-mode-cb" checked onchange="setCompactMode(this.checked)" />
+  <span>Mode économie — réponses courtes (moins de tokens)</span>
+  </label>
   <div class="modal-error" id="modal-error"></div>
   <div class="modal-row">
     <button class="btn-green" onclick="saveKey()">Enregistrer</button>
@@ -787,7 +792,7 @@ footer a { color: var(--green); text-decoration: none; }
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-badge">✦ Propulsé par Gemini — 100% gratuit</div>
+  <div class="hero-badge">✦ Gemini · OpenRouter · Groq — gratuit</div>
   <h1>Révise plus vite,<br><span>comprends mieux</span></h1>
   <p>Colle ton cours, choisis ton style d'explication. Quiz, flashcards, résumés, carte mentale et chat IA — tout ce qu'il te faut pour réussir tes examens.</p>
   <div class="hero-btns">
@@ -1122,12 +1127,23 @@ footer a { color: var(--green); text-decoration: none; }
 
 <script>
 const STYLES = {
-  simple:  'Explique ce concept simplement et clairement en 3-5 paragraphes. Commence par la définition puis approfondis progressivement. Texte brut sans markdown.',
-  analogy: 'Explique ce concept uniquement par des analogies du quotidien. Propose 3 analogies différentes, chacune commençant par "Imagine que…". Texte brut.',
-  steps:   'Explique ce concept étape par étape. Numérote chaque étape : "Étape 1 : ...". Sois précis et progressif. Texte brut.',
-  example: 'Explique ce concept par des exemples concrets. Si pertinent, inclus des calculs numériques détaillés et des applications pratiques. Donne 3 exemples. Texte brut.',
-  eli5:    'Explique ce concept comme à un enfant de 10 ans. Mots simples, images mentales, enthousiasme. Texte brut.'
+  simple:  'Définition + 3 points essentiels. Max 120 mots. Texte brut.',
+  analogy: '1 analogie "Imagine que…" + 2 phrases. Texte brut.',
+  steps:   '3 à 4 étapes numérotées "Étape N :". Courtes. Texte brut.',
+  example: '2 exemples concrets max. Texte brut.',
+  eli5:    'Explication enfant 10 ans, max 100 mots. Texte brut.'
 };
+function isCompactMode() { return localStorage.getItem('notiq_compact') !== '0'; }
+function setCompactMode(on) {
+  localStorage.setItem('notiq_compact', on ? '1' : '0');
+  showToast(on ? '💰 Mode économie activé' : '📝 Réponses détaillées', 'success');
+}
+function aiLimits() {
+  const c = isCompactMode();
+  return { text: c ? 640 : 2048, json: c ? 1024 : 3072, course: c ? 3000 : 6000 };
+}
+function compactSuffix() { return isCompactMode() ? ' Réponds en français, ultra-concis (minimum de tokens).' : ' Réponds en français.'; }
+function courseSlice(max) { return courseText.slice(0, max ?? aiLimits().course); }
 
 let courseText  = '';
 let chatHistory = [];
@@ -1578,8 +1594,10 @@ function hasAnyApiKey() {
 function setAiMode(mode) {
   localStorage.setItem('notiq_ai_mode', mode);
   document.getElementById('ai-mode-auto')?.classList.toggle('on', mode === 'auto');
+  document.getElementById('ai-mode-or')?.classList.toggle('on', mode === 'openrouter');
   document.getElementById('ai-mode-fast')?.classList.toggle('on', mode === 'fast');
-  showToast(mode === 'fast' ? '⚡ Mode rapide activé' : '🔄 Mode auto activé', 'success');
+  const labels = { auto: '🔄 Auto', openrouter: '🌐 OpenRouter', fast: '⚡ Groq' };
+  showToast((labels[mode] || mode) + ' activé', 'success');
 }
 function openKeyModal() {
   const m = document.getElementById('key-modal');
@@ -1590,7 +1608,10 @@ function openKeyModal() {
   document.getElementById('groq-key-input').value = localStorage.getItem('notiq_groq_key') || '';
   const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
   document.getElementById('ai-mode-auto')?.classList.toggle('on', mode === 'auto');
+  document.getElementById('ai-mode-or')?.classList.toggle('on', mode === 'openrouter');
   document.getElementById('ai-mode-fast')?.classList.toggle('on', mode === 'fast');
+  const compactCb = document.getElementById('compact-mode-cb');
+  if (compactCb) compactCb.checked = isCompactMode();
   document.getElementById('modal-error').textContent = '';
   setTimeout(() => document.getElementById('api-key-input').focus(), 200);
 }
@@ -1662,13 +1683,14 @@ function aiErrorHtml(msg) {
   return `<div style="color:var(--red);font-size:14px;padding:1rem 0;line-height:1.5">❌ ${escHtml(msg)}${hint}</div>`;
 }
 
-async function callGemini(model, prompt, attempt = 0, key = null) {
+async function callGemini(model, prompt, attempt = 0, key = null, maxTok) {
   const useKey = key || apiKey;
   if (!useKey) throw new Error('Pas de clé Gemini');
+  const cap = maxTok ?? aiLimits().text;
   const r = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${useKey}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 4096, temperature: 0.4 } }) }
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: cap, temperature: 0.35 } }) }
   );
   if ((r.status === 429 || r.status === 503) && attempt < 2) {
     await sleep(1200 * (attempt + 1));
@@ -1683,12 +1705,12 @@ async function callGemini(model, prompt, attempt = 0, key = null) {
   return text;
 }
 
-async function tryAllGemini(fullPrompt) {
+async function tryAllGemini(fullPrompt, maxTok) {
   let rateLimited = false;
   for (const key of getGeminiKeys()) {
     for (const model of GEMINI_MODELS) {
       try {
-        return await callGemini(model, fullPrompt, 0, key);
+        return await callGemini(model, fullPrompt, 0, key, maxTok);
       } catch(e) {
         if (e.message === 'Clé API invalide ou expirée.') throw e;
         if (e.message === 'RATE_LIMITED') rateLimited = true;
@@ -1701,12 +1723,14 @@ async function tryAllGemini(fullPrompt) {
 }
 
 const OPENROUTER_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
+  'google/gemini-2.0-flash-001',
   'meta-llama/llama-3.2-3b-instruct:free',
-  'google/gemma-2-9b-it:free'
+  'google/gemma-3-4b-it:free',
+  'qwen/qwen-2.5-7b-instruct:free'
 ];
 
-async function aiOpenRouter(prompt, orKey) {
+async function aiOpenRouter(prompt, orKey, maxTok) {
+  const cap = maxTok ?? aiLimits().text;
   let lastErr = 'OpenRouter indisponible';
   for (const model of OPENROUTER_MODELS) {
     const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1717,7 +1741,7 @@ async function aiOpenRouter(prompt, orKey) {
         'HTTP-Referer': location.origin || 'https://notiq.app',
         'X-Title': 'Notiq'
       },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 4096, temperature: 0.4 })
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: cap, temperature: 0.35 })
     });
     if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé'; continue; }
     if (!r.ok) {
@@ -1732,19 +1756,24 @@ async function aiOpenRouter(prompt, orKey) {
   throw new Error(lastErr);
 }
 
-async function ai(prompt, systemPrompt) {
+async function ai(prompt, systemPrompt, maxTok) {
   if (!hasAnyApiKey()) { openKeyModal(); throw new Error('Ajoute au moins une clé API.'); }
   syncPrimaryApiKey();
+  const cap = maxTok ?? aiLimits().text;
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
   const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
   const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
   const groqKey = (localStorage.getItem('notiq_groq_key') || '').trim();
 
   const steps = [];
-  if (mode === 'fast') {
-    if (groqKey && !isGroqBlocked()) steps.push('groq');
-    if (getGeminiKeys().length) steps.push('gemini');
+  if (mode === 'openrouter') {
     if (orKey) steps.push('openrouter');
+    if (getGeminiKeys().length) steps.push('gemini');
+    if (groqKey && !isGroqBlocked()) steps.push('groq');
+  } else if (mode === 'fast') {
+    if (groqKey && !isGroqBlocked()) steps.push('groq');
+    if (orKey) steps.push('openrouter');
+    if (getGeminiKeys().length) steps.push('gemini');
   } else {
     if (getGeminiKeys().length) steps.push('gemini');
     if (orKey) steps.push('openrouter');
@@ -1753,9 +1782,9 @@ async function ai(prompt, systemPrompt) {
 
   for (const step of steps) {
     try {
-      if (step === 'gemini') return await tryAllGemini(fullPrompt);
-      if (step === 'openrouter') return await aiOpenRouter(fullPrompt, orKey);
-      if (step === 'groq') return await aiGroq(fullPrompt, groqKey);
+      if (step === 'gemini') return await tryAllGemini(fullPrompt, cap);
+      if (step === 'openrouter') return await aiOpenRouter(fullPrompt, orKey, cap);
+      if (step === 'groq') return await aiGroq(fullPrompt, groqKey, cap);
     } catch(e) {
       console.warn(step, e.message);
       if (e.message === 'Clé API invalide ou expirée.') throw e;
@@ -1765,13 +1794,14 @@ async function ai(prompt, systemPrompt) {
   throw new Error(buildAiFailMessage());
 }
 
-async function aiGroq(prompt, groqKey) {
+async function aiGroq(prompt, groqKey, maxTok) {
+  const cap = maxTok ?? aiLimits().text;
   let lastErr = 'Erreur Groq';
   for (const model of GROQ_MODELS) {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.5 })
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: cap, temperature: 0.35 })
     });
     if (r.status === 429) {
       const e = await r.json().catch(() => ({}));
@@ -2154,7 +2184,10 @@ async function genSummary() {
   const el = document.getElementById('summary-content');
   document.getElementById('summary-ui').style.display = 'block';
   el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
-  const res = await ai(`Cours :\n\n${courseText.slice(0, 8000)}\n\nFais un résumé structuré : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`, 'Tu es un assistant pédagogique expert. Réponds en français.');
+  const res = await ai(
+    `Cours :\n\n${courseSlice()}\n\nRésumé MINIMAL : 6 à 8 puces "• " (une ligne chacune), zéro intro, zéro conclusion.${compactSuffix()}`,
+    'Assistant pédagogique.'
+  );
   renderSummaryFromText(res);
   saveCourseGenerated();
 }
@@ -2214,13 +2247,12 @@ async function genFlash() {
   const isAI = flashMode === 'ai';
   flashGenCount++;
   const sessionSeed = flashGenCount;
+  const nCards = isCompactMode() ? 8 : 10;
   const prompt = isAI
-    ? `Session #${sessionSeed} — ${Date.now()}. Tu es un professeur créatif. Cours :\n\n${courseText.slice(0, 6000)}\n\nCrée 12 flashcards DIFFÉRENTES des sessions précédentes. RÈGLES STRICTES :\n- Ne JAMAIS copier une phrase du cours mot pour mot\n- Reformule totalement avec tes propres mots\n- Le recto = une question ouverte variée (sans numéro, sans "Question :")\n- Le verso = explication claire en tes propres mots\n- Types : définition, mécanisme, comparaison, exemple concret, "pourquoi ?", conséquence\n- Session ${sessionSeed} : explore des angles NOUVEAUX\n{"cards":[{"front":"question reformulée","back":"explication reformulée"}]}`
-    : `Session #${sessionSeed} — ${Date.now()}. Cours :\n\n${courseText.slice(0, 6000)}\n\nExtrait 12 notions/termes clés DIFFÉRENTS (session ${sessionSeed}, varie par rapport aux sessions précédentes). Recto = terme court sans numéro. Verso = définition précise.\n{"cards":[{"front":"terme ou notion clé","back":"définition précise"}]}`;
+    ? `Cours :\n\n${courseSlice()}\n\n${nCards} flashcards reformulées (pas de copie mot à mot). Recto=question courte, verso=1-2 phrases.\n{"cards":[{"front":"…","back":"…"}]}`
+    : `Cours :\n\n${courseSlice()}\n\n${nCards} notions clés. Recto=terme, verso=définition courte (1 phrase).\n{"cards":[{"front":"…","back":"…"}]}`;
 
-  const sys = isAI
-    ? 'Tu es un professeur expert en pédagogie. Tu reformules toujours avec tes propres mots, tu ne copies jamais le texte source. Réponds uniquement en JSON.'
-    : 'Tu es un assistant pédagogique. Extrais les notions clés du cours. Réponds uniquement en JSON.';
+  const sys = (isAI ? 'Prof créatif.' : 'Assistant.') + ' JSON uniquement.' + compactSuffix();
 
   try {
     const data = await aiJSON(prompt, sys);
@@ -2287,7 +2319,11 @@ async function genQuiz() {
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
   try {
-    const data = await aiJSON(`Timestamp: ${Date.now()}. Voici un cours : ${courseText.slice(0, 4000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\nGénère exactement 10 QCM variés (du plus simple au plus difficile) :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication"}]}`, 'Tu es un professeur expert.');
+    const nQ = isCompactMode() ? 8 : 10;
+    const data = await aiJSON(
+      `Cours : ${courseSlice(3500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\n${nQ} QCM. "explanation" = max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
+      'Professeur. JSON uniquement.' + compactSuffix()
+    );
     quizData = Array.isArray(data.questions) ? data.questions : [];
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
@@ -2353,8 +2389,8 @@ async function startExam() {
   updateExamTimer();
   try {
     const data = await aiJSON(
-      `Timestamp: ${Date.now()}. Cours : ${courseText.slice(0, 5000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\/\-]/g, ' ')}\n\nGénère exactement 15 QCM variés (facile → difficile), progression du simple au complexe :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication precise"}]}`,
-      'Tu es un professeur expert. Génère exactement 15 questions QCM de niveaux variés. EXACTEMENT 15, JSON uniquement.'
+      `Cours : ${courseSlice(3500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\/\-]/g, ' ')}\n\n12 QCM. "explanation" max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
+      'Professeur. 12 questions. JSON uniquement.' + compactSuffix()
     );
     examQuizData = Array.isArray(data.questions) ? data.questions.slice(0, 20) : [];
     if (!examQuizData.length) throw new Error('Aucune question générée');
@@ -2438,9 +2474,9 @@ async function _doExplainNow() {
   const el = document.getElementById('ex-result');
   if (exCache[key]) { renderExplain(exStyle, exCache[key]); return; }
   el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération en cours…</span>';
-  const ctx = courseText ? `Cours de référence :\n${courseText.slice(0,4000)}\n\n` : '';
+  const ctx = courseText ? `Cours :\n${courseSlice(2500)}\n\n` : '';
   try {
-    const res = await ai(`${ctx}${STYLES[exStyle]}\n\nConcept : "${topic}"`, 'Tu es un tuteur pédagogique expert. Réponds en français.');
+    const res = await ai(`${ctx}${STYLES[exStyle]}\n\nConcept : "${topic}"`, 'Tuteur.' + compactSuffix());
     exCache[key] = res;
     renderExplain(exStyle, res);
   } catch(e) {
@@ -2800,8 +2836,8 @@ async function genMindmap() {
   ctx2d.fillText('Génération de la carte mentale…', W / 2, H / 2);
   try {
     const raw = await aiJSON(
-      `Cours :\n\n${courseText.slice(0, 5000)}\n\nGénère une carte mentale JSON :\n{"center":"titre court","branches":[{"label":"branche","children":["idée 1","idée 2"]}]}`,
-      'Tu es un assistant pédagogique. Règles STRICTES : 4 à 6 branches maximum ; 2 à 4 enfants par branche ; labels COURTS (branche ≤ 4 mots, enfant ≤ 6 mots) ; pas de doublons ; structure claire du cours. JSON uniquement.'
+      `Cours :\n\n${courseSlice()}\n\nCarte mentale JSON : 4-5 branches, 2 enfants max, labels ≤ 3 mots.\n{"center":"titre","branches":[{"label":"…","children":["…","…"]}]}`,
+      'Assistant. JSON uniquement.' + compactSuffix()
     );
     mindmapData = normalizeMindmapData(raw);
     mindmapView = { scale: 1, panX: 0, panY: 0 };
@@ -2832,8 +2868,8 @@ async function sendChat() {
   box.innerHTML += `<div class="cmsg user">${escHtml(msg)}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
   box.scrollTop = box.scrollHeight;
   const sys = courseText
-    ? `Tu es un tuteur pédagogique expert. Voici le cours :\n\n${courseText.slice(0,4000)}\n\nRéponds en français, clairement et pédagogiquement.`
-    : 'Tu es un tuteur pédagogique expert. Réponds en français.';
+    ? `Tuteur. Cours :\n\n${courseSlice(2500)}\n\nRéponses courtes (max 80 mots).`
+    : 'Tuteur. Réponses courtes (max 80 mots).';
   chatHistory.push({ role: 'user', parts: [{ text: msg }] });
   if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
   try {
@@ -2975,7 +3011,10 @@ function switchExoTab(name) {
 
 async function genExosQuiet() {
   if (!syncActiveCourseText() || courseText.length < 50) return;
-  const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs :\n{"exercices":[{"titre":"Titre","enonce":"Enonce","aide":"Indice","solution":"Solution"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
+  const data = await aiJSON(
+    `Cours :\n\n${courseSlice()}\n\n3 exercices courts.\n{"exercices":[{"titre":"…","enonce":"…","aide":"…","solution":"…"}]}`,
+    'Professeur. JSON.' + compactSuffix()
+  );
   exos = data.exercices || []; openAides = {}; openSols = {};
   document.getElementById('exo-empty').style.display = 'none';
   document.getElementById('exo-ui').style.display = 'block';
@@ -2991,7 +3030,10 @@ async function genExos() {
   const btn = document.getElementById('exo-gen-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Génération…';
   try {
-    const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs :\n{"exercices":[{"titre":"Titre","enonce":"Enonce","aide":"Indice","solution":"Solution"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
+    const data = await aiJSON(
+      `Cours :\n\n${courseSlice()}\n\n3 exercices courts.\n{"exercices":[{"titre":"…","enonce":"…","aide":"…","solution":"…"}]}`,
+      'Professeur. JSON.' + compactSuffix()
+    );
     exos = data.exercices || []; openAides = {}; openSols = {}; renderExos();
     saveCourseGenerated();
   } catch(e) { showToast('Erreur génération exercices', 'error'); }
@@ -3040,8 +3082,8 @@ async function corriger() {
   const btn = document.getElementById('corr-btn'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Correction…';
   document.getElementById('corr-result').innerHTML = '';
   try {
-    const sys = `Tu es un professeur correcteur. ${courseText ? 'Cours de référence :\n' + courseText.slice(0,3000) + '\n\n' : ''}Réponds UNIQUEMENT en JSON : {"verdict":"correct|incorrect|partiel","note_sur_10":8,"resume":"resume de la correction","etapes":[{"n":1,"texte":"description de l etape","ok":true}],"conseil":"conseil personnalise"}`;
-    const data = await aiJSON(`Énoncé : ${enonce}\n\nRéponse de l'étudiant : ${repText}\n\nCorrige étape par étape.`, sys);
+    const sys = `Correcteur.${courseText ? ' Cours:\n' + courseSlice(2000) : ''} JSON: {"verdict":"correct|incorrect|partiel","note_sur_10":8,"resume":"1 phrase","etapes":[{"n":1,"texte":"…","ok":true}],"conseil":"1 phrase"}` + compactSuffix();
+    const data = await aiJSON(`Énoncé : ${enonce}\nRéponse : ${repText}`, sys);
     renderCorrResult(data);
   } catch(e) { document.getElementById('corr-result').innerHTML = '<div style="color:var(--red);font-size:13px;margin-top:10px">❌ Erreur. Réessaie.</div>'; }
   finally { btn.disabled = false; btn.innerHTML = '🔍 Corriger ma réponse'; corrLoading = false; }
@@ -3119,7 +3161,7 @@ function undoDraw() {
 }
 
 function aiJSON(prompt, system) {
-  return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide. Sans markdown, sans backticks. Guillemets droits " uniquement.')
+  return ai(prompt, (system || '') + '\nJSON valide uniquement. Sans markdown.' + compactSuffix(), aiLimits().json)
     .then(text => {
       if (isGroqRateLimit(text) || /^error/i.test(text.trim())) {
         throw new Error('Réponse API invalide — quota ou surcharge. Réessaie.');
