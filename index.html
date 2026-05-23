@@ -1369,12 +1369,13 @@ window.addEventListener('load', () => {
 
 function toggleTheme() {
   const light = document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent = light ? '☀️' : '🌙';
+  const themeBtn = document.getElementById('theme-btn');
+  if (themeBtn) themeBtn.textContent = light ? '☀️' : '🌙';
   localStorage.setItem('notiq_theme', light ? 'light' : 'dark');
   if (mindmapData) {
     setTimeout(() => {
       const canvas = document.getElementById('mindmap-canvas');
-      if (canvas.offsetWidth > 0) {
+      if (canvas && canvas.offsetWidth > 0) {
         const ctx2d = canvas.getContext('2d');
         setupCanvas(canvas, ctx2d);
         renderMindmapFrame();
@@ -1392,7 +1393,9 @@ function saveCourses() {
 }
 
 function persistCourseTextarea() {
-  const txt = document.getElementById('course-text').value;
+  const courseTa = document.getElementById('course-text');
+  if (!courseTa) return;
+  const txt = courseTa.value;
   if (activeCourseId && courses[activeCourseId]) {
     courses[activeCourseId].text = txt;
     saveCourses();
@@ -1400,11 +1403,14 @@ function persistCourseTextarea() {
 }
 
 function updateCharCount() {
-  const n = document.getElementById('course-text').value.length;
+  const courseTa = document.getElementById('course-text');
+  if (!courseTa) return;
+  const n = courseTa.value.length;
   const el = document.getElementById('course-char-count');
   const hint = document.getElementById('course-char-hint');
   if (!el) return;
   el.textContent = n.toLocaleString('fr-FR') + ' caractère' + (n > 1 ? 's' : '');
+  if (!hint) return;
   if (n < 50) {
     hint.textContent = 'Minimum 50 pour analyser';
     hint.className = 'warn';
