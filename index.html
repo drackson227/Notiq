@@ -479,7 +479,23 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 .chat-in::placeholder { color: var(--text-muted); }
 
 /* ── MINDMAP ── */
-#mindmap-canvas { width: 100%; height: 420px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); display: block; }
+.mindmap-wrap { position: relative; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); overflow: hidden; }
+#mindmap-canvas { width: 100%; height: 540px; display: block; cursor: grab; touch-action: none; }
+#mindmap-canvas.dragging { cursor: grabbing; }
+.mindmap-toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center;
+  margin-top: 10px;
+}
+.mindmap-hint { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+.mindmap-tooltip {
+  position: absolute; pointer-events: none; z-index: 20;
+  max-width: 260px; padding: 10px 14px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border-hover);
+  font-size: 13px; color: var(--text); line-height: 1.45;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  opacity: 0; transition: opacity 0.15s;
+}
+.mindmap-tooltip.show { opacity: 1; }
 
 /* ── POMODORO ── */
 .pomo-wrap {
@@ -675,7 +691,7 @@ footer a { color: var(--green); text-decoration: none; }
   .anki-btn { padding: 10px 6px; font-size: 12px; }
   .export-bar { flex-wrap: wrap; }
   .export-bar .btn-outline { font-size: 12px; padding: 8px 12px; }
-  #mindmap-canvas { height: 280px; }
+  #mindmap-canvas { height: 320px; }
   .chat-box { min-height: 200px; max-height: 260px; }
   .chat-row { gap: 6px; }
   .chat-in { padding: 10px 14px; font-size: 14px; }
@@ -1009,9 +1025,17 @@ footer a { color: var(--green); text-decoration: none; }
         <div class="apanel" id="ap-mindmap">
           <div id="mindmap-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer la carte mentale.</div>
           <div id="mindmap-ui" style="display:none">
-            <canvas id="mindmap-canvas"></canvas>
-            <div style="text-align:center;margin-top:10px">
-              <button class="btn-outline" onclick="genMindmap()">↻ Régénérer</button>
+            <div class="mindmap-wrap" id="mindmap-wrap">
+              <canvas id="mindmap-canvas"></canvas>
+              <div class="mindmap-tooltip" id="mindmap-tooltip"></div>
+            </div>
+            <p class="mindmap-hint">Molette = zoom · Glisser = déplacer · Clic sur un nœud = détail</p>
+            <div class="mindmap-toolbar">
+              <button class="btn-outline" style="font-size:13px;padding:6px 12px" onclick="mindmapZoom(1.2)" title="Zoomer">＋</button>
+              <button class="btn-outline" style="font-size:13px;padding:6px 12px" onclick="mindmapZoom(1/1.2)" title="Dézoomer">－</button>
+              <button class="btn-outline" style="font-size:13px;padding:6px 12px" onclick="mindmapResetView()">⊙ Recentrer</button>
+              <button class="btn-outline" style="font-size:13px;padding:6px 12px" onclick="exportMindmapPNG()">⬇️ PNG</button>
+              <button class="btn-outline" style="font-size:13px" onclick="genMindmap()">↻ Régénérer</button>
             </div>
           </div>
         </div>
@@ -1022,7 +1046,7 @@ footer a { color: var(--green); text-decoration: none; }
             <div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions dessus. Je suis là pour t'aider à comprendre. 👋</div>
           </div>
           <div class="chat-row">
-            <input class="chat-in" id="chat-in" type="text" placeholder="Ta question…" onkeydown="if(event.key==='Enter')sendChat()" />
+            <input class="chat-in" id="chat-in" type="text" placeholder="Ta question… (Entrée ou Ctrl+Entrée)" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey||!event.shiftKey)){event.preventDefault();sendChat();}" />
             <button class="btn-green" onclick="sendChat()">Envoyer</button>
           </div>
         </div>
@@ -1103,6 +1127,10 @@ let quizData    = []; let quizAnswers = {};
 let flashData   = []; let flashIdx = 0;
 let exStyle     = 'simple'; let exCache = {};
 let mindmapData = null;
+let mindmapView = { scale: 1, panX: 0, panY: 0 };
+let mindmapHitAreas = [];
+let mindmapDrag = null;
+let mindmapInited = false;
 let apiKey      = '';
 let summaryText = '';
 let ankiScores  = {};
@@ -1207,7 +1235,7 @@ function toggleTheme() {
       if (canvas.offsetWidth > 0) {
         const ctx2d = canvas.getContext('2d');
         setupCanvas(canvas, ctx2d);
-        drawMindmap(canvas, ctx2d, canvas.offsetWidth, canvas.offsetHeight, mindmapData);
+        renderMindmapFrame();
       }
     }, 350);
   }
@@ -1335,6 +1363,12 @@ function restoreCourseGenerated() {
   if (hasContent && mindmapData) {
     document.getElementById('mindmap-empty').style.display = 'none';
     document.getElementById('mindmap-ui').style.display = 'block';
+    mindmapData = normalizeMindmapData(mindmapData);
+    mindmapView = { scale: 1, panX: 0, panY: 0 };
+    initMindmapInteractions();
+    if (document.getElementById('ap-mindmap').classList.contains('active')) {
+      setTimeout(renderMindmapFrame, 60);
+    }
   } else {
     document.getElementById('mindmap-empty').style.display = hasContent ? 'none' : 'block';
     document.getElementById('mindmap-ui').style.display = 'none';
@@ -1700,7 +1734,7 @@ function switchATab(name, el) {
       const canvas = document.getElementById('mindmap-canvas');
       const ctx2d = canvas.getContext('2d');
       setupCanvas(canvas, ctx2d);
-      drawMindmap(canvas, ctx2d, canvas.offsetWidth, canvas.offsetHeight, mindmapData);
+      renderMindmapFrame();
     }, 50);
   }
 }
@@ -2155,91 +2189,346 @@ function renderExplain(style, text) {
 
 function setupCanvas(canvas, ctx) {
   const W = canvas.offsetWidth || 600;
-  const H = parseInt(canvas.style.height) || canvas.offsetHeight || 420;
+  const H = parseInt(getComputedStyle(canvas).height, 10) || canvas.offsetHeight || 540;
   const dpr = window.devicePixelRatio || 1;
   canvas.width = W * dpr; canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { W, H };
 }
-async function genMindmap() {
-  const canvas = document.getElementById('mindmap-canvas');
-  const ctx2d = canvas.getContext('2d');
-  setupCanvas(canvas, ctx2d);
-  const W = canvas.offsetWidth || 600; const H = 420;
-  const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
-  ctx2d.fillStyle = bg; ctx2d.fillRect(0, 0, W, H);
-  ctx2d.fillStyle = 'var(--text-muted, #3d4d41)'; ctx2d.font = '14px DM Sans, sans-serif';
-  ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
-  ctx2d.fillText('Génération de la carte mentale…', W/2, H/2);
-  try {
-    mindmapData = await aiJSON(`Cours :\n\n${courseText.slice(0,5000)}\n\nGénère une carte mentale :\n{"center":"titre principal","branches":[{"label":"branche","children":["enfant1","enfant2"]}]}`, 'Tu es un assistant pédagogique.');
-    drawMindmap(canvas, ctx2d, W, H, mindmapData);
-    saveCourseGenerated();
-  } catch(e) {
-    ctx2d.clearRect(0, 0, W, H); ctx2d.fillStyle = bg; ctx2d.fillRect(0, 0, W, H);
-    ctx2d.fillStyle = '#7a8c7e'; ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
-    ctx2d.fillText('❌ Erreur — vérifie ta clé API', W/2, H/2);
+
+function shortenMindmapLabel(s, max) {
+  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > max * 0.5 ? cut.slice(0, sp) : cut).trim() + '…';
+}
+
+function normalizeMindmapData(data) {
+  const center = shortenMindmapLabel(data?.center || 'Cours', 42);
+  const seen = new Set();
+  const branches = (data?.branches || []).slice(0, 6).map(b => {
+    const label = shortenMindmapLabel(b?.label || '', 32);
+    const children = (b?.children || []).slice(0, 4).map(c =>
+      shortenMindmapLabel(typeof c === 'string' ? c : (c?.label || ''), 40)
+    ).filter(Boolean);
+    return { label, children };
+  }).filter(b => {
+    if (!b.label) return false;
+    const key = b.label.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return { center, branches };
+}
+
+function wrapTextLines(ctx, text, maxW, maxLines) {
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  words.forEach(w => {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line);
+      line = w;
+    } else line = test;
+  });
+  if (line) lines.push(line);
+  if (lines.length > maxLines) {
+    const last = lines[maxLines - 1];
+    lines.length = maxLines;
+    lines[maxLines - 1] = shortenMindmapLabel(last, Math.max(12, last.length - 2));
   }
+  return lines;
 }
-function drawMindmap(canvas, ctx, W, H, data) {
-  ctx.clearRect(0, 0, W, H);
-  const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.lineTo(x + w - rad, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+  ctx.lineTo(x + w, y + h - rad);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+  ctx.lineTo(x + rad, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+  ctx.lineTo(x, y + rad);
+  ctx.quadraticCurveTo(x, y, x + rad, y);
+  ctx.closePath();
+}
+
+function drawMindmapEdge(ctx, x1, y1, x2, y2, kind, isLight) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = kind === 'branch'
+    ? 'rgba(31,189,130,0.45)'
+    : (isLight ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.12)');
+  ctx.lineWidth = kind === 'branch' ? 2 : 1;
+  ctx.stroke();
+}
+
+function drawMindNode(ctx, x, y, text, kind, isLight) {
+  const styles = {
+    center: { font: 'bold 13px Syne, sans-serif', maxW: 118, maxLines: 3, padX: 14, padY: 10, rx: 16, fill: '#1fbd82', stroke: 'rgba(31,189,130,0.85)', color: '#000' },
+    branch: { font: '600 12px Syne, sans-serif', maxW: 112, maxLines: 2, padX: 11, padY: 8, rx: 12, fill: isLight ? '#dfe5de' : '#161a15', stroke: 'rgba(31,189,130,0.55)', color: isLight ? '#1a2219' : '#e8ede9' },
+    child:  { font: '11px DM Sans, sans-serif', maxW: 100, maxLines: 3, padX: 10, padY: 7, rx: 10, fill: isLight ? '#eaefe9' : '#121512', stroke: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.1)', color: isLight ? '#3d5245' : '#9aaba0' }
+  };
+  const cfg = styles[kind];
+  ctx.font = cfg.font;
+  const lines = wrapTextLines(ctx, text, cfg.maxW, cfg.maxLines);
+  const lineH = kind === 'center' ? 15 : kind === 'branch' ? 14 : 13;
+  const textW = Math.max(...lines.map(l => ctx.measureText(l).width), 16);
+  const w = textW + cfg.padX * 2;
+  const h = lines.length * lineH + cfg.padY * 2;
+  const left = x - w / 2;
+  const top = y - h / 2;
+  roundRectPath(ctx, left, top, w, h, cfg.rx);
+  ctx.fillStyle = cfg.fill;
+  ctx.fill();
+  ctx.strokeStyle = cfg.stroke;
+  ctx.lineWidth = kind === 'center' ? 2 : 1.5;
+  ctx.stroke();
+  ctx.fillStyle = cfg.color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const startY = y - ((lines.length - 1) * lineH) / 2;
+  lines.forEach((ln, i) => ctx.fillText(ln, x, startY + i * lineH));
+  mindmapHitAreas.push({ x: left, y: top, w, h, text: String(text), kind });
+}
+
+function drawMindmapContent(ctx, W, H, data) {
   const isLight = document.body.classList.contains('light');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-  const cx = W / 2; const cy = H / 2;
   const branches = data.branches || [];
-  if (!branches.length) return;
-  const angleStep = (2 * Math.PI) / branches.length;
-  const branchR = Math.min(W, H) * 0.32;
-  const childR  = Math.min(W, H) * 0.16;
-  ctx.beginPath(); ctx.arc(cx, cy, 52, 0, 2 * Math.PI);
-  ctx.fillStyle = '#1fbd82'; ctx.fill();
-  ctx.fillStyle = '#000'; ctx.font = 'bold 12px Syne, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  wrapText(ctx, data.center || 'Cours', cx, cy, 88, 14);
+  const n = branches.length;
+  if (!n) return;
+  const cx = W / 2;
+  const cy = H / 2;
+  const minSide = Math.min(W, H);
+  const branchR = minSide * (n <= 4 ? 0.30 : n <= 5 ? 0.33 : 0.36);
+  const childDist = minSide * 0.22;
+
+  drawMindNode(ctx, cx, cy, data.center || 'Cours', 'center', isLight);
+
   branches.forEach((branch, i) => {
-    const angle = i * angleStep - Math.PI / 2;
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
     const bx = cx + Math.cos(angle) * branchR;
     const by = cy + Math.sin(angle) * branchR;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(bx, by);
-    ctx.strokeStyle = 'rgba(31,189,130,0.4)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(bx, by, 64, 24, 0, 0, 2 * Math.PI);
-    ctx.fillStyle = isLight ? '#dfe5de' : '#161a15';
-    ctx.strokeStyle = 'rgba(31,189,130,0.55)'; ctx.lineWidth = 1.5;
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = isLight ? '#1a2219' : '#e8ede9';
-    ctx.font = '12px DM Sans, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(truncate(branch.label, 15), bx, by);
-    (branch.children || []).forEach((child, j) => {
-      const childCount = branch.children.length;
-      const spread = childCount > 1 ? 0.5 : 0;
-      const childAngle = angle + (j - (childCount - 1) / 2) * spread;
-      const chx = bx + Math.cos(childAngle) * childR;
-      const chy = by + Math.sin(childAngle) * childR;
-      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(chx, chy);
-      ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.1)';
-      ctx.lineWidth = 1; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(chx, chy, 48, 16, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = isLight ? '#eaefe9' : '#111410';
-      ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
-      ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
-      ctx.fillStyle = isLight ? '#4a6050' : '#7a8c7e';
-      ctx.font = '11px DM Sans, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(truncate(child, 13), chx, chy);
+    drawMindmapEdge(ctx, cx, cy, bx, by, 'branch', isLight);
+    drawMindNode(ctx, bx, by, branch.label, 'branch', isLight);
+
+    const kids = branch.children || [];
+    const kN = kids.length;
+    if (!kN) return;
+
+    const arcSpan = Math.min(Math.PI * 1.05, 0.5 * kN + 0.35);
+    const startA = angle - arcSpan / 2;
+    const dist = childDist + Math.max(0, kN - 3) * 10;
+
+    kids.forEach((child, j) => {
+      const t = kN === 1 ? 0.5 : j / (kN - 1);
+      const a = kN === 1 ? angle : startA + t * arcSpan;
+      let chx = bx + Math.cos(a) * dist;
+      let chy = by + Math.sin(a) * dist;
+      const toCenter = Math.hypot(chx - cx, chy - cy);
+      if (toCenter < branchR + childDist * 0.55) {
+        chx = bx + Math.cos(angle) * (dist + 22);
+        chy = by + Math.sin(angle) * (dist + 22);
+      }
+      drawMindmapEdge(ctx, bx, by, chx, chy, 'child', isLight);
+      drawMindNode(ctx, chx, chy, child, 'child', isLight);
     });
   });
 }
-function wrapText(ctx, text, x, y, maxW, lineH) {
-  const words = text.split(' '); let line = ''; const lines = [];
-  words.forEach(w => {
-    const test = line + w + ' ';
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
-    else line = test;
-  });
-  if (line) lines.push(line.trim());
-  const startY = y - (lines.length - 1) * lineH / 2;
-  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineH));
+
+function mindmapCanvasPoint(e) {
+  const canvas = document.getElementById('mindmap-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const { W, H } = { W: canvas.offsetWidth, H: parseInt(getComputedStyle(canvas).height, 10) || 540 };
+  return {
+    W, H,
+    px: (e.clientX - rect.left) * (W / rect.width),
+    py: (e.clientY - rect.top) * (H / rect.height)
+  };
 }
-function truncate(s, n) { return s && s.length > n ? s.slice(0, n-1) + '…' : (s || ''); }
+
+function mindmapWorldFromScreen(px, py, W, H) {
+  const cx = W / 2;
+  const cy = H / 2;
+  return {
+    x: (px - mindmapView.panX - cx) / mindmapView.scale + cx,
+    y: (py - mindmapView.panY - cy) / mindmapView.scale + cy
+  };
+}
+
+function renderMindmapFrame() {
+  if (!mindmapData) return;
+  const canvas = document.getElementById('mindmap-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const { W, H } = setupCanvas(canvas, ctx);
+  mindmapHitAreas = [];
+  const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(mindmapView.panX, mindmapView.panY);
+  const cx = W / 2;
+  const cy = H / 2;
+  ctx.translate(cx, cy);
+  ctx.scale(mindmapView.scale, mindmapView.scale);
+  ctx.translate(-cx, -cy);
+  drawMindmapContent(ctx, W, H, normalizeMindmapData(mindmapData));
+  ctx.restore();
+}
+
+function mindmapZoom(factor) {
+  mindmapView.scale = Math.min(2.5, Math.max(0.4, mindmapView.scale * factor));
+  renderMindmapFrame();
+}
+
+function mindmapResetView() {
+  mindmapView = { scale: 1, panX: 0, panY: 0 };
+  renderMindmapFrame();
+}
+
+function exportMindmapPNG() {
+  const canvas = document.getElementById('mindmap-canvas');
+  if (!mindmapData) { showToast('Génère d\'abord une carte mentale.', 'error'); return; }
+  const a = document.createElement('a');
+  a.download = ((activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'carte') + '-mindmap.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  showToast('⬇️ Carte exportée en PNG', 'success');
+}
+
+function mindmapHitAt(px, py, W, H) {
+  const p = mindmapWorldFromScreen(px, py, W, H);
+  for (let i = mindmapHitAreas.length - 1; i >= 0; i--) {
+    const a = mindmapHitAreas[i];
+    if (p.x >= a.x && p.x <= a.x + a.w && p.y >= a.y && p.y <= a.y + a.h) return a;
+  }
+  return null;
+}
+
+function showMindmapTooltip(text, clientX, clientY) {
+  const wrap = document.getElementById('mindmap-wrap');
+  const tip = document.getElementById('mindmap-tooltip');
+  if (!wrap || !tip) return;
+  const r = wrap.getBoundingClientRect();
+  tip.textContent = text;
+  tip.style.left = Math.min(Math.max(clientX - r.left + 12, 8), r.width - 268) + 'px';
+  tip.style.top = Math.min(Math.max(clientY - r.top + 12, 8), r.height - 60) + 'px';
+  tip.classList.add('show');
+}
+
+function hideMindmapTooltip() {
+  document.getElementById('mindmap-tooltip')?.classList.remove('show');
+}
+
+function initMindmapInteractions() {
+  if (mindmapInited) return;
+  mindmapInited = true;
+  const canvas = document.getElementById('mindmap-canvas');
+
+  canvas.addEventListener('wheel', e => {
+    if (!mindmapData) return;
+    e.preventDefault();
+    const { px, py, W, H } = mindmapCanvasPoint(e);
+    const cx = W / 2;
+    const cy = H / 2;
+    const wx = (px - mindmapView.panX - cx) / mindmapView.scale + cx;
+    const wy = (py - mindmapView.panY - cy) / mindmapView.scale + cy;
+    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    mindmapView.scale = Math.min(2.5, Math.max(0.4, mindmapView.scale * factor));
+    mindmapView.panX = px - (wx - cx) * mindmapView.scale - cx;
+    mindmapView.panY = py - (wy - cy) * mindmapView.scale - cy;
+    renderMindmapFrame();
+  }, { passive: false });
+
+  canvas.addEventListener('mousedown', e => {
+    if (!mindmapData) return;
+    mindmapDrag = { x: e.clientX, y: e.clientY, panX: mindmapView.panX, panY: mindmapView.panY, moved: false };
+    canvas.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', e => {
+    if (!mindmapDrag) {
+      if (!mindmapData || document.getElementById('mindmap-canvas') !== e.target && !document.getElementById('mindmap-wrap')?.contains(e.target)) {
+        hideMindmapTooltip();
+        return;
+      }
+      const { px, py, W, H } = mindmapCanvasPoint(e);
+      const hit = mindmapHitAt(px, py, W, H);
+      if (hit) showMindmapTooltip(hit.text, e.clientX, e.clientY);
+      else hideMindmapTooltip();
+      return;
+    }
+    hideMindmapTooltip();
+    const dx = e.clientX - mindmapDrag.x;
+    const dy = e.clientY - mindmapDrag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) mindmapDrag.moved = true;
+    mindmapView.panX = mindmapDrag.panX + dx;
+    mindmapView.panY = mindmapDrag.panY + dy;
+    renderMindmapFrame();
+  });
+  window.addEventListener('mouseup', e => {
+    if (!mindmapDrag) return;
+    const canvas = document.getElementById('mindmap-canvas');
+    canvas.classList.remove('dragging');
+    if (!mindmapDrag.moved) {
+      const { px, py, W, H } = mindmapCanvasPoint(e);
+      const hit = mindmapHitAt(px, py, W, H);
+      if (hit) showToast(hit.text, '');
+    }
+    mindmapDrag = null;
+  });
+
+  canvas.addEventListener('touchstart', e => {
+    if (!mindmapData || !e.touches[0]) return;
+    const t = e.touches[0];
+    mindmapDrag = { x: t.clientX, y: t.clientY, panX: mindmapView.panX, panY: mindmapView.panY, moved: false };
+  }, { passive: true });
+  canvas.addEventListener('touchmove', e => {
+    if (!mindmapDrag || !e.touches[0]) return;
+    const t = e.touches[0];
+    mindmapDrag.moved = true;
+    mindmapView.panX = mindmapDrag.panX + (t.clientX - mindmapDrag.x);
+    mindmapView.panY = mindmapDrag.panY + (t.clientY - mindmapDrag.y);
+    renderMindmapFrame();
+  }, { passive: true });
+  canvas.addEventListener('touchend', () => { mindmapDrag = null; });
+}
+
+async function genMindmap() {
+  const canvas = document.getElementById('mindmap-canvas');
+  const ctx2d = canvas.getContext('2d');
+  const { W, H } = setupCanvas(canvas, ctx2d);
+  const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
+  ctx2d.fillStyle = bg;
+  ctx2d.fillRect(0, 0, W, H);
+  ctx2d.fillStyle = '#7a8c7e';
+  ctx2d.font = '14px DM Sans, sans-serif';
+  ctx2d.textAlign = 'center';
+  ctx2d.textBaseline = 'middle';
+  ctx2d.fillText('Génération de la carte mentale…', W / 2, H / 2);
+  try {
+    const raw = await aiJSON(
+      `Cours :\n\n${courseText.slice(0, 5000)}\n\nGénère une carte mentale JSON :\n{"center":"titre court","branches":[{"label":"branche","children":["idée 1","idée 2"]}]}`,
+      'Tu es un assistant pédagogique. Règles STRICTES : 4 à 6 branches maximum ; 2 à 4 enfants par branche ; labels COURTS (branche ≤ 4 mots, enfant ≤ 6 mots) ; pas de doublons ; structure claire du cours. JSON uniquement.'
+    );
+    mindmapData = normalizeMindmapData(raw);
+    mindmapView = { scale: 1, panX: 0, panY: 0 };
+    initMindmapInteractions();
+    renderMindmapFrame();
+    saveCourseGenerated();
+  } catch(e) {
+    ctx2d.fillStyle = bg;
+    ctx2d.fillRect(0, 0, W, H);
+    ctx2d.fillStyle = '#7a8c7e';
+    ctx2d.fillText('❌ Erreur — vérifie ta clé API', W / 2, H / 2);
+  }
+}
 
 const MAX_CHAT_HISTORY = 20;
 async function sendChat() {
@@ -2604,9 +2893,7 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(() => {
     const canvas = document.getElementById('mindmap-canvas');
     if (mindmapData && canvas.offsetWidth > 0 && document.getElementById('ap-mindmap').classList.contains('active')) {
-      const ctx2d = canvas.getContext('2d');
-      setupCanvas(canvas, ctx2d);
-      drawMindmap(canvas, ctx2d, canvas.offsetWidth, canvas.offsetHeight || 420, mindmapData);
+      renderMindmapFrame();
     }
   }, 300);
 });
