@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -2399,6 +2400,22 @@ async function loadImagePayload(file, bulk) {
   }
 }
 
+async function transcribeImageViaTesseract(base64, mimeType) {
+  try {
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+    const result = await Tesseract.recognize(dataUrl, 'fra+eng', {
+      logger: m => {}
+    });
+    const text = result.data.text;
+    const sanitized = sanitizeOcrText(text);
+    if (isValidOcrText(sanitized, true)) return sanitized;
+    return null;
+  } catch(e) {
+    console.warn('Tesseract OCR error:', e.message);
+    return null;
+  }
+}
+
 async function transcribeOneItem(item, orKey) {
   let lastErr = '';
   if (!isGeminiVisionBlocked()) {
@@ -2408,10 +2425,12 @@ async function transcribeOneItem(item, orKey) {
   if (orKey) {
     try {
       return await transcribeImageViaOpenRouter(orKey, item.base64, item.mimeType, OCR_PROMPT);
-    } catch(e) { 
+    } catch(e) {
       lastErr = e.message;
     }
   }
+  const tesseractResult = await transcribeImageViaTesseract(item.base64, item.mimeType);
+  if (tesseractResult) return tesseractResult;
   throw new Error(lastErr || 'OCR impossible (quota ou image illisible)');
 }
 
@@ -2469,34 +2488,6 @@ async function processOcrChunk(items, orKey, batchSize) {
     }
   }
   
-  if (orKey && items.length > 1 && batchSize > 1) {
-    ocrJob.status = `Lot ${items.length} photos OpenRouter (pages ${startPage}–${items[items.length - 1].page})…`;
-    updateOcrUi();
-    try {
-      const texts = await transcribeImageBatchOpenRouter(orKey, items);
-      for (let i = 0; i < items.length; i++) {
-        if (ocrJob?.cancelled) return;
-        const text = texts[i];
-        if (text && appendCourseText(text, items[i].name, items[i].page)) {
-          ocrJob.ok++;
-        } else {
-          try {
-            const solo = await transcribeOneItem(items[i], orKey);
-            if (appendCourseText(solo, items[i].name, items[i].page)) ocrJob.ok++;
-            else { ocrJob.fail++; ocrJob.failedItems.push(items[i]); }
-          } catch(e) {
-            ocrJob.fail++;
-            ocrJob.failedItems.push(items[i]);
-          }
-        }
-        ocrJob.done++;
-        updateOcrUi();
-      }
-      return;
-    } catch(e) {
-      console.warn('Lot OCR:', e.message);
-    }
-  }
   await ocrItemsIndividually(items, orKey);
 }
 
