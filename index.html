@@ -2146,7 +2146,9 @@ function splitBatchOcrText(raw, items) {
   out.sort((a, b) => a._idx - b._idx);
   if (out.length === items.length) {
     return out.map((o, i) => {
-      const start = text.search(o._re) + text.match(o._re)[0].length;
+      const match = text.match(o._re);
+      if (!match) return { name: o.name, text: '' };
+      const start = text.search(o._re) + match[0].length;
       const end = i < out.length - 1 ? out[i + 1]._idx : text.length;
       const chunk = sanitizeOcrText(text.slice(start, end));
       return { name: o.name, text: chunk };
@@ -2182,7 +2184,9 @@ function splitBatchOcrByPage(raw, count) {
   if (markers.length >= Math.max(2, Math.ceil(count * 0.4))) {
     const out = [];
     for (let i = 0; i < markers.length; i++) {
-      const start = markers[i].idx + text.match(markers[i].re)[0].length;
+      const match = text.match(markers[i].re);
+      if (!match) continue;
+      const start = markers[i].idx + match[0].length;
       const end = i < markers.length - 1 ? markers[i + 1].idx : text.length;
       const chunk = sanitizeOcrText(text.slice(start, end));
       if (isValidOcrText(chunk, true)) out.push(chunk);
@@ -2195,12 +2199,12 @@ function splitBatchOcrByPage(raw, count) {
 
 function isValidOcrText(text, bulk) {
   const t = sanitizeOcrText(text);
-  const minLen = bulk ? 6 : 12;
+  const minLen = bulk ? 4 : 8;
   if (t.length < minLen) return false;
   const letters = (t.match(/[a-zA-ZÀ-ÿ0-9]/g) || []).length;
-  if (letters / t.length < 0.35) return false;
+  if (letters / t.length < 0.20) return false;
   if (/^(\s*<\|)+\s*$/.test(t)) return false;
-  if ((t.match(/<\|/g) || []).length > 2) return false;
+  if ((t.match(/<\|/g) || []).length > 5) return false;
   return true;
 }
 
