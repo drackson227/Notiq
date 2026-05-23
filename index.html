@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Notiq build: v6-ocr-clean -->
+<!-- Notiq build: v7-batch-ocr -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -879,7 +879,7 @@ footer a { color: var(--green); text-decoration: none; }
           <div class="courses-bar" id="courses-bar"></div>
           <div class="pdf-drop" id="pdf-drop" onclick="document.getElementById('pdf-input').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
             <div style="font-size:2rem">📄</div>
-            <p>Clique ici ou glisse un <strong>PDF</strong> ou une <strong>image</strong> (JPG, PNG) pour importer ton cours</p>
+            <p>PDF ou <strong>images</strong> (JPG, PNG) — import rapide par lots de 5 photos</p>
           </div>
           <input type="file" id="pdf-input" accept="application/pdf,.pdf,image/*" style="display:none" onchange="handlePDF(this)" multiple>
           <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici...&#10;&#10;Exemple : 'La dérivée d'une fonction f en un point a est la limite du taux de variation...'"></textarea>
@@ -1729,7 +1729,10 @@ async function tryAllGemini(fullPrompt, maxTok) {
   throw new Error('Gemini indisponible');
 }
 
-const NOTIQ_BUILD = 'v6';
+const NOTIQ_BUILD = 'v7';
+const OCR_BATCH_SIZE = 5;
+const OCR_BATCH_DELAY_MS = 400;
+const FAST_VISION_MODELS = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free'];
 const OPENROUTER_FALLBACK_TEXT = ['openrouter/free', 'meta-llama/llama-3.2-3b-instruct:free', 'deepseek/deepseek-v4-flash:free'];
 const OPENROUTER_FALLBACK_VISION = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free', 'google/gemma-4-26b-a4b-it:free'];
 let orModelsCache = { text: null, vision: null, at: 0 };
@@ -1880,7 +1883,7 @@ async function aiGroq(prompt, groqKey, maxTok) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-const IMAGE_IMPORT_DELAY = 5000;
+const IMAGE_IMPORT_DELAY = 800;
 let geminiVisionBlockedUntil = parseInt(localStorage.getItem('notiq_gemini_vision_blocked') || '0', 10);
 
 function markGeminiVisionBlocked() {
@@ -1892,7 +1895,7 @@ function isGeminiVisionBlocked() {
 }
 
 /** Réduit la taille des photos (évite 429 / erreurs vision). */
-async function compressImageFile(file, maxW = 1200) {
+async function compressImageFile(file, maxW = 960) {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, maxW / bmp.width);
   let w = Math.round(bmp.width * scale);
@@ -1936,7 +1939,40 @@ function isImageFile(file) {
   return file.type.startsWith('image/');
 }
 
-const OCR_PROMPT = 'Tu es un OCR. Transcris UNIQUEMENT le texte imprimé/manuscrit visible sur la photo (devoir, cours). Garde numéros de questions et tirets. Texte brut en français. Interdit : commentaires, markdown, balises <|...|>, JSON, tools.';
+const OCR_PROMPT = 'OCR : transcris le texte visible (devoir/cours). Numéros et tirets. Français, texte brut. Pas de markdown **, pas de balises <|.|>.';
+
+function ocrBatchPrompt(names) {
+  if (names.length === 1) return OCR_PROMPT;
+  return `OCR rapide : ${names.length} photos du même devoir, dans l'ordre.\n` +
+    names.map((n, i) => `Photo ${i + 1} = "${n}"`).join('\n') +
+    `\nAprès chaque photo, ligne exacte : --- NOM --- (remplace NOM par le nom du fichier).\nTexte brut, pas de **.`;
+}
+
+function splitBatchOcrText(raw, items) {
+  const text = sanitizeOcrText(raw);
+  if (items.length === 1) {
+    if (isValidOcrText(text)) return [{ name: items[0].name, text }];
+    return [];
+  }
+  const out = [];
+  for (const it of items) {
+    const esc = it.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`---\\s*${esc}\\s*---`, 'i');
+    const idx = text.search(re);
+    if (idx >= 0) out.push({ name: it.name, _idx: idx, _re: re });
+  }
+  out.sort((a, b) => a._idx - b._idx);
+  if (out.length === items.length) {
+    return out.map((o, i) => {
+      const start = text.search(o._re) + text.match(o._re)[0].length;
+      const end = i < out.length - 1 ? out[i + 1]._idx : text.length;
+      const chunk = sanitizeOcrText(text.slice(start, end));
+      return { name: o.name, text: chunk };
+    }).filter(x => isValidOcrText(x.text));
+  }
+  if (isValidOcrText(text)) return [{ name: items[0].name, text }];
+  return [];
+}
 
 function sanitizeOcrText(raw) {
   if (!raw) return '';
@@ -1975,18 +2011,14 @@ function appendCourseText(chunk, fileName) {
   updateCharCount();
 }
 
-async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
-  const dataUrl = `data:${mimeType};base64,${base64}`;
-  const cap = isCompactMode() ? 1800 : 3500;
-  const models = await fetchOpenRouterModelIds(true);
+async function transcribeViaOpenRouter(orKey, contentParts, maxTok, models) {
+  const cap = maxTok ?? (isCompactMode() ? 1600 : 2800);
+  const modelList = models || FAST_VISION_MODELS;
   let lastErr = '';
-  for (const model of models) {
+  for (const model of modelList) {
     try {
       const raw = await callOpenRouterChat(orKey, {
-        messages: [{ role: 'user', content: [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } }
-        ] }],
+        messages: [{ role: 'user', content: contentParts }],
         max_tokens: cap,
         temperature: 0
       }, [model]);
@@ -1996,6 +2028,24 @@ async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
     } catch(e) { lastErr = e.message; }
   }
   throw new Error(lastErr || 'OpenRouter OCR échoué');
+}
+
+async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
+  const dataUrl = `data:${mimeType};base64,${base64}`;
+  return transcribeViaOpenRouter(orKey, [
+    { type: 'text', text: prompt },
+    { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } }
+  ]);
+}
+
+async function transcribeImageBatchOpenRouter(orKey, items) {
+  const content = [{ type: 'text', text: ocrBatchPrompt(items.map(x => x.name)) }];
+  for (const it of items) {
+    content.push({ type: 'image_url', image_url: { url: `data:${it.mimeType};base64,${it.base64}`, detail: 'low' } });
+  }
+  const cap = Math.min(8000, 1200 + items.length * 1400);
+  const raw = await transcribeViaOpenRouter(orKey, content, cap, FAST_VISION_MODELS);
+  return splitBatchOcrText(raw, items);
 }
 
 async function transcribeImageViaGemini(base64, mimeType, prompt) {
@@ -2025,19 +2075,52 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
 }
 
 async function transcribeImageBase64(base64, mimeType) {
-  const prompt = OCR_PROMPT;
   const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
-
-  if (orKey) {
-    return await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
-  }
-
+  if (orKey) return await transcribeImageViaOpenRouter(orKey, base64, mimeType, OCR_PROMPT);
   if (!isGeminiVisionBlocked()) {
-    const geminiText = await transcribeImageViaGemini(base64, mimeType, prompt);
+    const geminiText = await transcribeImageViaGemini(base64, mimeType, OCR_PROMPT);
     if (geminiText) return geminiText;
   }
-
   throw new Error('Quota Gemini (429) — ajoute une clé OpenRouter pour les photos.');
+}
+
+async function loadImagePayload(file) {
+  try {
+    return { name: file.name, ...(await compressImageFile(file)) };
+  } catch(e) {
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Lecture fichier'));
+      r.readAsDataURL(file);
+    });
+    return { name: file.name, base64, mimeType: file.type || 'image/jpeg' };
+  }
+}
+
+async function processImageBatch(files, drop) {
+  const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
+  const items = await Promise.all(files.map(loadImagePayload));
+
+  if (orKey && files.length > 1) {
+    try {
+      const parts = await transcribeImageBatchOpenRouter(orKey, items);
+      if (parts.length) {
+        parts.forEach(p => appendCourseText(p.text, p.name));
+        const done = new Set(parts.map(p => p.name));
+        for (const it of items.filter(x => !done.has(x.name))) {
+          const file = files.find(f => f.name === it.name);
+          if (file) await processImage(file, { batch: true, preloaded: it });
+        }
+        return;
+      }
+    } catch(e) { console.warn('Batch OCR, repli 1 par 1:', e.message); }
+  }
+
+  for (let i = 0; i < files.length; i++) {
+    if (i > 0) await sleep(OCR_BATCH_DELAY_MS);
+    await processImage(files[i], { batch: true, preloaded: items[i] });
+  }
 }
 
 async function importFiles(files) {
@@ -2052,38 +2135,49 @@ async function importFiles(files) {
 
   let ok = 0;
   const failed = [];
-  let lastWasImage = false;
+  const pdfs = [];
+  const images = [];
+  for (const f of files) {
+    if (isPdfFile(f)) pdfs.push(f);
+    else if (isImageFile(f)) images.push(f);
+    else failed.push(f.name + ' (format)');
+  }
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (lastWasImage && isImageFile(file)) {
-      drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Pause API (${IMAGE_IMPORT_DELAY / 1000}s) avant image ${i + 1}/${files.length}…</p>`;
-      await sleep(IMAGE_IMPORT_DELAY);
-    }
-    lastWasImage = isImageFile(file);
-
-    drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Traitement <strong>${escHtml(file.name)}</strong> (${i + 1}/${files.length})…</p>`;
-
-    try {
-      if (isPdfFile(file)) {
-        await processPDF(file, true);
-        ok++;
-      } else if (isImageFile(file)) {
-        await processImage(file, { batch: true });
-        ok++;
-      } else {
-        failed.push(file.name + ' (format)');
-      }
-    } catch(e) {
+  for (const file of pdfs) {
+    drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>PDF : <strong>${escHtml(file.name)}</strong>…</p>`;
+    try { await processPDF(file, true); ok++; } catch(e) {
       failed.push(file.name);
-      console.error('Import:', file.name, e);
-      showToast(`⚠️ ${file.name} : ${(e.message || 'erreur').slice(0, 60)}`, 'error');
+      showToast(`⚠️ ${file.name}`, 'error');
     }
   }
 
+  const batchCount = Math.ceil(images.length / OCR_BATCH_SIZE) || 0;
+  for (let b = 0; b < images.length; b += OCR_BATCH_SIZE) {
+    const chunk = images.slice(b, b + OCR_BATCH_SIZE);
+    const batchNum = Math.floor(b / OCR_BATCH_SIZE) + 1;
+    if (b > 0) await sleep(OCR_BATCH_DELAY_MS);
+    drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Lot <strong>${batchNum}/${batchCount}</strong> — ${chunk.length} photo(s)…</p>`;
+    try {
+      await processImageBatch(chunk, drop);
+      ok += chunk.length;
+    } catch(e) {
+      console.error('Batch OCR:', e);
+      for (const file of chunk) {
+        try {
+          await processImage(file, { batch: true });
+          ok++;
+        } catch(e2) {
+          failed.push(file.name);
+          showToast(`⚠️ ${file.name} : ${(e2.message || '').slice(0, 50)}`, 'error');
+        }
+      }
+    }
+  }
+
+  const total = files.length;
   const errN = failed.length;
-  drop.innerHTML = `<div style="font-size:2rem">${errN && !ok ? '❌' : errN ? '⚠️' : '✅'}</div><p><strong>${ok}/${files.length} importé(s)</strong>${errN ? `<br><span style="font-size:12px;color:var(--text-muted)">Échec : ${escHtml(failed.join(', '))}</span>` : ''}</p>`;
-  showToast(errN ? `⚠️ ${ok}/${files.length} fichier(s)` : `✅ ${ok} fichier(s) importé(s) !`, errN ? 'error' : 'success');
+  drop.innerHTML = `<div style="font-size:2rem">${errN && !ok ? '❌' : errN ? '⚠️' : '✅'}</div><p><strong>${ok}/${total} importé(s)</strong>${images.length > 1 ? `<br><span style="font-size:12px;color:var(--text-muted)">${batchCount} lot(s) OCR</span>` : ''}${errN ? `<br><span style="font-size:12px;color:var(--text-muted)">Échec : ${escHtml(failed.join(', '))}</span>` : ''}</p>`;
+  showToast(errN ? `⚠️ ${ok}/${total}` : `✅ ${ok} fichier(s) — import rapide`, errN ? 'error' : 'success');
 }
 
 function handleDragOver(e) { e.preventDefault(); document.getElementById('pdf-drop').classList.add('drag'); }
@@ -2152,16 +2246,21 @@ async function processImage(file, opts = {}) {
   if (!batch) drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
 
   let base64, mimeType;
-  try {
-    ({ base64, mimeType } = await compressImageFile(file));
-  } catch(e) {
-    base64 = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]);
-      r.onerror = () => rej(new Error('Lecture du fichier échouée'));
-      r.readAsDataURL(file);
-    });
-    mimeType = file.type || 'image/jpeg';
+  if (opts.preloaded) {
+    base64 = opts.preloaded.base64;
+    mimeType = opts.preloaded.mimeType;
+  } else {
+    try {
+      ({ base64, mimeType } = await compressImageFile(file));
+    } catch(e) {
+      base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',')[1]);
+        r.onerror = () => rej(new Error('Lecture du fichier échouée'));
+        r.readAsDataURL(file);
+      });
+      mimeType = file.type || 'image/jpeg';
+    }
   }
   const text = await transcribeImageBase64(base64, mimeType);
   if (text.length <= 5) throw new Error('Aucun texte détecté sur l\'image');
