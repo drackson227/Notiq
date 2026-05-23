@@ -1712,10 +1712,6 @@ async function callGemini(model, prompt, attempt = 0, key = null, maxTok) {
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: cap, temperature: 0.35 } }) }
   );
-  if ((r.status === 429 || r.status === 503) && attempt < 2) {
-    await sleep(1200 * (attempt + 1));
-    return callGemini(model, prompt, attempt + 1, useKey);
-  }
   if (r.status === 429 || r.status === 503) throw new Error('RATE_LIMITED');
   if (r.status === 400 || r.status === 403) { openKeyModal(); throw new Error('Clé API invalide ou expirée.'); }
   if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.error?.message || `Erreur Gemini (${r.status})`); }
@@ -1725,7 +1721,15 @@ async function callGemini(model, prompt, attempt = 0, key = null, maxTok) {
   return text;
 }
 
+let geminiTextBlockedUntil = parseInt(localStorage.getItem('notiq_gemini_text_blocked') || '0', 10);
+function markGeminiTextBlocked() {
+  geminiTextBlockedUntil = Date.now() + 120000;
+  localStorage.setItem('notiq_gemini_text_blocked', String(geminiTextBlockedUntil));
+}
+function isGeminiTextBlocked() { return Date.now() < geminiTextBlockedUntil; }
+
 async function tryAllGemini(fullPrompt, maxTok) {
+  if (isGeminiTextBlocked()) throw new Error('RATE_LIMITED');
   let rateLimited = false;
   for (const key of getGeminiKeys()) {
     for (const model of GEMINI_MODELS) {
@@ -1733,10 +1737,11 @@ async function tryAllGemini(fullPrompt, maxTok) {
         return await callGemini(model, fullPrompt, 0, key, maxTok);
       } catch(e) {
         if (e.message === 'Clé API invalide ou expirée.') throw e;
-        if (e.message === 'RATE_LIMITED') rateLimited = true;
+        if (e.message === 'RATE_LIMITED') { rateLimited = true; markGeminiTextBlocked(); break; }
         else console.warn('Gemini', model, e.message);
       }
     }
+    if (rateLimited) break;
   }
   if (rateLimited) throw new Error('RATE_LIMITED');
   throw new Error('Gemini indisponible');
@@ -1855,7 +1860,10 @@ async function ai(prompt, systemPrompt, maxTok) {
 
   for (const step of steps) {
     try {
-      if (step === 'gemini') return await tryAllGemini(fullPrompt, cap);
+      if (step === 'gemini') {
+        if (isGeminiTextBlocked() && (orKey || (groqKey && !isGroqBlocked()))) continue;
+        return await tryAllGemini(fullPrompt, cap);
+      }
       if (step === 'openrouter') return await aiOpenRouter(fullPrompt, orKey, cap);
       if (step === 'groq') return await aiGroq(fullPrompt, groqKey, cap);
     } catch(e) {
@@ -1865,6 +1873,14 @@ async function ai(prompt, systemPrompt, maxTok) {
     }
   }
   throw new Error(buildAiFailMessage());
+}
+
+function userFacingAiError(errMsg, rawText) {
+  const m = String(errMsg || rawText || '').toLowerCase();
+  if (m.includes('rate_limited') || m.includes('429') || m.includes('quota') || m.includes('resource exhausted') || m.includes('satur'))
+    return 'Quota Gemini dépassé — attends 1–2 min ou ajoute une clé OpenRouter (gratuit).';
+  if (errMsg) return errMsg;
+  return buildAiFailMessage();
 }
 
 async function aiGroq(prompt, groqKey, maxTok) {
@@ -2346,7 +2362,7 @@ async function loadCourse() {
   let errors = 0;
   function apiDead(e) {
     const m = (e?.message || '').toLowerCase();
-    return m.includes('satur') || m.includes('quota') || m.includes('indisponible') || m.includes('toutes les ia') || m.includes('clé api');
+    return m.includes('satur') || m.includes('quota') || m.includes('429') || m.includes('rate') || m.includes('indisponible') || m.includes('toutes les ia') || m.includes('clé api') || m.includes('openrouter');
   }
   function abortLoad(msg) {
     document.getElementById('load-msg').textContent = '❌ ' + msg;
@@ -3458,33 +3474,38 @@ function undoDraw() {
   });
 }
 
-function aiJSON(prompt, system) {
-  return ai(prompt, (system || '') + '\nJSON valide uniquement. Sans markdown.' + compactSuffix(), aiLimits().json)
-    .then(text => {
-      if (isGroqRateLimit(text) || /^error/i.test(text.trim())) {
-        throw new Error('Réponse API invalide — quota ou surcharge. Réessaie.');
+async function aiJSON(prompt, system) {
+  let text;
+  try {
+    text = await ai(prompt, (system || '') + '\nJSON valide uniquement. Sans markdown.' + compactSuffix(), aiLimits().json);
+  } catch(e) {
+    throw new Error(userFacingAiError(e.message));
+  }
+  if (isGroqRateLimit(text) || /^error/i.test(text.trim())) {
+    throw new Error(userFacingAiError('quota'));
+  }
+  let clean = text.replace(/```json\n?|```\n?/g, '').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u00AB\u00BB]/g, '"').trim();
+  const jsonMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if (jsonMatch) clean = jsonMatch[0];
+  try { return JSON.parse(clean); }
+  catch(e) {
+    try {
+      let fixed = ''; let inStr = false, escape = false;
+      for (let ci = 0; ci < clean.length; ci++) {
+        const ch = clean[ci];
+        if (escape) { fixed += ch; escape = false; continue; }
+        if (ch === '\\') { escape = true; fixed += ch; continue; }
+        if (ch === '"') { inStr = !inStr; fixed += ch; continue; }
+        if (inStr && ch === '\n') { fixed += '\\n'; continue; }
+        if (inStr && ch === '\r') { continue; }
+        if (inStr && ch === '\t') { fixed += '\\t'; continue; }
+        fixed += ch;
       }
-      let clean = text.replace(/```json\n?|```\n?/g, '').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u00AB\u00BB]/g, '"').trim();
-      const jsonMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-      if (jsonMatch) clean = jsonMatch[0];
-      try { return JSON.parse(clean); }
-      catch(e) {
-        try {
-          let fixed = ''; let inStr = false, escape = false;
-          for (let ci = 0; ci < clean.length; ci++) {
-            const ch = clean[ci];
-            if (escape) { fixed += ch; escape = false; continue; }
-            if (ch === '\\') { escape = true; fixed += ch; continue; }
-            if (ch === '"') { inStr = !inStr; fixed += ch; continue; }
-            if (inStr && ch === '\n') { fixed += '\\n'; continue; }
-            if (inStr && ch === '\r') { continue; }
-            if (inStr && ch === '\t') { fixed += '\\t'; continue; }
-            fixed += ch;
-          }
-          return JSON.parse(fixed);
-        } catch(e2) { throw new Error('Réponse invalide (JSON malformé) — réessaie.'); }
-      }
-    });
+      return JSON.parse(fixed);
+    } catch(e2) {
+      throw new Error(userFacingAiError('', text));
+    }
+  }
 }
 
 function renderMath(el) {
