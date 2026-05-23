@@ -531,6 +531,12 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
   margin-top: 10px;
 }
 .mindmap-hint { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+.mindmap-legend {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  margin-top: 8px; font-size: 11px; color: var(--text-muted);
+}
+.mindmap-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.mindmap-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .mindmap-tooltip {
   position: absolute; pointer-events: none; z-index: 20;
   max-width: 260px; padding: 10px 14px; border-radius: 10px;
@@ -1126,7 +1132,8 @@ footer a { color: var(--green); text-decoration: none; }
               <canvas id="mindmap-canvas"></canvas>
               <div class="mindmap-tooltip" id="mindmap-tooltip"></div>
             </div>
-            <p class="mindmap-hint">Molette = zoom · Glisser = déplacer · Clic sur un nœud = détail</p>
+            <p class="mindmap-hint">Molette = zoom · Glisser = déplacer · Clic = détail · Lecture dans l'ordre ① → ⑤</p>
+            <div class="mindmap-legend" id="mindmap-legend"></div>
             <div class="mindmap-toolbar">
               <button class="btn-outline" style="font-size:13px;padding:6px 12px" onclick="mindmapZoom(1.2)" title="Zoomer">＋</button>
               <button class="btn-outline" style="font-size:13px;padding:6px 12px" onclick="mindmapZoom(1/1.2)" title="Dézoomer">－</button>
@@ -3239,15 +3246,38 @@ function shortenMindmapLabel(s, max) {
   return (sp > max * 0.5 ? cut.slice(0, sp) : cut).trim() + '…';
 }
 
+function hexAlpha(hex, a) {
+  const h = String(hex).replace('#', '');
+  if (h.length < 6) return `rgba(31,189,130,${a})`;
+  return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a})`;
+}
+
+const MINDMAP_COLORS = [
+  { stroke: '#1fbd82', fill: 'rgba(31,189,130,0.14)', branch: '#1fbd82', child: 'rgba(31,189,130,0.08)' },
+  { stroke: '#5eb8ff', fill: 'rgba(94,184,255,0.12)', branch: '#5eb8ff', child: 'rgba(94,184,255,0.07)' },
+  { stroke: '#c49bff', fill: 'rgba(196,155,255,0.12)', branch: '#c49bff', child: 'rgba(196,155,255,0.07)' },
+  { stroke: '#ffb454', fill: 'rgba(255,180,84,0.12)', branch: '#ffb454', child: 'rgba(255,180,84,0.07)' },
+  { stroke: '#ff7b9c', fill: 'rgba(255,123,156,0.12)', branch: '#ff7b9c', child: 'rgba(255,123,156,0.07)' },
+  { stroke: '#7ee787', fill: 'rgba(126,231,135,0.1)', branch: '#7ee787', child: 'rgba(126,231,135,0.06)' }
+];
+
+function mindmapBranchOrder(b, i) {
+  if (typeof b.order === 'number' && b.order > 0) return b.order;
+  const lab = (b.label || '').toLowerCase();
+  const keys = ['défin', 'but', 'prére', 'répli', 'étape', 'phase', 'méiose', 'division', 'anaph', 'résultat', 'produit', 'gamète', 'haplo', 'fécond', 'zygote', 'concl'];
+  for (let k = 0; k < keys.length; k++) if (lab.includes(keys[k])) return k + 1;
+  return 20 + i;
+}
+
 function normalizeMindmapData(data) {
   const center = shortenMindmapLabel(data?.center || 'Cours', 42);
   const seen = new Set();
-  const branches = (data?.branches || []).slice(0, 6).map(b => {
-    const label = shortenMindmapLabel(b?.label || '', 32);
-    const children = (b?.children || []).slice(0, 4).map(c =>
-      shortenMindmapLabel(typeof c === 'string' ? c : (c?.label || ''), 40)
+  const branches = (data?.branches || []).slice(0, 6).map((b, i) => {
+    const label = shortenMindmapLabel(b?.label || '', 36);
+    const children = (b?.children || []).slice(0, 3).map(c =>
+      shortenMindmapLabel(typeof c === 'string' ? c : (c?.label || ''), 44)
     ).filter(Boolean);
-    return { label, children };
+    return { label, children, order: mindmapBranchOrder(b, i), hint: (b?.hint || b?.link || '').trim() };
   }).filter(b => {
     if (!b.label) return false;
     const key = b.label.toLowerCase();
@@ -3255,7 +3285,20 @@ function normalizeMindmapData(data) {
     seen.add(key);
     return true;
   });
+  branches.sort((a, b) => a.order - b.order);
+  branches.forEach((b, i) => { b.order = i + 1; b.colorIdx = i % MINDMAP_COLORS.length; });
   return { center, branches };
+}
+
+function renderMindmapLegend(data) {
+  const el = document.getElementById('mindmap-legend');
+  if (!el || !data?.branches?.length) { if (el) el.innerHTML = ''; return; }
+  const nums = ['①', '②', '③', '④', '⑤', '⑥'];
+  el.innerHTML = data.branches.map(b => {
+    const c = MINDMAP_COLORS[b.colorIdx || 0];
+    const ord = nums[b.order - 1] || String(b.order);
+    return `<span><i style="background:${c.branch}"></i>${ord} ${escHtml(b.label)}</span>`;
+  }).join('') + '<span style="opacity:0.5;margin-left:8px">→ lecture horaire</span>';
 }
 
 function wrapTextLines(ctx, text, maxW, maxLines) {
@@ -3293,44 +3336,110 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawMindmapEdge(ctx, x1, y1, x2, y2, kind, isLight) {
+function drawMindmapEdgeCurve(ctx, x1, y1, x2, y2, color, width, bulge) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = (-dy / len) * bulge;
+  const ny = (dx / len) * bulge;
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.strokeStyle = kind === 'branch'
-    ? 'rgba(31,189,130,0.45)'
-    : (isLight ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.12)');
-  ctx.lineWidth = kind === 'branch' ? 2 : 1;
+  ctx.quadraticCurveTo(mx + nx, my + ny, x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
   ctx.stroke();
 }
 
-function drawMindNode(ctx, x, y, text, kind, isLight) {
+function drawMindmapBg(ctx, W, H, isLight) {
+  const cx = W / 2;
+  const cy = H / 2;
+  const g = ctx.createRadialGradient(cx, cy, 20, cx, cy, Math.max(W, H) * 0.55);
+  g.addColorStop(0, isLight ? 'rgba(31,189,130,0.06)' : 'rgba(31,189,130,0.1)');
+  g.addColorStop(1, isLight ? '#eaefe9' : '#0a0c0b');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawMindNode(ctx, x, y, text, kind, isLight, opts) {
+  opts = opts || {};
+  const pal = opts.colorIdx != null ? MINDMAP_COLORS[opts.colorIdx] : null;
   const styles = {
-    center: { font: 'bold 13px Syne, sans-serif', maxW: 118, maxLines: 3, padX: 14, padY: 10, rx: 16, fill: '#1fbd82', stroke: 'rgba(31,189,130,0.85)', color: '#000' },
-    branch: { font: '600 12px Syne, sans-serif', maxW: 112, maxLines: 2, padX: 11, padY: 8, rx: 12, fill: isLight ? '#dfe5de' : '#161a15', stroke: 'rgba(31,189,130,0.55)', color: isLight ? '#1a2219' : '#e8ede9' },
-    child:  { font: '11px DM Sans, sans-serif', maxW: 100, maxLines: 3, padX: 10, padY: 7, rx: 10, fill: isLight ? '#eaefe9' : '#121512', stroke: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.1)', color: isLight ? '#3d5245' : '#9aaba0' }
+    center: { font: 'bold 14px Syne, sans-serif', maxW: 130, maxLines: 3, padX: 16, padY: 11, rx: 18, fill: '#1fbd82', stroke: 'rgba(31,189,130,0.9)', color: '#000', glow: true },
+    branch: { font: '600 12px Syne, sans-serif', maxW: 118, maxLines: 2, padX: 12, padY: 9, rx: 13,
+      fill: pal ? pal.fill : (isLight ? '#dfe5de' : '#161a15'),
+      stroke: pal ? pal.branch : 'rgba(31,189,130,0.55)',
+      color: isLight ? '#1a2219' : '#e8ede9' },
+    child: { font: '11px DM Sans, sans-serif', maxW: 108, maxLines: 3, padX: 10, padY: 8, rx: 10,
+      fill: pal ? pal.child : (isLight ? '#eaefe9' : '#121512'),
+      stroke: pal ? pal.stroke : (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.12)'),
+      color: isLight ? '#3d5245' : '#b8c8bc' }
   };
   const cfg = styles[kind];
   ctx.font = cfg.font;
   const lines = wrapTextLines(ctx, text, cfg.maxW, cfg.maxLines);
-  const lineH = kind === 'center' ? 15 : kind === 'branch' ? 14 : 13;
+  const lineH = kind === 'center' ? 16 : kind === 'branch' ? 14 : 13;
   const textW = Math.max(...lines.map(l => ctx.measureText(l).width), 16);
   const w = textW + cfg.padX * 2;
   const h = lines.length * lineH + cfg.padY * 2;
   const left = x - w / 2;
   const top = y - h / 2;
+  if (cfg.glow) {
+    ctx.shadowColor = 'rgba(31,189,130,0.45)';
+    ctx.shadowBlur = 18;
+  }
   roundRectPath(ctx, left, top, w, h, cfg.rx);
   ctx.fillStyle = cfg.fill;
   ctx.fill();
+  ctx.shadowBlur = 0;
   ctx.strokeStyle = cfg.stroke;
-  ctx.lineWidth = kind === 'center' ? 2 : 1.5;
+  ctx.lineWidth = kind === 'center' ? 2.5 : 1.6;
   ctx.stroke();
+  if (kind === 'branch' && opts.order) {
+    const nums = ['①', '②', '③', '④', '⑤', '⑥'];
+    const ord = nums[opts.order - 1] || String(opts.order);
+    const bx = left - 2;
+    const by = top + h / 2;
+    ctx.beginPath();
+    ctx.arc(bx, by, 12, 0, Math.PI * 2);
+    ctx.fillStyle = pal ? pal.branch : '#1fbd82';
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 10px Syne, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ord, bx, by + 1);
+    ctx.font = cfg.font;
+  }
   ctx.fillStyle = cfg.color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const startY = y - ((lines.length - 1) * lineH) / 2;
   lines.forEach((ln, i) => ctx.fillText(ln, x, startY + i * lineH));
-  mindmapHitAreas.push({ x: left, y: top, w, h, text: String(text), kind });
+  const tip = opts.hint ? `${text} — ${opts.hint}` : String(text);
+  mindmapHitAreas.push({ x: left, y: top, w, h, text: tip, kind });
+  return { left, top, w, h, cx: x, cy: y };
+}
+
+function drawMindmapFlowArc(ctx, points, color) {
+  if (points.length < 2) return;
+  ctx.beginPath();
+  ctx.setLineDash([5, 6]);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const pNext = points[(i + 1) % points.length];
+    const mx = (p.x + pNext.x) / 2;
+    const my = (p.y + pNext.y) / 2;
+    const bulge = 28;
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    ctx.quadraticCurveTo(mx, my - bulge, pNext.x, pNext.y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 function drawMindmapContent(ctx, W, H, data) {
@@ -3341,40 +3450,47 @@ function drawMindmapContent(ctx, W, H, data) {
   const cx = W / 2;
   const cy = H / 2;
   const minSide = Math.min(W, H);
-  const branchR = minSide * (n <= 4 ? 0.30 : n <= 5 ? 0.33 : 0.36);
-  const childDist = minSide * 0.22;
+  const branchR = minSide * (n <= 4 ? 0.32 : 0.34);
+  const childDist = minSide * 0.19;
+  const branchPoints = [];
 
+  drawMindmapBg(ctx, W, H, isLight);
   drawMindNode(ctx, cx, cy, data.center || 'Cours', 'center', isLight);
 
   branches.forEach((branch, i) => {
     const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
     const bx = cx + Math.cos(angle) * branchR;
     const by = cy + Math.sin(angle) * branchR;
-    drawMindmapEdge(ctx, cx, cy, bx, by, 'branch', isLight);
-    drawMindNode(ctx, bx, by, branch.label, 'branch', isLight);
+    const pal = MINDMAP_COLORS[branch.colorIdx || 0];
+    drawMindmapEdgeCurve(ctx, cx, cy, bx, by, hexAlpha(pal.branch, 0.55), 2.8, 22);
+    drawMindNode(ctx, bx, by, branch.label, 'branch', isLight, {
+      colorIdx: branch.colorIdx,
+      order: branch.order,
+      hint: branch.hint
+    });
+    branchPoints.push({ x: bx, y: by });
 
     const kids = branch.children || [];
     const kN = kids.length;
     if (!kN) return;
-
-    const arcSpan = Math.min(Math.PI * 1.05, 0.5 * kN + 0.35);
-    const startA = angle - arcSpan / 2;
-    const dist = childDist + Math.max(0, kN - 3) * 10;
+    const outward = angle;
+    const arcSpan = Math.min(Math.PI * 0.85, 0.42 * kN + 0.28);
+    const startA = outward - arcSpan / 2;
 
     kids.forEach((child, j) => {
       const t = kN === 1 ? 0.5 : j / (kN - 1);
-      const a = kN === 1 ? angle : startA + t * arcSpan;
-      let chx = bx + Math.cos(a) * dist;
-      let chy = by + Math.sin(a) * dist;
-      const toCenter = Math.hypot(chx - cx, chy - cy);
-      if (toCenter < branchR + childDist * 0.55) {
-        chx = bx + Math.cos(angle) * (dist + 22);
-        chy = by + Math.sin(angle) * (dist + 22);
-      }
-      drawMindmapEdge(ctx, bx, by, chx, chy, 'child', isLight);
-      drawMindNode(ctx, chx, chy, child, 'child', isLight);
+      const a = kN === 1 ? outward : startA + t * arcSpan;
+      const dist = childDist + (j % 2) * 12;
+      const chx = bx + Math.cos(a) * dist;
+      const chy = by + Math.sin(a) * dist;
+      drawMindmapEdgeCurve(ctx, bx, by, chx, chy, hexAlpha(pal.branch, 0.38), 1.4, 14);
+      drawMindNode(ctx, chx, chy, child, 'child', isLight, { colorIdx: branch.colorIdx });
     });
   });
+
+  if (n >= 3) {
+    drawMindmapFlowArc(ctx, branchPoints, isLight ? 'rgba(31,189,130,0.25)' : 'rgba(31,189,130,0.2)');
+  }
 }
 
 function mindmapCanvasPoint(e) {
@@ -3406,9 +3522,10 @@ function renderMindmapFrame() {
   mindmapHitAreas = [];
   const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
   const data = normalizeMindmapData(mindmapData);
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  renderMindmapLegend(data);
   if (!data.branches?.length) {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#7a8c7e';
     ctx.font = '14px DM Sans, sans-serif';
     ctx.textAlign = 'center';
@@ -3559,7 +3676,14 @@ async function genMindmap() {
   ctx2d.fillText('Génération de la carte mentale…', W / 2, H / 2);
   try {
     const raw = await aiJSON(
-      `Cours :\n\n${courseSlice()}\n\nCarte mentale JSON : 4-5 branches, 2 enfants max, labels ≤ 3 mots.\n{"center":"titre","branches":[{"label":"…","children":["…","…"]}]}`,
+      `Cours :\n\n${courseSlice()}\n\nCarte mentale LOGIQUE (ordre pédagogique du cours). JSON :\n` +
+      `{"center":"titre court","branches":[\n` +
+      `  {"label":"Définition","order":1,"hint":"point de départ","children":["notion 1","notion 2"]},\n` +
+      `  {"label":"Étapes","order":2,"hint":"enchaînement","children":["phase clé","phase clé"]},\n` +
+      `  {"label":"Résultat","order":3,"hint":"produit","children":["…","…"]},\n` +
+      `  {"label":"Lien suivant","order":4,"hint":"conséquence","children":["…"]}\n` +
+      `]}\n` +
+      `Règles : 4-5 branches ; order 1→5 = chronologie ou logique (définition → processus → résultat → application) ; 2-3 children par branche ; labels ≤ 4 mots ; hint = lien avec la branche suivante (3 mots max).`,
       'Assistant. JSON uniquement.' + compactSuffix()
     );
     mindmapData = normalizeMindmapData(raw);
