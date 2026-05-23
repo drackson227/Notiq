@@ -1678,7 +1678,8 @@ function exportSummaryPDF() {
   win.document.close();
 }
 
-let flashMode = 'extract'; // 'extract' | 'ai'
+let flashMode = 'extract';
+let flashGenCount = 0; // increments each regen to force variety
 
 function setFlashMode(mode) {
   flashMode = mode;
@@ -1703,28 +1704,16 @@ async function genFlash() {
   ankiScores = {};
   document.getElementById('flash-empty').style.display = 'none';
   document.getElementById('flash-ui').style.display = 'flex';
-  document.getElementById('flash-front-text').textContent = '…';
+  document.getElementById('flash-front-text').textContent = '⏳ Génération en cours…';
   document.getElementById('flash-back-text').textContent = '…';
+  document.getElementById('flash-inner').classList.remove('flipped');
 
   const isAI = flashMode === 'ai';
+  flashGenCount++;
+  const sessionSeed = flashGenCount;
   const prompt = isAI
-    ? `Timestamp: ${Date.now()}. Tu es un professeur qui crée des flashcards pédagogiques. Cours de référence :
-
-${courseText.slice(0, 6000)}
-
-Crée 12 flashcards. RÈGLES STRICTES :
-- Ne JAMAIS copier une phrase du cours mot pour mot
-- Reformule totalement, change la structure
-- Le recto = une question ouverte ou un concept à définir (sans numéro, sans "Question :")
-- Le verso = une explication claire et complète en tes propres mots
-- Varie les types : définition, "pourquoi ?", "comment ?", comparaison, exemple
-{"cards":[{"front":"question ou concept reformulé","back":"explication complète reformulée"}]}`
-    : `Timestamp: ${Date.now()}. Cours :
-
-${courseText.slice(0, 6000)}
-
-Extrait les 12 notions, termes et concepts clés de ce cours pour en faire des flashcards de révision. Le recto = le terme ou la notion (court, sans numéro), le verso = la définition ou l'explication précise issue du cours.
-{"cards":[{"front":"terme ou notion clé","back":"définition ou explication précise"}]}`;
+    ? `Session #${sessionSeed} — ${Date.now()}. Tu es un professeur créatif. Cours :\n\n${courseText.slice(0, 6000)}\n\nCrée 12 flashcards DIFFÉRENTES des sessions précédentes. RÈGLES STRICTES :\n- Ne JAMAIS copier une phrase du cours mot pour mot\n- Reformule totalement avec tes propres mots\n- Le recto = une question ouverte variée (sans numéro, sans "Question :")\n- Le verso = explication claire en tes propres mots\n- Types : définition, mécanisme, comparaison, exemple concret, "pourquoi ?", conséquence\n- Session ${sessionSeed} : explore des angles NOUVEAUX\n{"cards":[{"front":"question reformulée","back":"explication reformulée"}]}`
+    : `Session #${sessionSeed} — ${Date.now()}. Cours :\n\n${courseText.slice(0, 6000)}\n\nExtrait 12 notions/termes clés DIFFÉRENTS (session ${sessionSeed}, varie par rapport aux sessions précédentes). Recto = terme court sans numéro. Verso = définition précise.\n{"cards":[{"front":"terme ou notion clé","back":"définition précise"}]}`;
 
   const sys = isAI
     ? 'Tu es un professeur expert en pédagogie. Tu reformules toujours avec tes propres mots, tu ne copies jamais le texte source. Réponds uniquement en JSON.'
