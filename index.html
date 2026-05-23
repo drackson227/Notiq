@@ -1723,21 +1723,23 @@ async function callGemini(model, prompt, attempt = 0, key = null, maxTok) {
 
 let geminiTextBlockedUntil = parseInt(localStorage.getItem('notiq_gemini_text_blocked') || '0', 10);
 function markGeminiTextBlocked() {
-  geminiTextBlockedUntil = Date.now() + 120000;
+  geminiTextBlockedUntil = Date.now() + 45000;
   localStorage.setItem('notiq_gemini_text_blocked', String(geminiTextBlockedUntil));
 }
 function isGeminiTextBlocked() { return Date.now() < geminiTextBlockedUntil; }
 
 async function tryAllGemini(fullPrompt, maxTok) {
-  if (isGeminiTextBlocked()) throw new Error('RATE_LIMITED');
+  const keys = getGeminiKeys();
+  if (!keys.length) throw new Error('Pas de clé Gemini');
+  const models = isGeminiTextBlocked() ? ['gemini-2.5-flash-lite'] : GEMINI_MODELS;
   let rateLimited = false;
-  for (const key of getGeminiKeys()) {
-    for (const model of GEMINI_MODELS) {
+  for (const key of keys) {
+    for (const model of models) {
       try {
         return await callGemini(model, fullPrompt, 0, key, maxTok);
       } catch(e) {
         if (e.message === 'Clé API invalide ou expirée.') throw e;
-        if (e.message === 'RATE_LIMITED') { rateLimited = true; markGeminiTextBlocked(); break; }
+        if (e.message === 'RATE_LIMITED') { rateLimited = true; if (!isGeminiTextBlocked()) markGeminiTextBlocked(); break; }
         else console.warn('Gemini', model, e.message);
       }
     }
@@ -1747,7 +1749,7 @@ async function tryAllGemini(fullPrompt, maxTok) {
   throw new Error('Gemini indisponible');
 }
 
-const NOTIQ_BUILD = 'v7';
+const NOTIQ_BUILD = 'v7.1';
 const EXAM_QUESTION_COUNT = 15;
 const OCR_BATCH_SIZE = 5;
 const OCR_BATCH_DELAY_MS = 400;
@@ -1860,10 +1862,7 @@ async function ai(prompt, systemPrompt, maxTok) {
 
   for (const step of steps) {
     try {
-      if (step === 'gemini') {
-        if (isGeminiTextBlocked() && (orKey || (groqKey && !isGroqBlocked()))) continue;
-        return await tryAllGemini(fullPrompt, cap);
-      }
+      if (step === 'gemini') return await tryAllGemini(fullPrompt, cap);
       if (step === 'openrouter') return await aiOpenRouter(fullPrompt, orKey, cap);
       if (step === 'groq') return await aiGroq(fullPrompt, groqKey, cap);
     } catch(e) {
@@ -2593,14 +2592,14 @@ function updateAnkiStats() {
   document.getElementById('anki-stats').textContent = `${rated}/${flashData.length} évaluées · ${easy} faciles`;
 }
 
-async function genQuiz() {
+async function genQuiz(retrySmall) {
   if (!syncActiveCourseText() || courseText.length < 50) return;
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
+  const nQ = retrySmall ? 5 : (isCompactMode() ? 6 : 8);
   try {
-    const nQ = isCompactMode() ? 8 : 10;
     const data = await aiJSON(
-      `Cours : ${courseSlice(3500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\n${nQ} QCM. "explanation" = max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
+      `Cours : ${courseSlice(2500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\n${nQ} QCM. "explanation" = max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
       'Professeur. JSON uniquement.' + compactSuffix()
     );
     quizData = normalizeQuizQuestions(data.questions);
@@ -2608,9 +2607,13 @@ async function genQuiz() {
     renderQuiz();
     saveCourseGenerated();
   } catch(e) {
+    if (!retrySmall && /satur|quota|429|rate/i.test(e.message || '')) {
+      return genQuiz(true);
+    }
     const msg = e.message || 'Erreur de génération';
     document.getElementById('quiz-list').innerHTML = aiErrorHtml(msg);
     showToast(msg.slice(0, 80), 'error');
+    if (/satur|toutes les ia/i.test(msg) && !localStorage.getItem('notiq_openrouter_key')) openKeyModal();
     console.error('Quiz error:', e);
   }
 }
