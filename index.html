@@ -425,10 +425,50 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 
 /* ── SUMMARY ── */
 .summary-body { font-size: 14px; line-height: 1.9; color: var(--text-dim); }
-.kp { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
-.kp:last-child { border-bottom: none; }
+.kp-list { margin: 0.5rem 0; }
+.kp-row {
+  display: grid; grid-template-columns: 1fr 128px; grid-template-rows: auto auto;
+  gap: 8px 14px; padding: 12px 10px; margin: 0 -10px;
+  border-bottom: 1px solid var(--border); border-radius: var(--radius);
+  transition: background 0.2s;
+}
+.kp-row:last-child { border-bottom: none; }
+.kp-row:hover { background: var(--green-pale); }
+.kp-left { grid-column: 1; min-width: 0; }
+.kp-main { display: flex; gap: 10px; align-items: flex-start; }
 .kp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-top: 7px; flex-shrink: 0; }
-.export-bar { display: flex; gap: 8px; margin-bottom: 1rem; }
+.kp-text { flex: 1; line-height: 1.75; }
+.kp-actions {
+  margin-top: 8px; margin-left: 18px;
+  opacity: 0; max-height: 0; overflow: hidden;
+  transition: opacity 0.2s, max-height 0.25s;
+}
+.kp-row:hover .kp-actions, .kp-row:focus-within .kp-actions {
+  opacity: 1; max-height: 48px;
+}
+.kp-actions .btn-outline { font-size: 11px; padding: 5px 12px; }
+.kp-media {
+  grid-column: 2; grid-row: 1 / 3; align-self: start;
+  width: 128px; min-height: 72px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+}
+.kp-media img { width: 100%; height: 100%; object-fit: cover; min-height: 88px; max-height: 120px; }
+.kp-media-placeholder { font-size: 10px; color: var(--text-muted); text-align: center; padding: 8px; line-height: 1.3; }
+.kp-detail {
+  grid-column: 1 / -1; display: none;
+  padding: 12px 14px; margin-top: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 13px; line-height: 1.75;
+}
+.kp-detail.open { display: block; }
+.kp-detail-loading { color: var(--text-muted); font-size: 13px; }
+@media (max-width: 640px) {
+  .kp-row { grid-template-columns: 1fr; }
+  .kp-media { grid-column: 1; grid-row: auto; width: 100%; max-width: 200px; }
+  .kp-actions { opacity: 1; max-height: 48px; }
+}
+.export-bar { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
 
 /* ── SCORE DE MAITRISE ── */
 .mastery-card {
@@ -1203,6 +1243,7 @@ let flashMode = 'extract';
 let exos = [], openAides = {}, openSols = {}, exoLoading = false;
 let apiKey      = '';
 let summaryText = '';
+let summaryBullets = [];
 let ankiScores  = {};
 let courses     = {};
 let activeCourseId = null;
@@ -1407,6 +1448,7 @@ function saveCourseGenerated() {
   const payload = {
     loaded: true,
     summaryText,
+    summaryBullets,
     quizData,
     quizAnswers,
     flashData,
@@ -1433,11 +1475,12 @@ function restoreCourseGenerated() {
   const hasContent = courseText.length >= 50;
 
   exCache = {}; chatHistory = []; openAides = {}; openSols = {};
-  summaryText = ''; quizData = []; quizAnswers = {}; flashData = []; exos = [];
+  summaryText = ''; summaryBullets = []; quizData = []; quizAnswers = {}; flashData = []; exos = [];
   mindmapData = null; ankiScores = {}; flashIdx = 0;
 
   if (g?.loaded) {
     summaryText = g.summaryText || '';
+    summaryBullets = g.summaryBullets || [];
     quizData = normalizeQuizQuestions(g.quizData);
     quizAnswers = g.quizAnswers || {};
     flashData = g.flashData || [];
@@ -1465,7 +1508,7 @@ function restoreCourseGenerated() {
   document.getElementById('saved-notice').style.display = hasContent ? 'block' : 'none';
 
   if (summaryText) {
-    renderSummaryFromText(summaryText);
+    renderSummaryFromText(summaryText, true);
   } else {
     document.getElementById('summary-empty').style.display = hasContent ? 'none' : 'block';
     document.getElementById('summary-ui').style.display = 'none';
@@ -2541,7 +2584,7 @@ async function loadCourse() {
   if (txt.length < 50) { showToast('⚠️ Le cours est trop court (50 min.).', 'error'); return; }
   isLoadingCourse = true;
   courseText = txt; exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
-  mindmapData = null; summaryText = '';
+  mindmapData = null; summaryText = ''; summaryBullets = [];
   document.getElementById('quiz-empty').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'block';
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Analyse en cours…</div>';
@@ -2638,27 +2681,150 @@ function bulletLineText(l) {
   return l.replace(/^[\s]*(?:[•\-*]|\d+[.)])\s+/, '').trim();
 }
 
-function renderSummaryFromText(res) {
+function parseSummaryLines(res) {
+  let lines = String(res || '').split('\n').map(l => l.trim()).filter(Boolean);
+  lines = lines.filter(l => !/^voici\b/i.test(l) && !/^un résumé\b/i.test(l) && !/^résumé\b/i.test(l));
+  const bullets = [];
+  const paras = [];
+  lines.forEach(l => {
+    if (isSummaryBulletLine(l)) bullets.push({ text: bulletLineText(l), detail: '', imageUrl: '', imageTitle: '' });
+    else paras.push(l);
+  });
+  return { bullets, paras };
+}
+
+function mergeSummaryBullets(parsed, saved) {
+  if (!saved?.length) return parsed.bullets;
+  return parsed.bullets.map((b, i) => {
+    const old = saved[i];
+    if (!old || old.text !== b.text) return b;
+    return { ...b, detail: old.detail || '', imageUrl: old.imageUrl || '', imageTitle: old.imageTitle || '' };
+  });
+}
+
+function wikiSearchQuery(text) {
+  const stop = /^(dans|avec|pour|elle|celle|cette|après|avant|deux|tous|vers|chez|sont|être|fait|peut|qui|que|des|les|une|par|sur|est|son|ses|leur|lors|dont|comme|mais|plus|moins|très|bien)$/i;
+  const words = text.toLowerCase()
+    .replace(/[^\wàâäéèêëïîôùûüçœæ\s-]/gi, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !stop.test(w));
+  const key = words.slice(0, 4).join(' ');
+  return key || text.slice(0, 50);
+}
+
+async function fetchWikiThumb(query) {
+  const q = wikiSearchQuery(query);
+  if (!q || q.length < 3) return null;
+  for (const lang of ['fr', 'en']) {
+    try {
+      const sUrl = `https://${lang}.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=1&format=json&origin=*`;
+      const sRes = await fetch(sUrl);
+      const sData = await sRes.json();
+      const title = sData[1]?.[0];
+      if (!title) continue;
+      const iUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&prop=pageimages&titles=${encodeURIComponent(title)}&pithumbsize=360&format=json&origin=*`;
+      const iRes = await fetch(iUrl);
+      const iData = await iRes.json();
+      const page = Object.values(iData.query?.pages || {})[0];
+      if (page?.thumbnail?.source) {
+        return { url: page.thumbnail.source, title, lang, pageUrl: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}` };
+      }
+    } catch(e) { /* suivant */ }
+  }
+  return null;
+}
+
+function renderSummaryMedia(i, b) {
+  const media = document.getElementById('kp-media-' + i);
+  if (!media) return;
+  if (b.imageUrl) {
+    media.innerHTML = `<a href="${escHtml(b.pageUrl || b.imageUrl)}" target="_blank" rel="noopener" title="${escHtml(b.imageTitle || 'Wikipedia')}"><img src="${escHtml(b.imageUrl)}" alt="${escHtml(b.imageTitle || '')}" loading="lazy"></a>`;
+  } else {
+    media.innerHTML = '<span class="kp-media-placeholder">🖼 Image…</span>';
+  }
+}
+
+async function loadSummaryImages() {
+  for (let i = 0; i < summaryBullets.length; i++) {
+    const b = summaryBullets[i];
+    if (b.imageUrl) { renderSummaryMedia(i, b); continue; }
+    const hit = await fetchWikiThumb(b.text);
+    if (hit) {
+      b.imageUrl = hit.url;
+      b.imageTitle = hit.title;
+      b.pageUrl = hit.pageUrl;
+      renderSummaryMedia(i, b);
+    } else {
+      const media = document.getElementById('kp-media-' + i);
+      if (media) media.innerHTML = '<span class="kp-media-placeholder">—</span>';
+    }
+    await sleep(120);
+  }
+  saveCourseGenerated();
+}
+
+function renderSummaryFromText(res, keepExtras) {
   summaryText = res;
   document.getElementById('summary-empty').style.display = 'none';
   const el = document.getElementById('summary-content');
   document.getElementById('summary-ui').style.display = 'block';
-  let lines = res.split('\n').map(l => l.trim()).filter(Boolean);
-  lines = lines.filter(l => !/^voici\b/i.test(l) && !/^un résumé\b/i.test(l) && !/^résumé\b/i.test(l));
-  let html = ''; let pts = ''; let inPts = false;
-  lines.forEach(l => {
-    if (isSummaryBulletLine(l)) {
-      if (!inPts) { inPts = true; pts = '<div style="margin:1rem 0">'; }
-      pts += `<div class="kp"><div class="kp-dot"></div><span>${mdToHtml(bulletLineText(l))}</span></div>`;
-    } else {
-      if (inPts) { html += pts + '</div>'; inPts = false; pts = ''; }
-      html += `<p style="margin-bottom:0.75rem">${mdToHtml(l)}</p>`;
-    }
-  });
-  if (inPts) html += pts + '</div>';
-  if (!html && !pts) html = `<p style="color:var(--text-muted)">Résumé vide — clique ↻ Régénérer.</p>`;
+  const parsed = parseSummaryLines(res);
+  summaryBullets = keepExtras ? mergeSummaryBullets(parsed, summaryBullets) : parsed.bullets;
+  let html = '';
+  parsed.paras.forEach(l => { html += `<p style="margin-bottom:0.75rem">${mdToHtml(l)}</p>`; });
+  if (summaryBullets.length) {
+    html += '<div class="kp-list">';
+    summaryBullets.forEach((b, i) => {
+      html += `<div class="kp-row" tabindex="0">
+        <div class="kp-left">
+          <div class="kp-main"><div class="kp-dot"></div><span class="kp-text">${mdToHtml(b.text)}</span></div>
+          <div class="kp-actions"><button type="button" class="btn-outline" onclick="explainSummaryBullet(${i})">🔍 Plus de précision</button></div>
+        </div>
+        <div class="kp-media" id="kp-media-${i}"><span class="kp-media-placeholder">🖼 …</span></div>
+        <div class="kp-detail${b.detail ? ' open' : ''}" id="kp-detail-${i}">${b.detail ? b.detail.split('\n').filter(x=>x.trim()).map(l=>`<p style="margin:0.35rem 0">${mdToHtml(l)}</p>`).join('') : ''}</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  if (!html) html = `<p style="color:var(--text-muted)">Résumé vide — clique ↻ Régénérer.</p>`;
   el.innerHTML = html;
   renderMath(el);
+  summaryBullets.forEach((b, i) => renderSummaryMedia(i, b));
+  loadSummaryImages();
+}
+
+async function explainSummaryBullet(i) {
+  const b = summaryBullets[i];
+  if (!b) return;
+  const detailEl = document.getElementById('kp-detail-' + i);
+  if (!detailEl) return;
+  if (b.detail && detailEl.classList.contains('open')) {
+    detailEl.classList.remove('open');
+    return;
+  }
+  if (b.detail) {
+    detailEl.classList.add('open');
+    renderMath(detailEl);
+    return;
+  }
+  if (!hasAnyApiKey()) { openKeyModal(); return; }
+  detailEl.classList.add('open');
+  detailEl.innerHTML = '<div class="kp-detail-loading"><span class="spinner"></span> Précision en cours…</div>';
+  try {
+    const ctx = courseText ? `Contexte cours :\n${courseSlice(2500)}\n\n` : '';
+    const res = await ai(
+      `${ctx}Développe avec précision (max 100 mots), 1 exemple concret si utile :\n« ${b.text} »`,
+      'Tuteur pédagogique.' + compactSuffix()
+    );
+    b.detail = res;
+    detailEl.innerHTML = res.split('\n').filter(l => l.trim()).map(l => `<p style="margin:0.35rem 0">${mdToHtml(l)}</p>`).join('');
+    renderMath(detailEl);
+    saveCourseGenerated();
+    showToast('✅ Précision ajoutée', 'success');
+  } catch(e) {
+    detailEl.innerHTML = `<p style="color:var(--red)">${escHtml(e.message || 'Erreur')}</p>`;
+    showToast('Erreur précision', 'error');
+  }
 }
 
 function buildSummaryPrompt(strict) {
