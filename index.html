@@ -265,6 +265,9 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 }
 .course-textarea:focus { outline: none; border-color: rgba(31,189,130,0.4); }
 .course-textarea::placeholder { color: var(--text-muted); }
+.course-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 12px; color: var(--text-muted); gap: 8px; flex-wrap: wrap; }
+.course-meta .warn { color: #ffb400; }
+.course-meta .ok { color: var(--green); }
 .action-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
 .status-pill {
   display: inline-flex; align-items: center; gap: 7px;
@@ -848,9 +851,14 @@ footer a { color: var(--green); text-decoration: none; }
           </div>
           <input type="file" id="pdf-input" accept="application/pdf,.pdf,image/*" style="display:none" onchange="handlePDF(this)" multiple>
           <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici...&#10;&#10;Exemple : 'La dérivée d'une fonction f en un point a est la limite du taux de variation...'"></textarea>
+          <div class="course-meta">
+            <span id="course-char-count">0 caractères</span>
+            <span id="course-char-hint"></span>
+          </div>
           <div class="action-row">
             <button class="btn-green" id="load-btn" onclick="loadCourse()"><span>✦</span> Charger et analyser</button>
             <button class="btn-outline" onclick="clearCourse()">🗑 Effacer</button>
+            <button class="btn-outline" onclick="exportCourseText()" title="Télécharger le texte du cours">⬇️ Exporter .txt</button>
             <span id="load-msg" style="font-size:13px;color:var(--text-muted)"></span>
             <span id="loaded-pill" style="display:none" class="status-pill"><span class="pulse"></span> Cours chargé</span>
           </div>
@@ -1105,6 +1113,8 @@ let pomoCompletedSessions = 0;
 const API_DELAY = 5000;
 let isChatPending = false;
 let explainDebounceTimer = null;
+let persistDebounceTimer = null;
+let isLoadingCourse = false;
 
 let toastTimer;
 function showToast(msg, type = '') {
@@ -1152,27 +1162,26 @@ window.addEventListener('load', () => {
   // sans appeler selectCourse() qui peut déclencher des effets de bord
   const ids = Object.keys(courses);
   if (ids.length > 0) {
-    activeCourseId = ids[0];
-    if (courses[ids[0]]) {
-      document.getElementById('course-text').value = courses[ids[0]].text || '';
-      courseText = courses[ids[0]].text || '';
-    }
-    renderCoursesBar();
-    const hasContent = !!courseText;
-    document.getElementById('saved-notice').style.display = hasContent ? 'block' : 'none';
-    document.getElementById('quiz-empty').style.display = hasContent ? 'none' : 'block';
-    document.getElementById('quiz-ui').style.display = hasContent ? 'block' : 'none';
-    document.getElementById('flash-empty').style.display = hasContent ? 'none' : 'block';
-    document.getElementById('flash-ui').style.display = 'none';
-    document.getElementById('exo-empty').style.display = hasContent ? 'none' : 'block';
-    document.getElementById('exo-ui').style.display = 'none';
-    document.getElementById('summary-empty').style.display = hasContent ? 'none' : 'block';
-    document.getElementById('summary-ui').style.display = 'none';
-    document.getElementById('mindmap-empty').style.display = hasContent ? 'none' : 'block';
-    document.getElementById('mindmap-ui').style.display = 'none';
+    const savedActive = localStorage.getItem('notiq_active_course');
+    const firstId = (savedActive && courses[savedActive]) ? savedActive : ids[0];
+    selectCourse(firstId);
   } else {
     renderCoursesBar();
   }
+
+  const courseTa = document.getElementById('course-text');
+  courseTa.addEventListener('input', () => {
+    updateCharCount();
+    clearTimeout(persistDebounceTimer);
+    persistDebounceTimer = setTimeout(persistCourseTextarea, 800);
+  });
+  updateCharCount();
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('key-modal').classList.contains('open')) closeKeyModal();
+    if (document.getElementById('exam-overlay').classList.contains('open')) closeExam();
+  });
 
   if (!apiKey) openKeyModal();
   initScrollReveal();
@@ -1205,7 +1214,11 @@ function toggleTheme() {
 }
 
 function saveCourses() {
-  localStorage.setItem('notiq_courses', JSON.stringify(courses));
+  try {
+    localStorage.setItem('notiq_courses', JSON.stringify(courses));
+  } catch(e) {
+    showToast('⚠️ Mémoire navigateur pleine — supprime un cours.', 'error');
+  }
 }
 
 function persistCourseTextarea() {
@@ -1214,6 +1227,134 @@ function persistCourseTextarea() {
     courses[activeCourseId].text = txt;
     saveCourses();
   }
+}
+
+function updateCharCount() {
+  const n = document.getElementById('course-text').value.length;
+  const el = document.getElementById('course-char-count');
+  const hint = document.getElementById('course-char-hint');
+  if (!el) return;
+  el.textContent = n.toLocaleString('fr-FR') + ' caractère' + (n > 1 ? 's' : '');
+  if (n < 50) {
+    hint.textContent = 'Minimum 50 pour analyser';
+    hint.className = 'warn';
+  } else if (n > 50000) {
+    hint.textContent = 'Texte très long — l\'analyse sera tronquée';
+    hint.className = 'warn';
+  } else {
+    hint.textContent = 'Prêt à analyser';
+    hint.className = 'ok';
+  }
+}
+
+function saveCourseGenerated() {
+  if (!activeCourseId || !courses[activeCourseId]) return;
+  const hasAny = !!(summaryText || quizData.length || flashData.length || exos.length || mindmapData);
+  if (!hasAny) return;
+  courses[activeCourseId].generated = {
+    loaded: true,
+    summaryText,
+    quizData,
+    quizAnswers,
+    flashData,
+    flashMode,
+    exos,
+    mindmapData,
+    ankiScores,
+    savedAt: Date.now()
+  };
+  saveCourses();
+}
+
+function restoreCourseGenerated() {
+  const g = (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].generated : null;
+  const hasContent = !!courseText;
+
+  exCache = {}; chatHistory = []; openAides = {}; openSols = {};
+  summaryText = ''; quizData = []; quizAnswers = {}; flashData = []; exos = [];
+  mindmapData = null; ankiScores = {}; flashIdx = 0;
+
+  if (g?.loaded) {
+    summaryText = g.summaryText || '';
+    quizData = g.quizData || [];
+    quizAnswers = g.quizAnswers || {};
+    flashData = g.flashData || [];
+    exos = g.exos || [];
+    mindmapData = g.mindmapData || null;
+    ankiScores = g.ankiScores || {};
+    flashMode = g.flashMode || 'extract';
+  }
+
+  document.getElementById('flash-mode-extract')?.classList.toggle('on', flashMode === 'extract');
+  document.getElementById('flash-mode-ai')?.classList.toggle('on', flashMode === 'ai');
+  const flashDesc = document.getElementById('flash-mode-desc');
+  if (flashDesc) {
+    flashDesc.textContent = flashMode === 'extract'
+      ? 'Les notions clés extraites directement de ton cours'
+      : "L'IA reformule et invente des questions — jamais copiées du cours";
+  }
+
+  document.getElementById('loaded-pill').style.display = g?.loaded ? 'inline-flex' : 'none';
+  document.getElementById('saved-notice').style.display = hasContent ? 'block' : 'none';
+
+  if (summaryText) {
+    renderSummaryFromText(summaryText);
+  } else {
+    document.getElementById('summary-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('summary-ui').style.display = 'none';
+  }
+
+  if (hasContent) {
+    document.getElementById('quiz-empty').style.display = 'none';
+    document.getElementById('quiz-ui').style.display = 'block';
+    if (quizData.length) renderQuiz();
+    else document.getElementById('quiz-list').innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:1rem 0">Lance « Charger et analyser » ou ↻ Nouveau quiz.</div>';
+  } else {
+    document.getElementById('quiz-empty').style.display = 'block';
+    document.getElementById('quiz-ui').style.display = 'none';
+  }
+
+  if (hasContent && flashData.length) {
+    document.getElementById('flash-empty').style.display = 'none';
+    document.getElementById('flash-ui').style.display = 'flex';
+    showFlash();
+  } else {
+    document.getElementById('flash-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('flash-ui').style.display = 'none';
+  }
+
+  if (hasContent && exos.length) {
+    document.getElementById('exo-empty').style.display = 'none';
+    document.getElementById('exo-ui').style.display = 'block';
+    renderExos();
+  } else {
+    document.getElementById('exo-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('exo-ui').style.display = 'none';
+  }
+
+  if (hasContent && mindmapData) {
+    document.getElementById('mindmap-empty').style.display = 'none';
+    document.getElementById('mindmap-ui').style.display = 'block';
+  } else {
+    document.getElementById('mindmap-empty').style.display = hasContent ? 'none' : 'block';
+    document.getElementById('mindmap-ui').style.display = 'none';
+  }
+
+  document.getElementById('chat-box').innerHTML = '<div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions. 👋</div>';
+}
+
+function exportCourseText() {
+  const t = document.getElementById('course-text').value.trim();
+  if (!t) { showToast('Aucun texte à exporter.', 'error'); return; }
+  const name = (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'cours';
+  const blob = new Blob([t], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name.replace(/[^\w\s-]/g, '').trim().slice(0, 40) || 'cours';
+  a.download += '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('⬇️ Cours exporté !', 'success');
 }
 
 function renderCoursesBar() {
@@ -1278,22 +1419,10 @@ function selectCourse(id) {
     courseText = courses[id].text || '';
   }
   renderCoursesBar();
-  exCache = {}; quizData = []; quizAnswers = {}; flashData = []; chatHistory = []; ankiScores = {}; exos = []; openAides = {}; openSols = {};
-  document.getElementById('loaded-pill').style.display = 'none';
+  localStorage.setItem('notiq_active_course', id);
   document.getElementById('load-progress').style.display = 'none';
-  document.getElementById('saved-notice').style.display = courseText ? 'block' : 'none';
-  const hasContent = !!courseText;
-  document.getElementById('quiz-empty').style.display = hasContent ? 'none' : 'block';
-  document.getElementById('quiz-ui').style.display = hasContent ? 'block' : 'none';
-  document.getElementById('flash-empty').style.display = hasContent ? 'none' : 'block';
-  document.getElementById('flash-ui').style.display = 'none';
-  document.getElementById('exo-empty').style.display = hasContent ? 'none' : 'block';
-  document.getElementById('exo-ui').style.display = 'none';
-  document.getElementById('summary-empty').style.display = hasContent ? 'none' : 'block';
-  document.getElementById('summary-ui').style.display = 'none';
-  document.getElementById('mindmap-empty').style.display = hasContent ? 'none' : 'block';
-  document.getElementById('mindmap-ui').style.display = 'none';
-  document.getElementById('chat-box').innerHTML = '<div class="cmsg ai">Bonjour ! Charge un cours et pose-moi toutes tes questions. 👋</div>';
+  restoreCourseGenerated();
+  updateCharCount();
 }
 
 function deleteCourse(e, id) {
@@ -1315,19 +1444,9 @@ function resetEmptyCourseUI() {
   activeCourseId = null;
   courseText = '';
   document.getElementById('course-text').value = '';
-  document.getElementById('saved-notice').style.display = 'none';
-  document.getElementById('loaded-pill').style.display = 'none';
-  document.getElementById('load-msg').textContent = '';
-  document.getElementById('quiz-empty').style.display = 'block';
-  document.getElementById('quiz-ui').style.display = 'none';
-  document.getElementById('flash-empty').style.display = 'block';
-  document.getElementById('flash-ui').style.display = 'none';
-  document.getElementById('exo-empty').style.display = 'block';
-  document.getElementById('exo-ui').style.display = 'none';
-  document.getElementById('summary-empty').style.display = 'block';
-  document.getElementById('summary-ui').style.display = 'none';
-  document.getElementById('mindmap-empty').style.display = 'block';
-  document.getElementById('mindmap-ui').style.display = 'none';
+  localStorage.removeItem('notiq_active_course');
+  restoreCourseGenerated();
+  updateCharCount();
 }
 
 function openKeyModal() {
@@ -1433,7 +1552,6 @@ async function aiGroq(prompt, groqKey) {
   const d = await r.json();
   const text = d.choices?.[0]?.message?.content || '';
   if (!text) throw new Error('Réponse vide de Groq.');
-  showToast('✅ Réponse via Groq', 'success');
   return text;
 }
 
@@ -1601,13 +1719,17 @@ function setProgress(pct) {
 }
 
 async function loadCourse() {
+  if (isLoadingCourse) return;
   const txt = document.getElementById('course-text').value.trim();
   if (!txt) { showToast('⚠️ Colle d\'abord le texte de ton cours.', 'error'); return; }
   if (!apiKey) { openKeyModal(); return; }
-  if (txt.length < 50) { showToast('⚠️ Le cours est trop court.', 'error'); return; }
+  if (txt.length < 50) { showToast('⚠️ Le cours est trop court (50 min.).', 'error'); return; }
+  isLoadingCourse = true;
   courseText = txt; exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
+  mindmapData = null; summaryText = '';
   if (activeCourseId && courses[activeCourseId]) {
     courses[activeCourseId].text = txt;
+    delete courses[activeCourseId].generated;
   } else {
     const id = 'c' + Date.now();
     const name = prompt('Nom de ce cours ?') || 'Mon cours';
@@ -1625,35 +1747,44 @@ async function loadCourse() {
     const m = e?.message || '';
     return m.includes('satur') || m.includes('indisponible') || m.includes('No API key') || m.startsWith('Tous les');
   }
+  function abortLoad(msg) {
+    document.getElementById('load-msg').textContent = '❌ ' + msg;
+    btn.disabled = false;
+    isLoadingCourse = false;
+    setProgress(100);
+    saveCourseGenerated();
+  }
 
   setProgress(5);
   document.getElementById('load-msg').textContent = '⏳ Génération du résumé…';
-  try { await genSummary(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
+  try { await genSummary(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
   setProgress(20); await sleep(API_DELAY);
 
   document.getElementById('load-msg').textContent = '⏳ Génération des flashcards…';
-  try { await genFlash(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
+  try { await genFlash(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
   setProgress(40); await sleep(API_DELAY);
 
   document.getElementById('exo-empty').style.display = 'none';
   document.getElementById('exo-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération des exercices…';
-  try { await genExosQuiet(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
+  try { await genExosQuiet(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
   setProgress(60); await sleep(API_DELAY);
 
   document.getElementById('quiz-empty').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération du quiz…';
-  try { await genQuiz(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
+  try { await genQuiz(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
   setProgress(80); await sleep(API_DELAY);
 
   document.getElementById('mindmap-empty').style.display = 'none';
   document.getElementById('mindmap-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération de la carte mentale…';
-  try { await genMindmap(); } catch(e) { errors++; if (apiDead(e)) { document.getElementById('load-msg').textContent = '❌ ' + e.message; btn.disabled = false; setProgress(100); return; } }
+  try { await genMindmap(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
   setProgress(100);
 
   btn.disabled = false;
+  isLoadingCourse = false;
+  saveCourseGenerated();
   if (errors === 0) {
     document.getElementById('load-msg').textContent = '';
     document.getElementById('loaded-pill').style.display = 'inline-flex';
@@ -1662,25 +1793,29 @@ async function loadCourse() {
   } else {
     document.getElementById('load-msg').textContent = `⚠️ ${errors} outil(s) n'ont pas pu charger.`;
     showToast(`⚠️ ${errors} erreur(s)`, 'error');
+    if (summaryText || quizData.length || flashData.length) saveCourseGenerated();
   }
 }
 
 function clearCourse() {
+  if (!confirm('Effacer le texte et tout le contenu généré pour ce cours ?')) return;
   document.getElementById('course-text').value = '';
-  if (activeCourseId && courses[activeCourseId]) { courses[activeCourseId].text = ''; saveCourses(); }
-  document.getElementById('saved-notice').style.display = 'none';
+  if (activeCourseId && courses[activeCourseId]) {
+    courses[activeCourseId].text = '';
+    delete courses[activeCourseId].generated;
+    saveCourses();
+  }
   courseText = '';
-  document.getElementById('loaded-pill').style.display = 'none';
   document.getElementById('load-msg').textContent = '';
+  restoreCourseGenerated();
+  updateCharCount();
 }
 
-async function genSummary() {
+function renderSummaryFromText(res) {
+  summaryText = res;
   document.getElementById('summary-empty').style.display = 'none';
   const el = document.getElementById('summary-content');
   document.getElementById('summary-ui').style.display = 'block';
-  el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
-  const res = await ai(`Cours :\n\n${courseText.slice(0, 8000)}\n\nFais un résumé structuré : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`, 'Tu es un assistant pédagogique expert. Réponds en français.');
-  summaryText = res;
   const lines = res.split('\n').filter(l => l.trim());
   let html = ''; let pts = ''; let inPts = false;
   lines.forEach(l => {
@@ -1695,6 +1830,16 @@ async function genSummary() {
   if (inPts) html += pts + '</div>';
   el.innerHTML = html;
   renderMath(el);
+}
+
+async function genSummary() {
+  document.getElementById('summary-empty').style.display = 'none';
+  const el = document.getElementById('summary-content');
+  document.getElementById('summary-ui').style.display = 'block';
+  el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
+  const res = await ai(`Cours :\n\n${courseText.slice(0, 8000)}\n\nFais un résumé structuré : 2 phrases d'intro, puis des points clés commençant par "• ", puis une conclusion courte. Texte brut.`, 'Tu es un assistant pédagogique expert. Réponds en français.');
+  renderSummaryFromText(res);
+  saveCourseGenerated();
 }
 
 function copySummary() {
@@ -1732,6 +1877,7 @@ function setFlashMode(mode) {
     desc.textContent = "L'IA reformule et invente des questions — jamais copiées du cours";
   }
   if (courseText && flashData.length) showToast('Mode changé — clique ↻ pour régénérer', '');
+  saveCourseGenerated();
 }
 
 // Nettoie un texte : retire les numéros de type "1)", "8.", "10)" en début de chaîne
@@ -1772,6 +1918,7 @@ async function genFlash() {
     flashIdx = 0;
     showFlash();
     showToast(isAI ? '🧠 Flashcards générées par l\'IA !' : '📄 Flashcards extraites du cours !', 'success');
+    saveCourseGenerated();
   } catch(e) {
     console.error('Flash error:', e);
     showToast('❌ Erreur de génération des flashcards', 'error');
@@ -1799,6 +1946,7 @@ function prevFlash() { if (flashIdx > 0) { flashIdx--; showFlash(); } }
 function ankiRate(rating) {
   ankiScores[flashIdx] = rating;
   updateAnkiStats();
+  saveCourseGenerated();
   setTimeout(() => {
     if (flashIdx < flashData.length - 1) { flashIdx++; showFlash(); }
     else {
@@ -1826,6 +1974,7 @@ async function genQuiz() {
     quizData = Array.isArray(data.questions) ? data.questions : [];
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
+    saveCourseGenerated();
   } catch(e) {
     document.getElementById('quiz-list').innerHTML = '<div class="loading-txt">❌ Erreur de génération, réessaie.</div>';
     console.error('Quiz error:', e);
@@ -1857,6 +2006,7 @@ function renderQuiz() {
 function ansQ(qi, a) {
   quizAnswers[qi] = a;
   renderQuiz();
+  saveCourseGenerated();
   if (quizData[qi] && a === quizData[qi].correct) showToast('✅ Bonne réponse !', 'success');
   else showToast('❌ Mauvaise réponse', 'error');
 }
@@ -2023,6 +2173,7 @@ async function genMindmap() {
   try {
     mindmapData = await aiJSON(`Cours :\n\n${courseText.slice(0,5000)}\n\nGénère une carte mentale :\n{"center":"titre principal","branches":[{"label":"branche","children":["enfant1","enfant2"]}]}`, 'Tu es un assistant pédagogique.');
     drawMindmap(canvas, ctx2d, W, H, mindmapData);
+    saveCourseGenerated();
   } catch(e) {
     ctx2d.clearRect(0, 0, W, H); ctx2d.fillStyle = bg; ctx2d.fillRect(0, 0, W, H);
     ctx2d.fillStyle = '#7a8c7e'; ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
@@ -2198,8 +2349,8 @@ function renderStats() {
   }).join('');
 }
 function clearHistory() {
-  if (!confirm('Effacer tout l\'historique ?')) return;
-  quizHistory = []; ankiScores = {};
+  if (!confirm('Effacer l\'historique des quiz et les sessions Pomodoro ?')) return;
+  quizHistory = [];
   localStorage.removeItem('notiq_history');
   pomoCompletedSessions = 0;
   localStorage.removeItem('notiq_pomo_sessions');
@@ -2254,6 +2405,7 @@ async function genExosQuiet() {
   document.getElementById('exo-empty').style.display = 'none';
   document.getElementById('exo-ui').style.display = 'block';
   renderExos();
+  saveCourseGenerated();
 }
 
 async function genExos() {
@@ -2266,6 +2418,7 @@ async function genExos() {
   try {
     const data = await aiJSON(`Cours :\n\n${courseText.slice(0,6000)}\n\nGénère 4 exercices progressifs :\n{"exercices":[{"titre":"Titre","enonce":"Enonce","aide":"Indice","solution":"Solution"}]}`, 'Tu es un professeur expert. Génère des exercices réalistes directement liés au cours.');
     exos = data.exercices || []; openAides = {}; openSols = {}; renderExos();
+    saveCourseGenerated();
   } catch(e) { showToast('Erreur génération exercices', 'error'); }
   finally { btn.disabled = false; btn.innerHTML = '✦ Générer des exercices'; exoLoading = false; }
 }
