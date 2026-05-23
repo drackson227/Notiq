@@ -896,14 +896,31 @@ footer a { color: var(--green); text-decoration: none; }
         <div class="apanel" id="ap-flash">
           <div id="flash-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour générer des flashcards.</div>
           <div id="flash-ui" style="display:none" class="flash-outer">
+
+            <!-- Mode selector -->
+            <div style="display:flex;gap:8px;margin-bottom:0.5rem;align-items:center;flex-wrap:wrap;justify-content:center">
+              <div style="display:flex;border:1px solid var(--border);border-radius:99px;overflow:hidden">
+                <button id="flash-mode-extract" class="mode-btn on" onclick="setFlashMode('extract')">📄 Depuis le cours</button>
+                <button id="flash-mode-ai" class="mode-btn" onclick="setFlashMode('ai')">🧠 Générées par l'IA</button>
+              </div>
+              <button class="btn-outline" style="padding:6px 14px;font-size:13px" onclick="genFlash()">↻ Régénérer</button>
+            </div>
+            <p id="flash-mode-desc" style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:0.5rem">Les notions clés extraites directement de ton cours</p>
+
             <div class="flash-progress"><div class="flash-progress-bar" id="flash-bar"></div></div>
+
             <div class="flash-scene" onclick="flipFlash()">
               <div class="flash-card-inner" id="flash-inner">
-                <div class="flash-face flash-front"><span id="flash-front-text">…</span></div>
-                <div class="flash-face flash-back"><span id="flash-back-text">…</span></div>
+                <div class="flash-face flash-front">
+                  <span id="flash-front-text">…</span>
+                </div>
+                <div class="flash-face flash-back">
+                  <span id="flash-back-text">…</span>
+                </div>
               </div>
             </div>
             <p class="flash-hint">Clique sur la carte pour retourner</p>
+
             <div id="anki-btns" class="anki-btns" style="display:none">
               <button class="anki-btn hard" onclick="ankiRate('hard')">😅 Difficile</button>
               <button class="anki-btn ok" onclick="ankiRate('ok')">🙂 Correct</button>
@@ -915,7 +932,6 @@ footer a { color: var(--green); text-decoration: none; }
               <button class="btn-outline" onclick="nextFlash()">Suiv. →</button>
             </div>
             <div class="anki-stats" id="anki-stats"></div>
-            <button class="btn-outline" onclick="genFlash()">↻ Nouvelles flashcards</button>
           </div>
         </div>
 
@@ -1662,19 +1678,77 @@ function exportSummaryPDF() {
   win.document.close();
 }
 
+let flashMode = 'extract'; // 'extract' | 'ai'
+
+function setFlashMode(mode) {
+  flashMode = mode;
+  document.getElementById('flash-mode-extract').classList.toggle('on', mode === 'extract');
+  document.getElementById('flash-mode-ai').classList.toggle('on', mode === 'ai');
+  const desc = document.getElementById('flash-mode-desc');
+  if (mode === 'extract') {
+    desc.textContent = 'Les notions clés extraites directement de ton cours';
+  } else {
+    desc.textContent = "L'IA reformule et invente des questions — jamais copiées du cours";
+  }
+  genFlash();
+}
+
+// Nettoie un texte : retire les numéros de type "1)", "8.", "10)" en début de chaîne
+function cleanFlashText(txt) {
+  return (txt || '').replace(/^\s*\d+[\)\.]\s*/, '').trim();
+}
+
 async function genFlash() {
   if (!courseText) return;
   ankiScores = {};
+  document.getElementById('flash-empty').style.display = 'none';
+  document.getElementById('flash-ui').style.display = 'flex';
+  document.getElementById('flash-front-text').textContent = '…';
+  document.getElementById('flash-back-text').textContent = '…';
+
+  const isAI = flashMode === 'ai';
+  const prompt = isAI
+    ? `Timestamp: ${Date.now()}. Tu es un professeur qui crée des flashcards pédagogiques. Cours de référence :
+
+${courseText.slice(0, 6000)}
+
+Crée 12 flashcards. RÈGLES STRICTES :
+- Ne JAMAIS copier une phrase du cours mot pour mot
+- Reformule totalement, change la structure
+- Le recto = une question ouverte ou un concept à définir (sans numéro, sans "Question :")
+- Le verso = une explication claire et complète en tes propres mots
+- Varie les types : définition, "pourquoi ?", "comment ?", comparaison, exemple
+{"cards":[{"front":"question ou concept reformulé","back":"explication complète reformulée"}]}`
+    : `Timestamp: ${Date.now()}. Cours :
+
+${courseText.slice(0, 6000)}
+
+Extrait les 12 notions, termes et concepts clés de ce cours pour en faire des flashcards de révision. Le recto = le terme ou la notion (court, sans numéro), le verso = la définition ou l'explication précise issue du cours.
+{"cards":[{"front":"terme ou notion clé","back":"définition ou explication précise"}]}`;
+
+  const sys = isAI
+    ? 'Tu es un professeur expert en pédagogie. Tu reformules toujours avec tes propres mots, tu ne copies jamais le texte source. Réponds uniquement en JSON.'
+    : 'Tu es un assistant pédagogique. Extrais les notions clés du cours. Réponds uniquement en JSON.';
+
   try {
-    const data = await aiJSON(`Timestamp: ${Date.now()}. Génère des flashcards variées. Cours :\n\n${courseText.slice(0, 6000)}\n\nGénère 10 flashcards :\n{"cards":[{"front":"terme ou question courte","back":"définition ou réponse complète"}]}`, 'Tu es un assistant pédagogique.');
-    flashData = Array.isArray(data.cards) ? data.cards : [];
-    if (!flashData.length) throw new Error('Aucune carte');
+    const data = await aiJSON(prompt, sys);
+    let cards = Array.isArray(data.cards) ? data.cards : [];
+    // Nettoyer les numéros parasites dans front ET back
+    cards = cards.map(c => ({
+      front: cleanFlashText(c.front),
+      back: cleanFlashText(c.back)
+    })).filter(c => c.front && c.back);
+    if (!cards.length) throw new Error('Aucune carte');
+    flashData = cards;
     flashIdx = 0;
-    document.getElementById('flash-empty').style.display = 'none';
-    document.getElementById('flash-ui').style.display = 'flex';
     showFlash();
-  } catch(e) { console.error('Flash parse error:', e); }
+    showToast(isAI ? '🧠 Flashcards générées par l\'IA !' : '📄 Flashcards extraites du cours !', 'success');
+  } catch(e) {
+    console.error('Flash error:', e);
+    showToast('❌ Erreur de génération des flashcards', 'error');
+  }
 }
+
 function showFlash() {
   if (!flashData.length) return;
   const c = flashData[flashIdx];
