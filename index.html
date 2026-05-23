@@ -1039,6 +1039,7 @@ footer a { color: var(--green); text-decoration: none; }
           <div id="summary-empty" style="padding:2rem 0;text-align:center;color:var(--text-muted)">Charge un cours pour obtenir un résumé.</div>
           <div id="summary-ui" style="display:none">
             <div class="export-bar">
+              <button class="btn-outline" onclick="genSummary()" style="font-size:13px">↻ Régénérer</button>
               <button class="btn-outline" onclick="exportSummaryPDF()" style="font-size:13px">⬇️ Exporter en PDF</button>
               <button class="btn-outline" onclick="copySummary()" style="font-size:13px">📋 Copier</button>
             </div>
@@ -2428,36 +2429,52 @@ function clearCourse() {
   updateCharCount();
 }
 
+function isSummaryBulletLine(l) {
+  return /^[\s]*([•\-*]|\d+[.)])\s+\S/.test(l);
+}
+function bulletLineText(l) {
+  return l.replace(/^[\s]*(?:[•\-*]|\d+[.)])\s+/, '').trim();
+}
+
 function renderSummaryFromText(res) {
   summaryText = res;
   document.getElementById('summary-empty').style.display = 'none';
   const el = document.getElementById('summary-content');
   document.getElementById('summary-ui').style.display = 'block';
-  const lines = res.split('\n').filter(l => l.trim());
+  let lines = res.split('\n').map(l => l.trim()).filter(Boolean);
+  lines = lines.filter(l => !/^voici\b/i.test(l) && !/^un résumé\b/i.test(l) && !/^résumé\b/i.test(l));
   let html = ''; let pts = ''; let inPts = false;
   lines.forEach(l => {
-    if (l.startsWith('•') || l.startsWith('-')) {
+    if (isSummaryBulletLine(l)) {
       if (!inPts) { inPts = true; pts = '<div style="margin:1rem 0">'; }
-      pts += `<div class="kp"><div class="kp-dot"></div><span>${mdToHtml(l.replace(/^[•\-]\s*/, ''))}</span></div>`;
+      pts += `<div class="kp"><div class="kp-dot"></div><span>${mdToHtml(bulletLineText(l))}</span></div>`;
     } else {
       if (inPts) { html += pts + '</div>'; inPts = false; pts = ''; }
       html += `<p style="margin-bottom:0.75rem">${mdToHtml(l)}</p>`;
     }
   });
   if (inPts) html += pts + '</div>';
+  if (!html && !pts) html = `<p style="color:var(--text-muted)">Résumé vide — clique ↻ Régénérer.</p>`;
   el.innerHTML = html;
   renderMath(el);
 }
 
+function buildSummaryPrompt(strict) {
+  const n = isCompactMode() ? 6 : 8;
+  const extra = strict ? '\nOBLIGATOIRE : exactement ' + n + ' lignes commençant par •, sans phrase d\'introduction.' : '';
+  return `Cours :\n\n${courseSlice()}\n\nRésumé de révision : ${n} puces "• " (1–2 phrases chacune, notions importantes du cours).\nPas d'intro, pas de conclusion, pas de titre. Commence par "• ".${extra}${compactSuffix()}`;
+}
+
 async function genSummary() {
+  if (!syncActiveCourseText() || courseText.length < 50) { showToast('Charge un cours d\'abord.', 'error'); return; }
   document.getElementById('summary-empty').style.display = 'none';
   const el = document.getElementById('summary-content');
   document.getElementById('summary-ui').style.display = 'block';
   el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
-  const res = await ai(
-    `Cours :\n\n${courseSlice()}\n\nRésumé MINIMAL : 6 à 8 puces "• " (une ligne chacune), zéro intro, zéro conclusion.${compactSuffix()}`,
-    'Assistant pédagogique.'
-  );
+  const maxTok = isCompactMode() ? 1400 : 2400;
+  let res = await ai(buildSummaryPrompt(false), 'Assistant pédagogique.', maxTok);
+  const bullets = (res.match(/^[\s]*[•\-*]/gm) || []).length;
+  if (bullets < 4) res = await ai(buildSummaryPrompt(true), 'Assistant pédagogique.', maxTok);
   renderSummaryFromText(res);
   saveCourseGenerated();
 }
