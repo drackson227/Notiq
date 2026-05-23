@@ -1782,7 +1782,7 @@ async function genQuiz() {
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
   try {
-    const data = await aiJSON(`Timestamp: ${Date.now()}. Voici un cours : ${courseText.slice(0, 6000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\nGénère exactement 20 QCM variés couvrant tout le cours, du plus simple au plus complexe :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication"}]}`, 'Tu es un professeur expert.');
+    const data = await aiJSON(`Timestamp: ${Date.now()}. Voici un cours : ${courseText.slice(0, 4000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\nGénère exactement 10 QCM variés (du plus simple au plus difficile) :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication"}]}`, 'Tu es un professeur expert.');
     quizData = Array.isArray(data.questions) ? data.questions : [];
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
@@ -1843,8 +1843,8 @@ async function startExam() {
   updateExamTimer();
   try {
     const data = await aiJSON(
-      `Timestamp: ${Date.now()}. Cours : ${courseText.slice(0, 7000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\/\-]/g, ' ')}\n\nGénère exactement 20 QCM variés couvrant tout le cours, progression du simple au complexe :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication precise"}]}`,
-      'Tu es un professeur expert. Génère exactement 20 questions QCM de niveaux variés. EXACTEMENT 20, pas moins.'
+      `Timestamp: ${Date.now()}. Cours : ${courseText.slice(0, 5000).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?()\/\-]/g, ' ')}\n\nGénère exactement 15 QCM variés (facile → difficile), progression du simple au complexe :\n{"questions":[{"q":"question","options":["A","B","C","D"],"correct":2,"explanation":"explication precise"}]}`,
+      'Tu es un professeur expert. Génère exactement 15 questions QCM de niveaux variés. EXACTEMENT 15, JSON uniquement.'
     );
     examQuizData = Array.isArray(data.questions) ? data.questions.slice(0, 20) : [];
     if (!examQuizData.length) throw new Error('Aucune question générée');
