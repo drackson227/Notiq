@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Notiq build: v5-dynamic-or -->
+<!-- Notiq build: v6-ocr-clean -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -1729,7 +1729,7 @@ async function tryAllGemini(fullPrompt, maxTok) {
   throw new Error('Gemini indisponible');
 }
 
-const NOTIQ_BUILD = 'v5';
+const NOTIQ_BUILD = 'v6';
 const OPENROUTER_FALLBACK_TEXT = ['openrouter/free', 'meta-llama/llama-3.2-3b-instruct:free', 'deepseek/deepseek-v4-flash:free'];
 const OPENROUTER_FALLBACK_VISION = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free', 'google/gemma-4-26b-a4b-it:free'];
 let orModelsCache = { text: null, vision: null, at: 0 };
@@ -1747,6 +1747,7 @@ async function fetchOpenRouterModelIds(visionOnly) {
     const text = ['openrouter/free'];
     for (const m of list) {
       if (!m.id || !m.id.endsWith(':free')) continue;
+      if (/reasoning|thinking|coder/i.test(m.id)) continue;
       const mods = m.architecture?.input_modalities || [];
       if (mods.includes('image')) vision.push(m.id);
       else text.push(m.id);
@@ -1891,17 +1892,29 @@ function isGeminiVisionBlocked() {
 }
 
 /** Réduit la taille des photos (évite 429 / erreurs vision). */
-async function compressImageFile(file, maxW = 1024) {
+async function compressImageFile(file, maxW = 1200) {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, maxW / bmp.width);
-  const w = Math.round(bmp.width * scale);
-  const h = Math.round(bmp.height * scale);
+  let w = Math.round(bmp.width * scale);
+  let h = Math.round(bmp.height * scale);
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-  canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, w, h);
   bmp.close();
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.75));
+  // Recadrage : enlève barres Snapchat (haut/bas) pour mieux lire le devoir
+  const top = Math.round(h * 0.06);
+  const bottom = Math.round(h * 0.14);
+  const cropH = Math.max(80, h - top - bottom);
+  const cropped = document.createElement('canvas');
+  cropped.width = w;
+  cropped.height = cropH;
+  cropped.getContext('2d').drawImage(canvas, 0, top, w, cropH, 0, 0, w, cropH);
+  w = cropped.width;
+  h = cropped.height;
+  const out = cropped;
+  const blob = await new Promise(res => out.toBlob(res, 'image/jpeg', 0.8));
   if (!blob) throw new Error('Compression image échouée');
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
@@ -1923,8 +1936,37 @@ function isImageFile(file) {
   return file.type.startsWith('image/');
 }
 
+const OCR_PROMPT = 'Tu es un OCR. Transcris UNIQUEMENT le texte imprimé/manuscrit visible sur la photo (devoir, cours). Garde numéros de questions et tirets. Texte brut en français. Interdit : commentaires, markdown, balises <|...|>, JSON, tools.';
+
+function sanitizeOcrText(raw) {
+  if (!raw) return '';
+  let t = String(raw)
+    .replace(/<\|[^|>]*\|>/g, '')
+    .replace(/<\|tool\|>/gi, '')
+    .replace(/<\|im_start\|>|<\|im_end\|>/gi, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\b(tool_calls?|function_call)\b/gi, '')
+    .replace(/\n{4,}/g, '\n\n')
+    .trim();
+  return t;
+}
+
+function isValidOcrText(text) {
+  const t = sanitizeOcrText(text);
+  if (t.length < 12) return false;
+  const letters = (t.match(/[a-zA-ZÀ-ÿ0-9]/g) || []).length;
+  if (letters / t.length < 0.35) return false;
+  if (/^(\s*<\|)+\s*$/.test(t)) return false;
+  if ((t.match(/<\|/g) || []).length > 2) return false;
+  return true;
+}
+
 function appendCourseText(chunk, fileName) {
-  const cleanText = chunk.replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$');
+  const cleanText = sanitizeOcrText(chunk).replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$');
+  if (!cleanText || cleanText.length < 8) {
+    showToast(`⚠️ ${fileName || 'Image'} : texte illisible — réessaie une photo plus nette`, 'error');
+    return;
+  }
   const current = document.getElementById('course-text').value.trim();
   const header = fileName ? `\n\n— ${fileName} —\n\n` : '\n\n—\n\n';
   document.getElementById('course-text').value = current ? current + header + cleanText : cleanText;
@@ -1935,17 +1977,25 @@ function appendCourseText(chunk, fileName) {
 
 async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
   const dataUrl = `data:${mimeType};base64,${base64}`;
-  const cap = isCompactMode() ? 1200 : 2048;
+  const cap = isCompactMode() ? 1800 : 3500;
   const models = await fetchOpenRouterModelIds(true);
-  const text = await callOpenRouterChat(orKey, {
-    messages: [{ role: 'user', content: [
-      { type: 'text', text: prompt },
-      { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } }
-    ] }],
-    max_tokens: cap,
-    temperature: 0
-  }, models);
-  return (text || '').trim();
+  let lastErr = '';
+  for (const model of models) {
+    try {
+      const raw = await callOpenRouterChat(orKey, {
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } }
+        ] }],
+        max_tokens: cap,
+        temperature: 0
+      }, [model]);
+      const text = sanitizeOcrText(raw);
+      if (isValidOcrText(text)) return text;
+      lastErr = 'Réponse OCR invalide';
+    } catch(e) { lastErr = e.message; }
+  }
+  throw new Error(lastErr || 'OpenRouter OCR échoué');
 }
 
 async function transcribeImageViaGemini(base64, mimeType, prompt) {
@@ -1966,8 +2016,8 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
         if (r.status === 429 || r.status === 503) { markGeminiVisionBlocked(); await sleep(3000); continue; }
         if (!r.ok) continue;
         const d = await r.json();
-        const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-        if (t.length > 5) return t;
+        const t = sanitizeOcrText(d.candidates?.[0]?.content?.parts?.[0]?.text || '');
+        if (isValidOcrText(t)) return t;
       } catch(e) { /* suivant */ }
     }
   }
@@ -1975,13 +2025,11 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
 }
 
 async function transcribeImageBase64(base64, mimeType) {
-  const prompt = 'Transcris le texte visible (cours). Structure conservée. Maths en LaTeX $ $. Texte brut, concis.';
+  const prompt = OCR_PROMPT;
   const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
 
   if (orKey) {
-    const t = await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
-    if (t.length > 5) return t;
-    throw new Error('OpenRouter n\'a pas pu lire l\'image — vérifie ta clé (openrouter.ai/keys) et réessaie.');
+    return await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
   }
 
   if (!isGeminiVisionBlocked()) {
