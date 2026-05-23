@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Notiq build: openrouter-v3-free -->
+<!-- Notiq build: openrouter-v4-models -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -736,8 +736,9 @@ footer a { color: var(--green); text-decoration: none; }
   <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" />
   <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">Gemini secours (2e compte Google, optionnel)</label>
   <input class="modal-input" id="api-key-input2" type="password" placeholder="AIza... (autre compte)" autocomplete="off" />
-  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">OpenRouter (recommandé — secours rapide)</label>
-  <input class="modal-input" id="openrouter-key-input" type="password" placeholder="sk-or-..." autocomplete="off" />
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">OpenRouter (photos + secours — gratuit)</label>
+  <input class="modal-input" id="openrouter-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" />
+  <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0">Crée la clé sur openrouter.ai/keys · mode 🌐 OpenRouter pour les images</p>
   <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">Groq (optionnel)</label>
   <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_..." autocomplete="off" />
   <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;margin-top:12px">Moteur IA</label>
@@ -1723,17 +1724,18 @@ async function tryAllGemini(fullPrompt, maxTok) {
   throw new Error('Gemini indisponible');
 }
 
-// Uniquement modèles GRATUITS (:free ou openrouter/free) — évite 402 Payment Required
+// IDs vérifiés sur openrouter.ai/api/v1/models (évite 404)
 const OPENROUTER_MODELS_TEXT = [
   'openrouter/free',
   'meta-llama/llama-3.2-3b-instruct:free',
-  'qwen/qwen-2.5-7b-instruct:free',
-  'google/gemma-2-9b-it:free'
+  'qwen/qwen3-next-80b-a3b-instruct:free',
+  'deepseek/deepseek-v4-flash:free'
 ];
 const OPENROUTER_MODELS_VISION = [
   'openrouter/free',
-  'google/gemini-2.0-flash-exp:free',
-  'google/gemini-2.5-flash-lite-preview-09-2025:free'
+  'nvidia/nemotron-nano-12b-v2-vl:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
 ];
 
 function openRouterHeaders(orKey) {
@@ -1753,7 +1755,11 @@ async function callOpenRouterChat(orKey, body, models) {
       headers: openRouterHeaders(orKey),
       body: JSON.stringify({ ...body, model })
     });
-    if (r.status === 402) { lastErr = 'OpenRouter : crédits requis (utilise modèles :free)'; continue; }
+    if (r.status === 402) {
+      const e = await r.json().catch(() => ({}));
+      lastErr = e.error?.message || 'OpenRouter 402 : vérifie ta clé sur openrouter.ai/keys (compte actif, modèles gratuits)';
+      continue;
+    }
     if (r.status === 404) { lastErr = 'Modèle OpenRouter introuvable'; continue; }
     if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé'; await sleep(2000); continue; }
     if (!r.ok) {
@@ -1847,7 +1853,38 @@ async function aiGroq(prompt, groqKey, maxTok) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-const IMAGE_IMPORT_DELAY = 4000;
+const IMAGE_IMPORT_DELAY = 5000;
+let geminiVisionBlockedUntil = parseInt(localStorage.getItem('notiq_gemini_vision_blocked') || '0', 10);
+
+function markGeminiVisionBlocked() {
+  geminiVisionBlockedUntil = Date.now() + 90000;
+  localStorage.setItem('notiq_gemini_vision_blocked', String(geminiVisionBlockedUntil));
+}
+function isGeminiVisionBlocked() {
+  return Date.now() < geminiVisionBlockedUntil;
+}
+
+/** Réduit la taille des photos (évite 429 / erreurs vision). */
+async function compressImageFile(file, maxW = 1400) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxW / bmp.width);
+  const w = Math.round(bmp.width * scale);
+  const h = Math.round(bmp.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.82));
+  if (!blob) throw new Error('Compression image échouée');
+  const base64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Lecture image'));
+    r.readAsDataURL(blob);
+  });
+  return { base64, mimeType: 'image/jpeg' };
+}
 
 function hasVisionApiKey() {
   return getGeminiKeys().length > 0 || !!(localStorage.getItem('notiq_openrouter_key') || '').trim();
@@ -1885,8 +1922,9 @@ async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
 }
 
 async function transcribeImageViaGemini(base64, mimeType, prompt) {
-  const visionModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
-  const cap = isCompactMode() ? 2048 : 4096;
+  if (isGeminiVisionBlocked()) return null;
+  const visionModels = ['gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+  const cap = isCompactMode() ? 2048 : 3072;
   for (const gKey of getGeminiKeys()) {
     for (const model of visionModels) {
       try {
@@ -1898,7 +1936,7 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
               { inline_data: { mime_type: mimeType, data: base64 } }
             ] }], generationConfig: { maxOutputTokens: cap, temperature: 0 } }) }
         );
-        if (r.status === 429 || r.status === 503) { await sleep(3000); continue; }
+        if (r.status === 429 || r.status === 503) { markGeminiVisionBlocked(); await sleep(3000); continue; }
         if (!r.ok) continue;
         const d = await r.json();
         const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
@@ -1912,27 +1950,21 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
 async function transcribeImageBase64(base64, mimeType) {
   const prompt = 'Transcris le texte visible (cours). Structure conservée. Maths en LaTeX $ $. Texte brut, concis.';
   const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
-  const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
-  const tryOrFirst = orKey && (mode === 'openrouter' || !getGeminiKeys().length);
+  let lastErr = '';
 
-  if (tryOrFirst) {
+  if (orKey) {
     try {
       const t = await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
       if (t.length > 5) return t;
-    } catch(e) { console.warn('OR vision', e.message); }
+    } catch(e) { lastErr = e.message; console.warn('OR vision', e.message); }
   }
 
-  const geminiText = await transcribeImageViaGemini(base64, mimeType, prompt);
-  if (geminiText) return geminiText;
-
-  if (orKey && !tryOrFirst) {
-    try {
-      const t = await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
-      if (t.length > 5) return t;
-    } catch(e) { console.warn('OR vision fallback', e.message); }
+  if (!isGeminiVisionBlocked()) {
+    const geminiText = await transcribeImageViaGemini(base64, mimeType, prompt);
+    if (geminiText) return geminiText;
   }
 
-  throw new Error('Quota saturé — attends 1 min entre photos, ou clé OpenRouter gratuite (openrouter.ai/keys).');
+  throw new Error(lastErr || 'Images : Gemini saturé (429). Utilise une clé OpenRouter valide (openrouter.ai/keys) et mode 🌐 OpenRouter.');
 }
 
 async function importFiles(files) {
@@ -2046,13 +2078,18 @@ async function processImage(file, opts = {}) {
   }
   if (!batch) drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
 
-  const base64 = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = () => rej(new Error('Lecture du fichier échouée'));
-    r.readAsDataURL(file);
-  });
-  const mimeType = file.type || 'image/jpeg';
+  let base64, mimeType;
+  try {
+    ({ base64, mimeType } = await compressImageFile(file));
+  } catch(e) {
+    base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Lecture du fichier échouée'));
+      r.readAsDataURL(file);
+    });
+    mimeType = file.type || 'image/jpeg';
+  }
   const text = await transcribeImageBase64(base64, mimeType);
   if (text.length <= 5) throw new Error('Aucun texte détecté sur l\'image');
 
