@@ -1794,45 +1794,152 @@ async function aiGroq(prompt, groqKey) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+const IMAGE_IMPORT_DELAY = 6000;
+
+function hasVisionApiKey() {
+  return getGeminiKeys().length > 0 || !!(localStorage.getItem('notiq_openrouter_key') || '').trim();
+}
+
+function isPdfFile(file) {
+  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+}
+function isImageFile(file) {
+  return file.type.startsWith('image/');
+}
+
+function appendCourseText(chunk, fileName) {
+  const cleanText = chunk.replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$');
+  const current = document.getElementById('course-text').value.trim();
+  const header = fileName ? `\n\n— ${fileName} —\n\n` : '\n\n—\n\n';
+  document.getElementById('course-text').value = current ? current + header + cleanText : cleanText;
+  persistCourseTextarea();
+  document.getElementById('saved-notice').style.display = 'block';
+  updateCharCount();
+}
+
+async function transcribeImageBase64(base64, mimeType) {
+  const prompt = 'Transcris intégralement le texte de cette image de cours scolaire. Préserve la structure. Formules mathématiques en LaTeX entre $ $. Texte brut, pas de markdown.';
+  const visionModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+
+  for (const gKey of getGeminiKeys()) {
+    for (const model of visionModels) {
+      try {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gKey}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mimeType, data: base64 } }
+            ] }], generationConfig: { maxOutputTokens: 4096, temperature: 0 } }) }
+        );
+        if (r.status === 429 || r.status === 503) { await sleep(2500); continue; }
+        if (!r.ok) continue;
+        const d = await r.json();
+        const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        if (t.length > 5) return t;
+      } catch(e) { /* clé / modèle suivant */ }
+    }
+  }
+
+  const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
+  if (orKey) {
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+    for (const model of OPENROUTER_MODELS) {
+      try {
+        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${orKey}`,
+            'HTTP-Referer': location.origin || 'https://notiq.app',
+            'X-Title': 'Notiq'
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: dataUrl } }
+            ] }],
+            max_tokens: 4096,
+            temperature: 0
+          })
+        });
+        if (r.status === 429 || r.status === 503) { await sleep(2500); continue; }
+        if (!r.ok) continue;
+        const d = await r.json();
+        const t = d.choices?.[0]?.message?.content?.trim() || '';
+        if (t.length > 5) return t;
+      } catch(e) { /* modèle suivant */ }
+    }
+  }
+
+  throw new Error('Quota API (429) — attends 1 min entre les photos ou ajoute OpenRouter / 2e clé Gemini.');
+}
+
+async function importFiles(files) {
+  const drop = document.getElementById('pdf-drop');
+  if (!files.length) return;
+  if (!hasAnyApiKey()) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
+  if (files.some(isImageFile) && !hasVisionApiKey()) {
+    showToast('🔑 Images : clé Gemini ou OpenRouter requise.', 'error');
+    openKeyModal();
+    return;
+  }
+
+  let ok = 0;
+  const failed = [];
+  let lastWasImage = false;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (lastWasImage && isImageFile(file)) {
+      drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Pause API (${IMAGE_IMPORT_DELAY / 1000}s) avant image ${i + 1}/${files.length}…</p>`;
+      await sleep(IMAGE_IMPORT_DELAY);
+    }
+    lastWasImage = isImageFile(file);
+
+    drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Traitement <strong>${escHtml(file.name)}</strong> (${i + 1}/${files.length})…</p>`;
+
+    try {
+      if (isPdfFile(file)) {
+        await processPDF(file, true);
+        ok++;
+      } else if (isImageFile(file)) {
+        await processImage(file, { batch: true });
+        ok++;
+      } else {
+        failed.push(file.name + ' (format)');
+      }
+    } catch(e) {
+      failed.push(file.name);
+      console.error('Import:', file.name, e);
+      showToast(`⚠️ ${file.name} : ${(e.message || 'erreur').slice(0, 60)}`, 'error');
+    }
+  }
+
+  const errN = failed.length;
+  drop.innerHTML = `<div style="font-size:2rem">${errN && !ok ? '❌' : errN ? '⚠️' : '✅'}</div><p><strong>${ok}/${files.length} importé(s)</strong>${errN ? `<br><span style="font-size:12px;color:var(--text-muted)">Échec : ${escHtml(failed.join(', '))}</span>` : ''}</p>`;
+  showToast(errN ? `⚠️ ${ok}/${files.length} fichier(s)` : `✅ ${ok} fichier(s) importé(s) !`, errN ? 'error' : 'success');
+}
+
 function handleDragOver(e) { e.preventDefault(); document.getElementById('pdf-drop').classList.add('drag'); }
 
 async function handleDrop(e) {
   e.preventDefault();
   document.getElementById('pdf-drop').classList.remove('drag');
-  const files = Array.from(e.dataTransfer.files);
-  if (!files.length) return;
-  if (!hasAnyApiKey()) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
-  for (const file of files) {
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) await processPDF(file);
-    else if (file.type.startsWith('image/')) await processImage(file);
-    else showToast(`⚠️ ${file.name} : format non supporté.`, 'error');
-  }
+  await importFiles(Array.from(e.dataTransfer.files));
 }
 
 async function handlePDF(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
-  if (!hasAnyApiKey()) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
-  const drop = document.getElementById('pdf-drop');
-  let errors = 0;
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Traitement de <strong>${escHtml(file.name)}</strong> (${i+1}/${files.length})…</p>`;
-    try {
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) await processPDF(file);
-      else if (file.type.startsWith('image/')) await processImage(file);
-      else { showToast(`⚠️ ${file.name} : format non supporté.`, 'error'); errors++; }
-    } catch(e) { errors++; console.error('Import error:', file.name, e); }
-  }
-  const ok = files.length - errors;
-  drop.innerHTML = `<div style="font-size:2rem">${errors ? '⚠️' : '✅'}</div><p><strong>${ok} fichier(s) importé(s)</strong>${errors ? ` · ${errors} erreur(s)` : ''}</p>`;
-  showToast(errors ? `⚠️ ${ok}/${files.length} importés` : `✅ ${ok} fichier(s) importés !`, errors ? 'error' : 'success');
+  await importFiles(files);
   input.value = '';
 }
 
-async function processPDF(file) {
+async function processPDF(file, batch = false) {
   const drop = document.getElementById('pdf-drop');
-  drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Extraction du texte…</p>';
+  if (!batch) drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Extraction du texte…</p>';
   try {
     const arrayBuffer = await file.arrayBuffer();
     const uint8 = new Uint8Array(arrayBuffer);
@@ -1853,65 +1960,47 @@ async function processPDF(file) {
     }
     text = text.trim().replace(/\s{3,}/g, '\n\n');
     if (text.length < 50) text = `[PDF importé : ${file.name}]\n\nLe texte n'a pas pu être extrait automatiquement.`;
-    document.getElementById('course-text').value = text;
-    persistCourseTextarea();
-    document.getElementById('saved-notice').style.display = 'block';
-    drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> importé</p>`;
+    if (batch) appendCourseText(text, file.name);
+    else {
+      document.getElementById('course-text').value = text;
+      persistCourseTextarea();
+      document.getElementById('saved-notice').style.display = 'block';
+      updateCharCount();
+      drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> importé</p>`;
+    }
   } catch(e) {
-    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong></p>';
-    showToast('❌ Erreur lors de l\'import du PDF', 'error');
+    if (!batch) {
+      drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong></p>';
+      showToast('❌ Erreur lors de l\'import du PDF', 'error');
+    }
+    throw e;
   }
 }
 
-async function processImage(file) {
+async function processImage(file, opts = {}) {
+  const batch = !!opts.batch;
   const drop = document.getElementById('pdf-drop');
-  if (!getGeminiKeys().length) { showToast('🔑 Clé Gemini requise pour les images.', 'error'); openKeyModal(); return; }
-  drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
-  try {
-    const base64 = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]);
-      r.onerror = () => rej(new Error('Lecture échouée'));
-      r.readAsDataURL(file);
-    });
-    const mimeType = file.type || 'image/jpeg';
-    const text = await (async () => {
-      for (const gKey of getGeminiKeys()) {
-        for (const model of ['gemini-2.5-flash-lite', 'gemini-2.5-flash']) {
-          try {
-            const r = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gKey}`,
-              { method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({ contents:[{parts:[
-                  {text:'Transcris intégralement le texte de cette image de cours scolaire. Préserve la structure. Formules mathématiques en LaTeX entre $ $. Texte brut, pas de markdown.'},
-                  {inline_data:{mime_type:mimeType,data:base64}}
-                ]}], generationConfig:{maxOutputTokens:4096,temperature:0} }) }
-            );
-            if (r.status === 429 || r.status === 503) continue;
-            if (!r.ok) continue;
-            const d = await r.json();
-            const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-            if (t) return t;
-          } catch(e) { /* essaie clé/modèle suivant */ }
-        }
-      }
-      throw new Error('Erreur API (429)');
-    })();
-    if (text.length > 5) {
-      const cleanText = text.replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$');
-      const current = document.getElementById('course-text').value.trim();
-      document.getElementById('course-text').value = current ? current + '\n\n—\n\n' + cleanText : cleanText;
-      persistCourseTextarea();
-      document.getElementById('saved-notice').style.display = 'block';
-      drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit</p>`;
-      showToast('✅ Image transcrite !', 'success');
-    } else {
-      drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un <strong>PDF</strong> ou une <strong>image</strong></p>';
-      showToast('❌ Aucun texte détecté.', 'error');
-    }
-  } catch(e) {
-    drop.innerHTML = '<div style="font-size:2rem">📄</div><p>Clique ici ou glisse un fichier</p>';
-    showToast('❌ ' + (e.message || 'Erreur lors de l\'analyse'), 'error');
+  if (!hasVisionApiKey()) {
+    showToast('🔑 Clé Gemini ou OpenRouter requise pour les images.', 'error');
+    openKeyModal();
+    throw new Error('Pas de clé vision');
+  }
+  if (!batch) drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
+
+  const base64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Lecture du fichier échouée'));
+    r.readAsDataURL(file);
+  });
+  const mimeType = file.type || 'image/jpeg';
+  const text = await transcribeImageBase64(base64, mimeType);
+  if (text.length <= 5) throw new Error('Aucun texte détecté sur l\'image');
+
+  appendCourseText(text, file.name);
+  if (!batch) {
+    drop.innerHTML = `<div style="font-size:2rem">✅</div><p><strong>${escHtml(file.name)}</strong> transcrit</p>`;
+    showToast('✅ Image transcrite !', 'success');
   }
 }
 
