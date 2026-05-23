@@ -730,19 +730,16 @@ footer a { color: var(--green); text-decoration: none; }
 <div class="modal-overlay" id="key-modal">
 <div class="modal">
   <h3>🔑 Clés API</h3>
-  <p>Entre ta clé Gemini (obligatoire). Groq et DeepSeek sont optionnels — utilisés automatiquement si Gemini est surchargé.</p>
+  <p>Entre ta clé <strong>Gemini</strong> (obligatoire). Groq est optionnel en secours — quota journalier limité (~100k tokens/jour).</p>
   <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Google Gemini (obligatoire)</label>
   <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" />
-  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">Groq (optionnel — gratuit, prioritaire sur Gemini)</label>
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">Groq (optionnel — secours si Gemini est saturé)</label>
   <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_..." autocomplete="off" />
-  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">DeepSeek (optionnel — fallback automatique)</label>
-  <input class="modal-input" id="deepseek-key-input" type="password" placeholder="sk-..." autocomplete="off" />
   <div class="modal-error" id="modal-error"></div>
   <div class="modal-row">
     <button class="btn-green" onclick="saveKey()">Connecter</button>
     <a class="modal-link" href="https://aistudio.google.com/app/apikey" target="_blank">Clé Gemini →</a>
     <a class="modal-link" href="https://console.groq.com/keys" target="_blank">Clé Groq →</a>
-    <a class="modal-link" href="https://platform.deepseek.com/api_keys" target="_blank">Clé DeepSeek →</a>
   </div>
   <div class="modal-note">🔒 Tes clés restent dans ton navigateur uniquement.</div>
 </div>
@@ -1138,7 +1135,7 @@ let courses     = {};
 let activeCourseId = null;
 let quizHistory = [];
 let pomoCompletedSessions = 0;
-const API_DELAY = 5000;
+const API_DELAY = 8000;
 let isChatPending = false;
 let explainDebounceTimer = null;
 let persistDebounceTimer = null;
@@ -1549,7 +1546,6 @@ function openKeyModal() {
   const m = document.getElementById('key-modal');
   m.classList.add('open');
   document.getElementById('api-key-input').value = localStorage.getItem('notiq_gemini_key') || '';
-  document.getElementById('deepseek-key-input').value = localStorage.getItem('notiq_deepseek_key') || '';
   document.getElementById('groq-key-input').value = localStorage.getItem('notiq_groq_key') || '';
   document.getElementById('modal-error').textContent = '';
   setTimeout(() => document.getElementById('api-key-input').focus(), 200);
@@ -1563,9 +1559,6 @@ function saveKey() {
   errEl.textContent = '';
   apiKey = k;
   localStorage.setItem('notiq_gemini_key', k);
-  const dsKey = document.getElementById('deepseek-key-input').value.trim();
-  if (dsKey && !dsKey.startsWith('sk-')) { errEl.textContent = 'Clé DeepSeek invalide.'; return; }
-  if (dsKey) localStorage.setItem('notiq_deepseek_key', dsKey);
   const groqKey2 = document.getElementById('groq-key-input')?.value.trim();
   if (groqKey2) localStorage.setItem('notiq_groq_key', groqKey2);
   updateKeyStatus();
@@ -1582,87 +1575,112 @@ function updateKeyStatus() {
 document.getElementById('key-modal').addEventListener('click', function(e) { if (e.target === this) closeKeyModal(); });
 document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
 
-const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+const GROQ_MODELS = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'];
 
-async function callGemini(model, prompt) {
+function isGroqRateLimit(msg) {
+  const m = String(msg || '').toLowerCase();
+  return m.includes('rate limit') || m.includes('429') || m.includes('tokens per day') || m.includes('quota');
+}
+function markGroqBlocked(errMsg) {
+  let mins = 50;
+  const m = String(errMsg).match(/try again in\s+(\d+)\s*m/i);
+  if (m) mins = parseInt(m[1], 10) + 3;
+  localStorage.setItem('notiq_groq_blocked_until', String(Date.now() + mins * 60000));
+}
+function isGroqBlocked() {
+  return Date.now() < parseInt(localStorage.getItem('notiq_groq_blocked_until') || '0', 10);
+}
+
+function buildAiFailMessage() {
+  if (isGroqBlocked()) {
+    return 'Quota Groq épuisé pour aujourd\'hui. Utilise ta clé Gemini (déjà connectée) — réessaie dans ~1 h si Gemini est aussi saturé.';
+  }
+  return 'APIs surchargées (Gemini/Groq). Attends 1–2 minutes et réessaie, ou réessaie plus tard.';
+}
+
+function aiErrorHtml(msg) {
+  const hint = isGroqRateLimit(msg) || msg.includes('satur') || msg.includes('Quota')
+    ? '<p style="font-size:12px;margin-top:8px;color:var(--text-muted)">Conseil : retire la clé Groq dans les paramètres si tu es en quota journalier — Gemini sera utilisé en priorité.</p>'
+    : '';
+  return `<div style="color:var(--red);font-size:14px;padding:1rem 0;line-height:1.5">❌ ${escHtml(msg)}${hint}</div>`;
+}
+
+async function callGemini(model, prompt, attempt = 0) {
   const r = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 4096, temperature: 0.4 } }) }
   );
+  if ((r.status === 429 || r.status === 503) && attempt < 2) {
+    await sleep(2000 * (attempt + 1));
+    return callGemini(model, prompt, attempt + 1);
+  }
   if (r.status === 429 || r.status === 503) throw new Error('RATE_LIMITED');
   if (r.status === 400 || r.status === 403) { openKeyModal(); throw new Error('Clé API invalide ou expirée.'); }
-  if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.error?.message || `Erreur API (${r.status})`); }
+  if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.error?.message || `Erreur Gemini (${r.status})`); }
   const d = await r.json();
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
   if (!text) throw new Error('Réponse vide.');
   return text;
 }
 
-// ══ FONCTION ai() — FIX : Groq en premier, avec return si echec pour ne pas tomber sur Gemini ══
 async function ai(prompt, systemPrompt) {
-  if (!apiKey) { openKeyModal(); throw new Error('No API key'); }
+  if (!apiKey) { openKeyModal(); throw new Error('Clé Gemini requise — ouvre les paramètres API.'); }
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
-  const groqKey = localStorage.getItem('notiq_groq_key');
 
-  // Groq en premier — si echec, on STOPPE (return) et n'appelle pas Gemini
-  if (groqKey) {
-    try { return await aiGroq(fullPrompt, groqKey); }
-    catch(gErr) {
-      console.warn('Groq error:', gErr.message);
-      showToast('⚠️ Groq indisponible — bascule sur Gemini…');
-      // NE PAS mettre return ici : on laisse tomber sur Gemini UNIQUEMENT si Groq echoue vraiment
-    }
-  }
-
-  // Cascade Gemini
-  for (let i = 0; i < GEMINI_MODELS.length; i++) {
-    const model = GEMINI_MODELS[i];
-    if (i > 0) showToast(`⚠️ Bascule sur ${model}…`);
+  // Gemini en priorité (clé principale de l'app)
+  let geminiLimited = false;
+  for (const model of GEMINI_MODELS) {
     try {
-      const result = await callGemini(model, fullPrompt);
-      return result;
+      return await callGemini(model, fullPrompt);
     } catch(e) {
-      if (e.message !== 'RATE_LIMITED') throw e;
+      if (e.message === 'Clé API invalide ou expirée.') throw e;
+      if (e.message === 'RATE_LIMITED') { geminiLimited = true; continue; }
+      console.warn('Gemini', model, e.message);
     }
   }
 
-  // Fallback DeepSeek
-  const dsKey = localStorage.getItem('notiq_deepseek_key');
-  if (dsKey) {
-    showToast('🔄 Bascule sur DeepSeek…');
-    try { return await aiDeepSeek(fullPrompt, dsKey); }
-    catch(dsErr) { throw new Error('Tous les APIs surchargés. Réessaie dans 1 minute.'); }
+  // Groq en secours (sauf si quota journalier déjà atteint)
+  const groqKey = localStorage.getItem('notiq_groq_key');
+  if (groqKey && !isGroqBlocked()) {
+    try { return await aiGroq(fullPrompt, groqKey); }
+    catch(e) {
+      console.warn('Groq:', e.message);
+      if (isGroqRateLimit(e.message)) markGroqBlocked(e.message);
+    }
   }
 
-  throw new Error('Tous les modeles satures. Ajoute une cle Groq (gratuit) dans les parametres.');
+  if (geminiLimited && isGroqBlocked()) throw new Error(buildAiFailMessage());
+  if (geminiLimited) throw new Error('Gemini surchargé. Réessaie dans 1–2 minutes.');
+  throw new Error(buildAiFailMessage());
 }
 
 async function aiGroq(prompt, groqKey) {
-  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-    body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.7 })
-  });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Erreur Groq (${r.status})`); }
-  const d = await r.json();
-  const text = d.choices?.[0]?.message?.content || '';
-  if (!text) throw new Error('Réponse vide de Groq.');
-  return text;
-}
-
-async function aiDeepSeek(prompt, dsKey) {
-  const r = await fetch('https://corsproxy.io/?https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${dsKey}` },
-    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.7 })
-  });
-  if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.error?.message || `Erreur DeepSeek (${r.status})`); }
-  const d = await r.json();
-  const text = d.choices?.[0]?.message?.content || '';
-  if (!text) throw new Error('Réponse vide de DeepSeek.');
-  showToast('✅ Réponse via DeepSeek', 'success');
-  return text;
+  let lastErr = 'Erreur Groq';
+  for (const model of GROQ_MODELS) {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.5 })
+    });
+    if (r.status === 429) {
+      const e = await r.json().catch(() => ({}));
+      lastErr = e.error?.message || 'Rate limit Groq';
+      if (isGroqRateLimit(lastErr)) { markGroqBlocked(lastErr); throw new Error(lastErr); }
+      continue;
+    }
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      lastErr = e.error?.message || `Erreur Groq (${r.status})`;
+      continue;
+    }
+    const d = await r.json();
+    const text = d.choices?.[0]?.message?.content || '';
+    if (text) return text;
+    lastErr = 'Réponse vide de Groq';
+  }
+  throw new Error(lastErr);
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -2074,7 +2092,9 @@ async function genQuiz() {
     renderQuiz();
     saveCourseGenerated();
   } catch(e) {
-    document.getElementById('quiz-list').innerHTML = '<div class="loading-txt">❌ Erreur de génération, réessaie.</div>';
+    const msg = e.message || 'Erreur de génération';
+    document.getElementById('quiz-list').innerHTML = aiErrorHtml(msg);
+    showToast(msg.slice(0, 80), 'error');
     console.error('Quiz error:', e);
   }
 }
@@ -2900,6 +2920,9 @@ function undoDraw() {
 function aiJSON(prompt, system) {
   return ai(prompt, (system || '') + '\nRéponds UNIQUEMENT en JSON valide. Sans markdown, sans backticks. Guillemets droits " uniquement.')
     .then(text => {
+      if (isGroqRateLimit(text) || /^error/i.test(text.trim())) {
+        throw new Error('Réponse API invalide — quota ou surcharge. Réessaie.');
+      }
       let clean = text.replace(/```json\n?|```\n?/g, '').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u00AB\u00BB]/g, '"').trim();
       const jsonMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
       if (jsonMatch) clean = jsonMatch[0];
