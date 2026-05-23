@@ -730,16 +730,27 @@ footer a { color: var(--green); text-decoration: none; }
 <div class="modal-overlay" id="key-modal">
 <div class="modal">
   <h3>🔑 Clés API</h3>
-  <p>Entre ta clé <strong>Gemini</strong> (obligatoire). Groq est optionnel en secours — quota journalier limité (~100k tokens/jour).</p>
-  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Google Gemini (obligatoire)</label>
+  <p style="font-size:13px;margin-bottom:12px">Plus tu ajoutes de clés, moins tu seras bloqué. Au moins <strong>une</strong> clé suffit.</p>
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Google Gemini (principale)</label>
   <input class="modal-input" id="api-key-input" type="password" placeholder="AIza..." autocomplete="off" />
-  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:4px">Groq (optionnel — secours si Gemini est saturé)</label>
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">Gemini secours (2e compte Google, optionnel)</label>
+  <input class="modal-input" id="api-key-input2" type="password" placeholder="AIza... (autre compte)" autocomplete="off" />
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">OpenRouter (recommandé — secours rapide)</label>
+  <input class="modal-input" id="openrouter-key-input" type="password" placeholder="sk-or-..." autocomplete="off" />
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:8px">Groq (optionnel)</label>
   <input class="modal-input" id="groq-key-input" type="password" placeholder="gsk_..." autocomplete="off" />
+  <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;margin-top:12px">Vitesse d'analyse</label>
+  <div class="mode-sw" id="ai-mode-sw">
+    <button type="button" class="mode-btn on" id="ai-mode-auto" onclick="setAiMode('auto')">🔄 Auto</button>
+    <button type="button" class="mode-btn" id="ai-mode-fast" onclick="setAiMode('fast')">⚡ Rapide</button>
+  </div>
+  <p style="font-size:11px;color:var(--text-muted);margin-top:6px">Rapide = Groq en premier. Auto = Gemini puis secours.</p>
   <div class="modal-error" id="modal-error"></div>
   <div class="modal-row">
-    <button class="btn-green" onclick="saveKey()">Connecter</button>
-    <a class="modal-link" href="https://aistudio.google.com/app/apikey" target="_blank">Clé Gemini →</a>
-    <a class="modal-link" href="https://console.groq.com/keys" target="_blank">Clé Groq →</a>
+    <button class="btn-green" onclick="saveKey()">Enregistrer</button>
+    <a class="modal-link" href="https://aistudio.google.com/app/apikey" target="_blank">Gemini</a>
+    <a class="modal-link" href="https://openrouter.ai/keys" target="_blank">OpenRouter</a>
+    <a class="modal-link" href="https://console.groq.com/keys" target="_blank">Groq</a>
   </div>
   <div class="modal-note">🔒 Tes clés restent dans ton navigateur uniquement.</div>
 </div>
@@ -1135,7 +1146,12 @@ let courses     = {};
 let activeCourseId = null;
 let quizHistory = [];
 let pomoCompletedSessions = 0;
-const API_DELAY = 8000;
+function getApiDelay() {
+  const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
+  if (mode === 'fast') return 1200;
+  if (getGeminiKeys().length > 1 || localStorage.getItem('notiq_openrouter_key')) return 2000;
+  return 3500;
+}
 let isChatPending = false;
 let explainDebounceTimer = null;
 let persistDebounceTimer = null;
@@ -1157,7 +1173,7 @@ window.addEventListener('load', () => {
     if (cta) cta.style.display = 'none';
   }
 
-  apiKey = localStorage.getItem('notiq_gemini_key') || '';
+  syncPrimaryApiKey();
   updateKeyStatus();
 
   if (localStorage.getItem('notiq_theme') === 'light') {
@@ -1216,7 +1232,7 @@ window.addEventListener('load', () => {
     if (document.getElementById('exam-overlay').classList.contains('open')) closeExam();
   });
 
-  if (!apiKey) openKeyModal();
+  if (!hasAnyApiKey()) openKeyModal();
   initScrollReveal();
   initPomodoro();
   renderStats();
@@ -1542,35 +1558,80 @@ function resetEmptyCourseUI() {
   updateCharCount();
 }
 
+function getGeminiKeys() {
+  const keys = [];
+  const k1 = (localStorage.getItem('notiq_gemini_key') || '').trim();
+  const k2 = (localStorage.getItem('notiq_gemini_key2') || '').trim();
+  if (k1) keys.push(k1);
+  if (k2 && k2 !== k1) keys.push(k2);
+  return keys;
+}
+function syncPrimaryApiKey() {
+  const keys = getGeminiKeys();
+  apiKey = keys[0] || '';
+}
+function hasAnyApiKey() {
+  return getGeminiKeys().length > 0
+    || !!(localStorage.getItem('notiq_openrouter_key') || '').trim()
+    || !!(localStorage.getItem('notiq_groq_key') || '').trim();
+}
+function setAiMode(mode) {
+  localStorage.setItem('notiq_ai_mode', mode);
+  document.getElementById('ai-mode-auto')?.classList.toggle('on', mode === 'auto');
+  document.getElementById('ai-mode-fast')?.classList.toggle('on', mode === 'fast');
+  showToast(mode === 'fast' ? '⚡ Mode rapide activé' : '🔄 Mode auto activé', 'success');
+}
 function openKeyModal() {
   const m = document.getElementById('key-modal');
   m.classList.add('open');
   document.getElementById('api-key-input').value = localStorage.getItem('notiq_gemini_key') || '';
+  document.getElementById('api-key-input2').value = localStorage.getItem('notiq_gemini_key2') || '';
+  document.getElementById('openrouter-key-input').value = localStorage.getItem('notiq_openrouter_key') || '';
   document.getElementById('groq-key-input').value = localStorage.getItem('notiq_groq_key') || '';
+  const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
+  document.getElementById('ai-mode-auto')?.classList.toggle('on', mode === 'auto');
+  document.getElementById('ai-mode-fast')?.classList.toggle('on', mode === 'fast');
   document.getElementById('modal-error').textContent = '';
   setTimeout(() => document.getElementById('api-key-input').focus(), 200);
 }
 function closeKeyModal() { document.getElementById('key-modal').classList.remove('open'); }
 function saveKey() {
   const k = document.getElementById('api-key-input').value.trim();
-  const errEl = document.getElementById('modal-error');
-  if (!k) { errEl.textContent = 'Entre ta clé API.'; return; }
-  if (!k.startsWith('AIza') || k.length < 20) { errEl.textContent = 'Clé invalide — elle doit commencer par "AIza".'; return; }
-  errEl.textContent = '';
-  apiKey = k;
-  localStorage.setItem('notiq_gemini_key', k);
+  const k2 = document.getElementById('api-key-input2').value.trim();
+  const orKey = document.getElementById('openrouter-key-input').value.trim();
   const groqKey2 = document.getElementById('groq-key-input')?.value.trim();
-  if (groqKey2) localStorage.setItem('notiq_groq_key', groqKey2);
+  const errEl = document.getElementById('modal-error');
+  if (!k && !k2 && !orKey && !groqKey2) { errEl.textContent = 'Ajoute au moins une clé API.'; return; }
+  if (k && (!k.startsWith('AIza') || k.length < 20)) { errEl.textContent = 'Clé Gemini 1 invalide (AIza…).'; return; }
+  if (k2 && (!k2.startsWith('AIza') || k2.length < 20)) { errEl.textContent = 'Clé Gemini 2 invalide (AIza…).'; return; }
+  if (orKey && !orKey.startsWith('sk-or')) { errEl.textContent = 'Clé OpenRouter invalide (sk-or…).'; return; }
+  errEl.textContent = '';
+  if (k) localStorage.setItem('notiq_gemini_key', k); else localStorage.removeItem('notiq_gemini_key');
+  if (k2) localStorage.setItem('notiq_gemini_key2', k2); else localStorage.removeItem('notiq_gemini_key2');
+  if (orKey) localStorage.setItem('notiq_openrouter_key', orKey); else localStorage.removeItem('notiq_openrouter_key');
+  if (groqKey2) localStorage.setItem('notiq_groq_key', groqKey2); else localStorage.removeItem('notiq_groq_key');
+  syncPrimaryApiKey();
   updateKeyStatus();
   closeKeyModal();
-  showToast('✅ Clé API connectée !', 'success');
+  const n = [k, k2 && k2 !== k ? k2 : '', orKey, groqKey2].filter(Boolean).length;
+  showToast(`✅ ${n} clé(s) enregistrée(s) !`, 'success');
 }
 function updateKeyStatus() {
   const btn = document.getElementById('key-status-btn');
   const txt = document.getElementById('key-status-txt');
   const ico = document.getElementById('key-status-icon');
-  if (apiKey) { btn.classList.add('connected'); txt.textContent = 'Connecté'; ico.textContent = '✅'; }
-  else { btn.classList.remove('connected'); txt.textContent = 'Clé API'; ico.textContent = '🔑'; }
+  const n = getGeminiKeys().length
+    + (localStorage.getItem('notiq_openrouter_key') ? 1 : 0)
+    + (localStorage.getItem('notiq_groq_key') ? 1 : 0);
+  if (n > 0) {
+    btn.classList.add('connected');
+    txt.textContent = n > 1 ? `${n} IA` : 'Connecté';
+    ico.textContent = '✅';
+  } else {
+    btn.classList.remove('connected');
+    txt.textContent = 'Clé API';
+    ico.textContent = '🔑';
+  }
 }
 document.getElementById('key-modal').addEventListener('click', function(e) { if (e.target === this) closeKeyModal(); });
 document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
@@ -1593,28 +1654,25 @@ function isGroqBlocked() {
 }
 
 function buildAiFailMessage() {
-  if (isGroqBlocked()) {
-    return 'Quota Groq épuisé pour aujourd\'hui. Utilise ta clé Gemini (déjà connectée) — réessaie dans ~1 h si Gemini est aussi saturé.';
-  }
-  return 'APIs surchargées (Gemini/Groq). Attends 1–2 minutes et réessaie, ou réessaie plus tard.';
+  return 'Toutes les IA sont saturées. Ouvre Paramètres API → ajoute une clé OpenRouter (gratuit) ou une 2e clé Gemini, puis réessaie.';
 }
 
 function aiErrorHtml(msg) {
-  const hint = isGroqRateLimit(msg) || msg.includes('satur') || msg.includes('Quota')
-    ? '<p style="font-size:12px;margin-top:8px;color:var(--text-muted)">Conseil : retire la clé Groq dans les paramètres si tu es en quota journalier — Gemini sera utilisé en priorité.</p>'
-    : '';
+  const hint = '<p style="font-size:12px;margin-top:8px;color:var(--text-muted)"><a href="#" onclick="openKeyModal();return false" style="color:var(--green)">+ Ajouter une clé OpenRouter</a> (recommandé) ou une 2e clé Gemini.</p>';
   return `<div style="color:var(--red);font-size:14px;padding:1rem 0;line-height:1.5">❌ ${escHtml(msg)}${hint}</div>`;
 }
 
-async function callGemini(model, prompt, attempt = 0) {
+async function callGemini(model, prompt, attempt = 0, key = null) {
+  const useKey = key || apiKey;
+  if (!useKey) throw new Error('Pas de clé Gemini');
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${useKey}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 4096, temperature: 0.4 } }) }
   );
   if ((r.status === 429 || r.status === 503) && attempt < 2) {
-    await sleep(2000 * (attempt + 1));
-    return callGemini(model, prompt, attempt + 1);
+    await sleep(1200 * (attempt + 1));
+    return callGemini(model, prompt, attempt + 1, useKey);
   }
   if (r.status === 429 || r.status === 503) throw new Error('RATE_LIMITED');
   if (r.status === 400 || r.status === 403) { openKeyModal(); throw new Error('Clé API invalide ou expirée.'); }
@@ -1625,34 +1683,85 @@ async function callGemini(model, prompt, attempt = 0) {
   return text;
 }
 
+async function tryAllGemini(fullPrompt) {
+  let rateLimited = false;
+  for (const key of getGeminiKeys()) {
+    for (const model of GEMINI_MODELS) {
+      try {
+        return await callGemini(model, fullPrompt, 0, key);
+      } catch(e) {
+        if (e.message === 'Clé API invalide ou expirée.') throw e;
+        if (e.message === 'RATE_LIMITED') rateLimited = true;
+        else console.warn('Gemini', model, e.message);
+      }
+    }
+  }
+  if (rateLimited) throw new Error('RATE_LIMITED');
+  throw new Error('Gemini indisponible');
+}
+
+const OPENROUTER_MODELS = [
+  'google/gemini-2.0-flash-exp:free',
+  'meta-llama/llama-3.2-3b-instruct:free',
+  'google/gemma-2-9b-it:free'
+];
+
+async function aiOpenRouter(prompt, orKey) {
+  let lastErr = 'OpenRouter indisponible';
+  for (const model of OPENROUTER_MODELS) {
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${orKey}`,
+        'HTTP-Referer': location.origin || 'https://notiq.app',
+        'X-Title': 'Notiq'
+      },
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 4096, temperature: 0.4 })
+    });
+    if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé'; continue; }
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      lastErr = e.error?.message || `OpenRouter (${r.status})`;
+      continue;
+    }
+    const d = await r.json();
+    const text = d.choices?.[0]?.message?.content || '';
+    if (text) return text;
+  }
+  throw new Error(lastErr);
+}
+
 async function ai(prompt, systemPrompt) {
-  if (!apiKey) { openKeyModal(); throw new Error('Clé Gemini requise — ouvre les paramètres API.'); }
+  if (!hasAnyApiKey()) { openKeyModal(); throw new Error('Ajoute au moins une clé API.'); }
+  syncPrimaryApiKey();
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n---\n\n${prompt}` : prompt;
+  const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
+  const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
+  const groqKey = (localStorage.getItem('notiq_groq_key') || '').trim();
 
-  // Gemini en priorité (clé principale de l'app)
-  let geminiLimited = false;
-  for (const model of GEMINI_MODELS) {
+  const steps = [];
+  if (mode === 'fast') {
+    if (groqKey && !isGroqBlocked()) steps.push('groq');
+    if (getGeminiKeys().length) steps.push('gemini');
+    if (orKey) steps.push('openrouter');
+  } else {
+    if (getGeminiKeys().length) steps.push('gemini');
+    if (orKey) steps.push('openrouter');
+    if (groqKey && !isGroqBlocked()) steps.push('groq');
+  }
+
+  for (const step of steps) {
     try {
-      return await callGemini(model, fullPrompt);
+      if (step === 'gemini') return await tryAllGemini(fullPrompt);
+      if (step === 'openrouter') return await aiOpenRouter(fullPrompt, orKey);
+      if (step === 'groq') return await aiGroq(fullPrompt, groqKey);
     } catch(e) {
+      console.warn(step, e.message);
       if (e.message === 'Clé API invalide ou expirée.') throw e;
-      if (e.message === 'RATE_LIMITED') { geminiLimited = true; continue; }
-      console.warn('Gemini', model, e.message);
+      if (step === 'groq' && isGroqRateLimit(e.message)) markGroqBlocked(e.message);
     }
   }
-
-  // Groq en secours (sauf si quota journalier déjà atteint)
-  const groqKey = localStorage.getItem('notiq_groq_key');
-  if (groqKey && !isGroqBlocked()) {
-    try { return await aiGroq(fullPrompt, groqKey); }
-    catch(e) {
-      console.warn('Groq:', e.message);
-      if (isGroqRateLimit(e.message)) markGroqBlocked(e.message);
-    }
-  }
-
-  if (geminiLimited && isGroqBlocked()) throw new Error(buildAiFailMessage());
-  if (geminiLimited) throw new Error('Gemini surchargé. Réessaie dans 1–2 minutes.');
   throw new Error(buildAiFailMessage());
 }
 
@@ -1692,7 +1801,7 @@ async function handleDrop(e) {
   document.getElementById('pdf-drop').classList.remove('drag');
   const files = Array.from(e.dataTransfer.files);
   if (!files.length) return;
-  if (!apiKey) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
+  if (!hasAnyApiKey()) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
   for (const file of files) {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) await processPDF(file);
     else if (file.type.startsWith('image/')) await processImage(file);
@@ -1703,7 +1812,7 @@ async function handleDrop(e) {
 async function handlePDF(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
-  if (!apiKey) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
+  if (!hasAnyApiKey()) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
   const drop = document.getElementById('pdf-drop');
   let errors = 0;
   for (let i = 0; i < files.length; i++) {
@@ -1756,7 +1865,7 @@ async function processPDF(file) {
 
 async function processImage(file) {
   const drop = document.getElementById('pdf-drop');
-  if (!apiKey) { showToast('🔑 Entre ta clé API pour analyser des images.', 'error'); openKeyModal(); return; }
+  if (!getGeminiKeys().length) { showToast('🔑 Clé Gemini requise pour les images.', 'error'); openKeyModal(); return; }
   drop.innerHTML = '<div style="font-size:2rem">⏳</div><p>Analyse de l\'image par l\'IA…</p>';
   try {
     const base64 = await new Promise((res, rej) => {
@@ -1767,21 +1876,24 @@ async function processImage(file) {
     });
     const mimeType = file.type || 'image/jpeg';
     const text = await (async () => {
-      for (const model of ['gemini-2.5-flash-lite', 'gemini-2.5-flash']) {
-        try {
-          const r = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-            { method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ contents:[{parts:[
-                {text:'Transcris intégralement le texte de cette image de cours scolaire. Préserve la structure. Formules mathématiques en LaTeX entre $ $. Texte brut, pas de markdown.'},
-                {inline_data:{mime_type:mimeType,data:base64}}
-              ]}], generationConfig:{maxOutputTokens:4096,temperature:0} }) }
-          );
-          if (r.status === 429) continue;
-          if (!r.ok) throw new Error(`Erreur API (${r.status})`);
-          const d = await r.json();
-          return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-        } catch(e) { if (!e.message?.includes('429')) throw e; }
+      for (const gKey of getGeminiKeys()) {
+        for (const model of ['gemini-2.5-flash-lite', 'gemini-2.5-flash']) {
+          try {
+            const r = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${gKey}`,
+              { method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ contents:[{parts:[
+                  {text:'Transcris intégralement le texte de cette image de cours scolaire. Préserve la structure. Formules mathématiques en LaTeX entre $ $. Texte brut, pas de markdown.'},
+                  {inline_data:{mime_type:mimeType,data:base64}}
+                ]}], generationConfig:{maxOutputTokens:4096,temperature:0} }) }
+            );
+            if (r.status === 429 || r.status === 503) continue;
+            if (!r.ok) continue;
+            const d = await r.json();
+            const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+            if (t) return t;
+          } catch(e) { /* essaie clé/modèle suivant */ }
+        }
       }
       throw new Error('Erreur API (429)');
     })();
@@ -1836,7 +1948,7 @@ async function loadCourse() {
   if (isLoadingCourse) return;
   const txt = document.getElementById('course-text').value.trim();
   if (!txt) { showToast('⚠️ Colle d\'abord le texte de ton cours.', 'error'); return; }
-  if (!apiKey) { openKeyModal(); return; }
+  if (!hasAnyApiKey()) { openKeyModal(); return; }
   if (txt.length < 50) { showToast('⚠️ Le cours est trop court (50 min.).', 'error'); return; }
   isLoadingCourse = true;
   courseText = txt; exCache = {}; quizData = []; flashData = []; chatHistory = []; ankiScores = {}; exos = [];
@@ -1859,8 +1971,8 @@ async function loadCourse() {
   document.getElementById('loaded-pill').style.display = 'none';
   let errors = 0;
   function apiDead(e) {
-    const m = e?.message || '';
-    return m.includes('satur') || m.includes('indisponible') || m.includes('No API key') || m.startsWith('Tous les');
+    const m = (e?.message || '').toLowerCase();
+    return m.includes('satur') || m.includes('quota') || m.includes('indisponible') || m.includes('toutes les ia') || m.includes('clé api');
   }
   function abortLoad(msg) {
     document.getElementById('load-msg').textContent = '❌ ' + msg;
@@ -1873,23 +1985,23 @@ async function loadCourse() {
   setProgress(5);
   document.getElementById('load-msg').textContent = '⏳ Génération du résumé…';
   try { await genSummary(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
-  setProgress(20); await sleep(API_DELAY);
+  setProgress(20); await sleep(getApiDelay());
 
   document.getElementById('load-msg').textContent = '⏳ Génération des flashcards…';
   try { await genFlash(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
-  setProgress(40); await sleep(API_DELAY);
+  setProgress(40); await sleep(getApiDelay());
 
   document.getElementById('exo-empty').style.display = 'none';
   document.getElementById('exo-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération des exercices…';
   try { await genExosQuiet(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
-  setProgress(60); await sleep(API_DELAY);
+  setProgress(60); await sleep(getApiDelay());
 
   document.getElementById('quiz-empty').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'block';
   document.getElementById('load-msg').textContent = '⏳ Génération du quiz…';
   try { await genQuiz(); } catch(e) { errors++; if (apiDead(e)) { abortLoad(e.message); return; } }
-  setProgress(80); await sleep(API_DELAY);
+  setProgress(80); await sleep(getApiDelay());
 
   document.getElementById('mindmap-empty').style.display = 'none';
   document.getElementById('mindmap-ui').style.display = 'block';
@@ -2621,7 +2733,7 @@ async function sendChat() {
   const inp = document.getElementById('chat-in');
   const msg = inp.value.trim();
   if (!msg) return;
-  if (!apiKey) { openKeyModal(); return; }
+  if (!hasAnyApiKey()) { openKeyModal(); return; }
   isChatPending = true;
   const chatBtn = document.querySelector('#ap-chat .btn-green');
   if (chatBtn) chatBtn.disabled = true;
