@@ -1548,9 +1548,7 @@ function restoreCourseGenerated() {
     mindmapData = normalizeMindmapData(mindmapData);
     mindmapView = { scale: 1, panX: 0, panY: 0 };
     initMindmapInteractions();
-    if (document.getElementById('ap-mindmap').classList.contains('active')) {
-      setTimeout(renderMindmapFrame, 60);
-    }
+    if (document.getElementById('ap-mindmap').classList.contains('active')) scheduleMindmapRender();
   } else {
     document.getElementById('mindmap-empty').style.display = hasContent ? 'none' : 'block';
     document.getElementById('mindmap-ui').style.display = 'none';
@@ -2553,14 +2551,33 @@ function switchATab(name, el) {
   document.querySelectorAll('.apanel').forEach(p => p.classList.remove('active'));
   document.getElementById('ap-'+name).classList.add('active');
   if (name === 'stats') renderStats();
-  if (name === 'mindmap' && mindmapData) {
-    setTimeout(() => {
-      const canvas = document.getElementById('mindmap-canvas');
-      const ctx2d = canvas.getContext('2d');
-      setupCanvas(canvas, ctx2d);
-      renderMindmapFrame();
-    }, 50);
+  if (name === 'mindmap') showMindmapPanel();
+}
+
+function showMindmapPanel() {
+  const hasCourse = (document.getElementById('course-text')?.value || courseText || '').trim().length >= 50;
+  if (mindmapData?.branches?.length) {
+    document.getElementById('mindmap-empty').style.display = 'none';
+    document.getElementById('mindmap-ui').style.display = 'block';
+    scheduleMindmapRender();
+  } else if (hasCourse) {
+    document.getElementById('mindmap-empty').style.display = 'block';
+    document.getElementById('mindmap-empty').innerHTML = '<p style="color:var(--text-muted);margin-bottom:1rem">Carte pas encore générée.</p><button class="btn-green" onclick="genMindmap()">✦ Générer la carte mentale</button>';
+    document.getElementById('mindmap-ui').style.display = 'none';
   }
+}
+
+function scheduleMindmapRender() {
+  const run = () => {
+    if (!mindmapData || !document.getElementById('ap-mindmap')?.classList.contains('active')) return;
+    const canvas = document.getElementById('mindmap-canvas');
+    if (!canvas) return;
+    setupCanvas(canvas, canvas.getContext('2d'));
+    renderMindmapFrame();
+  };
+  requestAnimationFrame(() => requestAnimationFrame(run));
+  setTimeout(run, 150);
+  setTimeout(run, 400);
 }
 function pickStyle(el, s) {
   document.querySelectorAll('.spill').forEach(p => p.classList.remove('active'));
@@ -2681,14 +2698,33 @@ function bulletLineText(l) {
   return l.replace(/^[\s]*(?:[•\-*]|\d+[.)])\s+/, '').trim();
 }
 
+function isSummaryNoiseLine(l) {
+  const t = l.trim();
+  if (/^réponses?\s*:/i.test(t)) return true;
+  if (/^\d+\s*(mots?|words?)\s*$/i.test(t)) return true;
+  if (t.length < 70 && /^[A-ZÀ-Ü0-9]/.test(t) && (t.match(/\./g) || []).length <= 1 && t.split(/\s+/).length <= 7) {
+    if (/^(métaphase|anaphase|télophase|prophase|réplication|division|cellule|chromosome|gamète|haplo|diplo)/i.test(t)) return true;
+  }
+  return false;
+}
+
+function sanitizeSummaryDetail(text) {
+  if (!text) return '';
+  const t = text.trim();
+  if (t.length > 450) return '';
+  if (/^réponses?\s*:/im.test(t)) return '';
+  if ((t.match(/\n/g) || []).length > 12) return '';
+  return t;
+}
+
 function parseSummaryLines(res) {
   let lines = String(res || '').split('\n').map(l => l.trim()).filter(Boolean);
-  lines = lines.filter(l => !/^voici\b/i.test(l) && !/^un résumé\b/i.test(l) && !/^résumé\b/i.test(l));
+  lines = lines.filter(l => !/^voici\b/i.test(l) && !/^un résumé\b/i.test(l) && !/^résumé\b/i.test(l) && !isSummaryNoiseLine(l));
   const bullets = [];
   const paras = [];
   lines.forEach(l => {
     if (isSummaryBulletLine(l)) bullets.push({ text: bulletLineText(l), detail: '', imageUrl: '', imageTitle: '' });
-    else paras.push(l);
+    else if (!isSummaryNoiseLine(l) && l.length > 20) paras.push(l);
   });
   return { bullets, paras };
 }
@@ -2698,7 +2734,13 @@ function mergeSummaryBullets(parsed, saved) {
   return parsed.bullets.map((b, i) => {
     const old = saved[i];
     if (!old || old.text !== b.text) return b;
-    return { ...b, detail: old.detail || '', imageUrl: old.imageUrl || '', imageTitle: old.imageTitle || '' };
+    return {
+      ...b,
+      detail: sanitizeSummaryDetail(old.detail),
+      imageUrl: old.imageUrl || '',
+      imageTitle: old.imageTitle || '',
+      pageUrl: old.pageUrl || ''
+    };
   });
 }
 
@@ -2781,7 +2823,7 @@ function renderSummaryFromText(res, keepExtras) {
           <div class="kp-actions"><button type="button" class="btn-outline" onclick="explainSummaryBullet(${i})">🔍 Plus de précision</button></div>
         </div>
         <div class="kp-media" id="kp-media-${i}"><span class="kp-media-placeholder">🖼 …</span></div>
-        <div class="kp-detail${b.detail ? ' open' : ''}" id="kp-detail-${i}">${b.detail ? b.detail.split('\n').filter(x=>x.trim()).map(l=>`<p style="margin:0.35rem 0">${mdToHtml(l)}</p>`).join('') : ''}</div>
+        <div class="kp-detail" id="kp-detail-${i}">${b.detail ? b.detail.split('\n').filter(x=>x.trim()).map(l=>`<p style="margin:0.35rem 0">${mdToHtml(l)}</p>`).join('') : ''}</div>
       </div>`;
     });
     html += '</div>';
@@ -2816,8 +2858,8 @@ async function explainSummaryBullet(i) {
       `${ctx}Développe avec précision (max 100 mots), 1 exemple concret si utile :\n« ${b.text} »`,
       'Tuteur pédagogique.' + compactSuffix()
     );
-    b.detail = res;
-    detailEl.innerHTML = res.split('\n').filter(l => l.trim()).map(l => `<p style="margin:0.35rem 0">${mdToHtml(l)}</p>`).join('');
+    b.detail = sanitizeSummaryDetail(res) || res.slice(0, 400);
+    detailEl.innerHTML = b.detail.split('\n').filter(l => l.trim()).map(l => `<p style="margin:0.35rem 0">${mdToHtml(l)}</p>`).join('');
     renderMath(detailEl);
     saveCourseGenerated();
     showToast('✅ Précision ajoutée', 'success');
@@ -3180,7 +3222,8 @@ function renderExplain(style, text) {
 }
 
 function setupCanvas(canvas, ctx) {
-  const W = canvas.offsetWidth || 600;
+  let W = canvas.offsetWidth;
+  if (!W) W = canvas.parentElement?.clientWidth || document.getElementById('mindmap-wrap')?.clientWidth || 600;
   const H = parseInt(getComputedStyle(canvas).height, 10) || canvas.offsetHeight || 540;
   const dpr = window.devicePixelRatio || 1;
   canvas.width = W * dpr; canvas.height = H * dpr;
@@ -3362,8 +3405,17 @@ function renderMindmapFrame() {
   const { W, H } = setupCanvas(canvas, ctx);
   mindmapHitAreas = [];
   const bg = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#0a0c0b';
+  const data = normalizeMindmapData(mindmapData);
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
+  if (!data.branches?.length) {
+    ctx.fillStyle = '#7a8c7e';
+    ctx.font = '14px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Carte vide — clique ↻ Régénérer', W / 2, H / 2);
+    return;
+  }
   ctx.save();
   ctx.translate(mindmapView.panX, mindmapView.panY);
   const cx = W / 2;
@@ -3371,7 +3423,7 @@ function renderMindmapFrame() {
   ctx.translate(cx, cy);
   ctx.scale(mindmapView.scale, mindmapView.scale);
   ctx.translate(-cx, -cy);
-  drawMindmapContent(ctx, W, H, normalizeMindmapData(mindmapData));
+  drawMindmapContent(ctx, W, H, data);
   ctx.restore();
 }
 
@@ -3512,8 +3564,10 @@ async function genMindmap() {
     );
     mindmapData = normalizeMindmapData(raw);
     mindmapView = { scale: 1, panX: 0, panY: 0 };
+    document.getElementById('mindmap-empty').style.display = 'none';
+    document.getElementById('mindmap-ui').style.display = 'block';
     initMindmapInteractions();
-    renderMindmapFrame();
+    scheduleMindmapRender();
     saveCourseGenerated();
   } catch(e) {
     ctx2d.fillStyle = bg;
@@ -3524,12 +3578,24 @@ async function genMindmap() {
 }
 
 const MAX_CHAT_HISTORY = 20;
+
+function isChatSmallTalk(msg) {
+  const m = msg.trim().toLowerCase().replace(/[!?.…]+$/g, '');
+  return /^(cc|c|coucou|salut|hello|hi|hey|yo|ok|merci|bsr|bonjour|bonsoir|ca va|ça va|comment vas tu|comment ça va|wesh|slt)$/.test(m);
+}
+
+function cleanChatReply(text) {
+  return String(text || '')
+    .replace(/\s*\(\d+\s*(mots?|words?)\)\s*$/gim, '')
+    .replace(/\s*\[\d+\s*(mots?|words?)\]\s*$/gim, '')
+    .trim();
+}
+
 async function sendChat() {
   if (isChatPending) return;
   const inp = document.getElementById('chat-in');
   const msg = inp.value.trim();
   if (!msg) return;
-  if (!hasAnyApiKey()) { openKeyModal(); return; }
   isChatPending = true;
   const chatBtn = document.querySelector('#ap-chat .btn-green');
   if (chatBtn) chatBtn.disabled = true;
@@ -3538,15 +3604,29 @@ async function sendChat() {
   const typingId = 'typing-' + Date.now();
   box.innerHTML += `<div class="cmsg user">${escHtml(msg)}</div><div class="cmsg ai" id="${typingId}"><span class="spinner"></span></div>`;
   box.scrollTop = box.scrollHeight;
+
+  if (isChatSmallTalk(msg)) {
+    const msgEl = document.getElementById(typingId);
+    const hint = courseText
+      ? 'Salut ! 👋 Pose une vraie question sur ton cours (ex. : « Explique la méiose en 3 étapes »).'
+      : 'Salut ! 👋 Charge d\'abord ton cours dans l\'onglet Cours, puis pose-moi tes questions.';
+    msgEl.innerHTML = `<p>${escHtml(hint)}</p>`;
+    isChatPending = false;
+    if (chatBtn) chatBtn.disabled = false;
+    return;
+  }
+
+  if (!hasAnyApiKey()) { openKeyModal(); isChatPending = false; if (chatBtn) chatBtn.disabled = false; return; }
+
   const sys = courseText
-    ? `Tuteur. Cours :\n\n${courseSlice(2500)}\n\nRéponses courtes (max 80 mots).`
-    : 'Tuteur. Réponses courtes (max 80 mots).';
+    ? `Tu es un tuteur. RÈGLES : réponds UNIQUEMENT en français ; réponds à la question de l'étudiant (pas un autre sujet) ; max 80 mots ; pas de compteur « X mots ».\n\nCours :\n${courseSlice(2500)}`
+    : 'Tuteur. UNIQUEMENT en français. Max 80 mots. Dis de charger un cours dans l\'onglet Cours.';
   chatHistory.push({ role: 'user', parts: [{ text: msg }] });
   if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
   try {
-    const historyText = chatHistory.slice(0, -1).map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`).join('\n');
-    const fullPrompt = historyText ? `${historyText}\nÉtudiant: ${msg}` : msg;
-    const reply = await ai(fullPrompt, sys);
+    const historyText = chatHistory.slice(0, -1).slice(-6).map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`).join('\n');
+    const fullPrompt = historyText ? `${historyText}\nÉtudiant: ${msg}\n\n(Réponds à ce message.)` : msg;
+    let reply = cleanChatReply(await ai(fullPrompt, sys));
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
     const msgEl = document.getElementById(typingId);
