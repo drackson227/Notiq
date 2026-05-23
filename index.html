@@ -6,9 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Notiq — Révise plus vite, comprends mieux</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="apple-touch-icon" href="favicon.svg">
-<meta name="theme-color" content="#121816">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
@@ -69,7 +66,7 @@ nav {
 }
 body.light nav { background: rgba(244,247,244,0.92); }
 .nav-logo { display: flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
-.nav-logo .logo-mark { width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; box-shadow: 0 0 16px rgba(31,189,130,0.25); }
+.nav-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
 .nav-links { display: flex; gap: 2rem; list-style: none; }
 .nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color 0.2s; }
 .nav-links a:hover { color: var(--text); }
@@ -780,14 +777,7 @@ footer a { color: var(--green); text-decoration: none; }
 
 <!-- NAV -->
 <nav>
-  <a href="#" class="nav-logo" aria-label="Notiq — accueil">
-    <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="#121816"/>
-      <path d="M9 23V9h3.4l5.6 9.3V9H21v14h-3.3l-5.7-9.4V23H9z" fill="#1fbd82"/>
-      <circle cx="24" cy="8" r="2" fill="#1fbd82"/>
-    </svg>
-    Notiq
-  </a>
+  <a href="#" class="nav-logo"><div class="dot"></div> Notiq</a>
   <ul class="nav-links">
     <li><a href="#features">Fonctionnalités</a></li>
     <li><a href="#how">Comment ça marche</a></li>
