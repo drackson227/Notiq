@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<!-- Notiq build: openrouter-v4-models -->
+<!-- Notiq build: v5-dynamic-or -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Notiq — Révise plus vite, comprends mieux</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
@@ -1251,6 +1252,10 @@ window.addEventListener('load', () => {
   });
 
   if (!hasAnyApiKey()) openKeyModal();
+  if (localStorage.getItem('notiq_seen_build') !== NOTIQ_BUILD) {
+    localStorage.setItem('notiq_seen_build', NOTIQ_BUILD);
+    showToast(`Notiq ${NOTIQ_BUILD} — Ctrl+F5 si les photos échouent encore`, '');
+  }
   initScrollReveal();
   initPomodoro();
   renderStats();
@@ -1724,19 +1729,38 @@ async function tryAllGemini(fullPrompt, maxTok) {
   throw new Error('Gemini indisponible');
 }
 
-// IDs vérifiés sur openrouter.ai/api/v1/models (évite 404)
-const OPENROUTER_MODELS_TEXT = [
-  'openrouter/free',
-  'meta-llama/llama-3.2-3b-instruct:free',
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-  'deepseek/deepseek-v4-flash:free'
-];
-const OPENROUTER_MODELS_VISION = [
-  'openrouter/free',
-  'nvidia/nemotron-nano-12b-v2-vl:free',
-  'google/gemma-4-26b-a4b-it:free',
-  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
-];
+const NOTIQ_BUILD = 'v5';
+const OPENROUTER_FALLBACK_TEXT = ['openrouter/free', 'meta-llama/llama-3.2-3b-instruct:free', 'deepseek/deepseek-v4-flash:free'];
+const OPENROUTER_FALLBACK_VISION = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free', 'google/gemma-4-26b-a4b-it:free'];
+let orModelsCache = { text: null, vision: null, at: 0 };
+
+async function fetchOpenRouterModelIds(visionOnly) {
+  if (orModelsCache.at && Date.now() - orModelsCache.at < 3600000) {
+    return visionOnly ? orModelsCache.vision : orModelsCache.text;
+  }
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/models');
+    if (!r.ok) throw new Error('models');
+    const d = await r.json();
+    const list = d.data || [];
+    const vision = ['openrouter/free'];
+    const text = ['openrouter/free'];
+    for (const m of list) {
+      if (!m.id || !m.id.endsWith(':free')) continue;
+      const mods = m.architecture?.input_modalities || [];
+      if (mods.includes('image')) vision.push(m.id);
+      else text.push(m.id);
+    }
+    orModelsCache = {
+      vision: [...new Set(vision)].slice(0, 8),
+      text: [...new Set(text)].slice(0, 8),
+      at: Date.now()
+    };
+  } catch(e) {
+    orModelsCache = { vision: OPENROUTER_FALLBACK_VISION, text: OPENROUTER_FALLBACK_TEXT, at: Date.now() };
+  }
+  return visionOnly ? orModelsCache.vision : orModelsCache.text;
+}
 
 function openRouterHeaders(orKey) {
   return {
@@ -1747,26 +1771,27 @@ function openRouterHeaders(orKey) {
   };
 }
 
+async function parseOpenRouterError(r) {
+  try {
+    const e = await r.json();
+    return e.error?.message || e.message || `HTTP ${r.status}`;
+  } catch(x) { return `HTTP ${r.status}`; }
+}
+
 async function callOpenRouterChat(orKey, body, models) {
   let lastErr = 'OpenRouter indisponible';
-  for (const model of models) {
+  const list = models?.length ? models : OPENROUTER_FALLBACK_TEXT;
+  for (const model of list) {
     const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: openRouterHeaders(orKey),
       body: JSON.stringify({ ...body, model })
     });
-    if (r.status === 402) {
-      const e = await r.json().catch(() => ({}));
-      lastErr = e.error?.message || 'OpenRouter 402 : vérifie ta clé sur openrouter.ai/keys (compte actif, modèles gratuits)';
-      continue;
-    }
-    if (r.status === 404) { lastErr = 'Modèle OpenRouter introuvable'; continue; }
-    if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé'; await sleep(2000); continue; }
-    if (!r.ok) {
-      const e = await r.json().catch(() => ({}));
-      lastErr = e.error?.message || `OpenRouter (${r.status})`;
-      continue;
-    }
+    if (r.status === 401) throw new Error('Clé OpenRouter invalide — régénère-la sur openrouter.ai/keys');
+    if (r.status === 402) { lastErr = await parseOpenRouterError(r); continue; }
+    if (r.status === 404) { lastErr = await parseOpenRouterError(r) || `Modèle ${model} indisponible`; continue; }
+    if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé — réessaie dans 1 min'; await sleep(2000); continue; }
+    if (!r.ok) { lastErr = await parseOpenRouterError(r); continue; }
     const d = await r.json();
     const text = (typeof d.choices?.[0]?.message?.content === 'string')
       ? d.choices[0].message.content
@@ -1778,11 +1803,12 @@ async function callOpenRouterChat(orKey, body, models) {
 
 async function aiOpenRouter(prompt, orKey, maxTok) {
   const cap = maxTok ?? aiLimits().text;
+  const models = await fetchOpenRouterModelIds(false);
   return callOpenRouterChat(orKey, {
     messages: [{ role: 'user', content: prompt }],
     max_tokens: cap,
     temperature: 0.35
-  }, OPENROUTER_MODELS_TEXT);
+  }, models);
 }
 
 async function ai(prompt, systemPrompt, maxTok) {
@@ -1865,7 +1891,7 @@ function isGeminiVisionBlocked() {
 }
 
 /** Réduit la taille des photos (évite 429 / erreurs vision). */
-async function compressImageFile(file, maxW = 1400) {
+async function compressImageFile(file, maxW = 1024) {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, maxW / bmp.width);
   const w = Math.round(bmp.width * scale);
@@ -1875,7 +1901,7 @@ async function compressImageFile(file, maxW = 1400) {
   canvas.height = h;
   canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
   bmp.close();
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.82));
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.75));
   if (!blob) throw new Error('Compression image échouée');
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
@@ -1909,15 +1935,16 @@ function appendCourseText(chunk, fileName) {
 
 async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
   const dataUrl = `data:${mimeType};base64,${base64}`;
-  const cap = isCompactMode() ? 1536 : 3072;
+  const cap = isCompactMode() ? 1200 : 2048;
+  const models = await fetchOpenRouterModelIds(true);
   const text = await callOpenRouterChat(orKey, {
     messages: [{ role: 'user', content: [
       { type: 'text', text: prompt },
-      { type: 'image_url', image_url: { url: dataUrl } }
+      { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } }
     ] }],
     max_tokens: cap,
     temperature: 0
-  }, OPENROUTER_MODELS_VISION);
+  }, models);
   return (text || '').trim();
 }
 
@@ -1950,13 +1977,11 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
 async function transcribeImageBase64(base64, mimeType) {
   const prompt = 'Transcris le texte visible (cours). Structure conservée. Maths en LaTeX $ $. Texte brut, concis.';
   const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
-  let lastErr = '';
 
   if (orKey) {
-    try {
-      const t = await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
-      if (t.length > 5) return t;
-    } catch(e) { lastErr = e.message; console.warn('OR vision', e.message); }
+    const t = await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
+    if (t.length > 5) return t;
+    throw new Error('OpenRouter n\'a pas pu lire l\'image — vérifie ta clé (openrouter.ai/keys) et réessaie.');
   }
 
   if (!isGeminiVisionBlocked()) {
@@ -1964,7 +1989,7 @@ async function transcribeImageBase64(base64, mimeType) {
     if (geminiText) return geminiText;
   }
 
-  throw new Error(lastErr || 'Images : Gemini saturé (429). Utilise une clé OpenRouter valide (openrouter.ai/keys) et mode 🌐 OpenRouter.');
+  throw new Error('Quota Gemini (429) — ajoute une clé OpenRouter pour les photos.');
 }
 
 async function importFiles(files) {
