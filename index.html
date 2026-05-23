@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Notiq build: openrouter-v2 -->
+<!-- Notiq build: openrouter-v3-free -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -1626,7 +1626,7 @@ function saveKey() {
   if (!k && !k2 && !orKey && !groqKey2) { errEl.textContent = 'Ajoute au moins une clé API.'; return; }
   if (k && (!k.startsWith('AIza') || k.length < 20)) { errEl.textContent = 'Clé Gemini 1 invalide (AIza…).'; return; }
   if (k2 && (!k2.startsWith('AIza') || k2.length < 20)) { errEl.textContent = 'Clé Gemini 2 invalide (AIza…).'; return; }
-  if (orKey && !orKey.startsWith('sk-or')) { errEl.textContent = 'Clé OpenRouter invalide (sk-or…).'; return; }
+  if (orKey && !/^sk-or(-v1)?-/.test(orKey)) { errEl.textContent = 'Clé OpenRouter invalide (sk-or-v1-… ou sk-or-…).'; return; }
   errEl.textContent = '';
   if (k) localStorage.setItem('notiq_gemini_key', k); else localStorage.removeItem('notiq_gemini_key');
   if (k2) localStorage.setItem('notiq_gemini_key2', k2); else localStorage.removeItem('notiq_gemini_key2');
@@ -1723,38 +1723,60 @@ async function tryAllGemini(fullPrompt, maxTok) {
   throw new Error('Gemini indisponible');
 }
 
-const OPENROUTER_MODELS = [
-  'google/gemini-2.0-flash-001',
+// Uniquement modèles GRATUITS (:free ou openrouter/free) — évite 402 Payment Required
+const OPENROUTER_MODELS_TEXT = [
+  'openrouter/free',
   'meta-llama/llama-3.2-3b-instruct:free',
-  'google/gemma-3-4b-it:free',
-  'qwen/qwen-2.5-7b-instruct:free'
+  'qwen/qwen-2.5-7b-instruct:free',
+  'google/gemma-2-9b-it:free'
+];
+const OPENROUTER_MODELS_VISION = [
+  'openrouter/free',
+  'google/gemini-2.0-flash-exp:free',
+  'google/gemini-2.5-flash-lite-preview-09-2025:free'
 ];
 
-async function aiOpenRouter(prompt, orKey, maxTok) {
-  const cap = maxTok ?? aiLimits().text;
+function openRouterHeaders(orKey) {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${orKey}`,
+    'HTTP-Referer': location.origin || 'https://notiq.app',
+    'X-Title': 'Notiq'
+  };
+}
+
+async function callOpenRouterChat(orKey, body, models) {
   let lastErr = 'OpenRouter indisponible';
-  for (const model of OPENROUTER_MODELS) {
+  for (const model of models) {
     const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${orKey}`,
-        'HTTP-Referer': location.origin || 'https://notiq.app',
-        'X-Title': 'Notiq'
-      },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: cap, temperature: 0.35 })
+      headers: openRouterHeaders(orKey),
+      body: JSON.stringify({ ...body, model })
     });
-    if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé'; continue; }
+    if (r.status === 402) { lastErr = 'OpenRouter : crédits requis (utilise modèles :free)'; continue; }
+    if (r.status === 404) { lastErr = 'Modèle OpenRouter introuvable'; continue; }
+    if (r.status === 429 || r.status === 503) { lastErr = 'OpenRouter saturé'; await sleep(2000); continue; }
     if (!r.ok) {
       const e = await r.json().catch(() => ({}));
       lastErr = e.error?.message || `OpenRouter (${r.status})`;
       continue;
     }
     const d = await r.json();
-    const text = d.choices?.[0]?.message?.content || '';
+    const text = (typeof d.choices?.[0]?.message?.content === 'string')
+      ? d.choices[0].message.content
+      : '';
     if (text) return text;
   }
   throw new Error(lastErr);
+}
+
+async function aiOpenRouter(prompt, orKey, maxTok) {
+  const cap = maxTok ?? aiLimits().text;
+  return callOpenRouterChat(orKey, {
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: cap,
+    temperature: 0.35
+  }, OPENROUTER_MODELS_TEXT);
 }
 
 async function ai(prompt, systemPrompt, maxTok) {
@@ -1825,7 +1847,7 @@ async function aiGroq(prompt, groqKey, maxTok) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-const IMAGE_IMPORT_DELAY = 6000;
+const IMAGE_IMPORT_DELAY = 4000;
 
 function hasVisionApiKey() {
   return getGeminiKeys().length > 0 || !!(localStorage.getItem('notiq_openrouter_key') || '').trim();
@@ -1848,10 +1870,23 @@ function appendCourseText(chunk, fileName) {
   updateCharCount();
 }
 
-async function transcribeImageBase64(base64, mimeType) {
-  const prompt = 'Transcris intégralement le texte de cette image de cours scolaire. Préserve la structure. Formules mathématiques en LaTeX entre $ $. Texte brut, pas de markdown.';
-  const visionModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
+  const dataUrl = `data:${mimeType};base64,${base64}`;
+  const cap = isCompactMode() ? 1536 : 3072;
+  const text = await callOpenRouterChat(orKey, {
+    messages: [{ role: 'user', content: [
+      { type: 'text', text: prompt },
+      { type: 'image_url', image_url: { url: dataUrl } }
+    ] }],
+    max_tokens: cap,
+    temperature: 0
+  }, OPENROUTER_MODELS_VISION);
+  return (text || '').trim();
+}
 
+async function transcribeImageViaGemini(base64, mimeType, prompt) {
+  const visionModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+  const cap = isCompactMode() ? 2048 : 4096;
   for (const gKey of getGeminiKeys()) {
     for (const model of visionModels) {
       try {
@@ -1861,50 +1896,43 @@ async function transcribeImageBase64(base64, mimeType) {
             body: JSON.stringify({ contents: [{ parts: [
               { text: prompt },
               { inline_data: { mime_type: mimeType, data: base64 } }
-            ] }], generationConfig: { maxOutputTokens: 4096, temperature: 0 } }) }
+            ] }], generationConfig: { maxOutputTokens: cap, temperature: 0 } }) }
         );
-        if (r.status === 429 || r.status === 503) { await sleep(2500); continue; }
+        if (r.status === 429 || r.status === 503) { await sleep(3000); continue; }
         if (!r.ok) continue;
         const d = await r.json();
         const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
         if (t.length > 5) return t;
-      } catch(e) { /* clé / modèle suivant */ }
+      } catch(e) { /* suivant */ }
     }
   }
+  return null;
+}
 
+async function transcribeImageBase64(base64, mimeType) {
+  const prompt = 'Transcris le texte visible (cours). Structure conservée. Maths en LaTeX $ $. Texte brut, concis.';
   const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
-  if (orKey) {
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-    for (const model of OPENROUTER_MODELS) {
-      try {
-        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${orKey}`,
-            'HTTP-Referer': location.origin || 'https://notiq.app',
-            'X-Title': 'Notiq'
-          },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: 'user', content: [
-              { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: dataUrl } }
-            ] }],
-            max_tokens: 4096,
-            temperature: 0
-          })
-        });
-        if (r.status === 429 || r.status === 503) { await sleep(2500); continue; }
-        if (!r.ok) continue;
-        const d = await r.json();
-        const t = d.choices?.[0]?.message?.content?.trim() || '';
-        if (t.length > 5) return t;
-      } catch(e) { /* modèle suivant */ }
-    }
+  const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
+  const tryOrFirst = orKey && (mode === 'openrouter' || !getGeminiKeys().length);
+
+  if (tryOrFirst) {
+    try {
+      const t = await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
+      if (t.length > 5) return t;
+    } catch(e) { console.warn('OR vision', e.message); }
   }
 
-  throw new Error('Quota API (429) — attends 1 min entre les photos ou ajoute OpenRouter / 2e clé Gemini.');
+  const geminiText = await transcribeImageViaGemini(base64, mimeType, prompt);
+  if (geminiText) return geminiText;
+
+  if (orKey && !tryOrFirst) {
+    try {
+      const t = await transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt);
+      if (t.length > 5) return t;
+    } catch(e) { console.warn('OR vision fallback', e.message); }
+  }
+
+  throw new Error('Quota saturé — attends 1 min entre photos, ou clé OpenRouter gratuite (openrouter.ai/keys).');
 }
 
 async function importFiles(files) {
