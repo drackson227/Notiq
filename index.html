@@ -610,6 +610,18 @@ footer a { color: var(--green); text-decoration: none; }
 }
 .pdf-drop:hover, .pdf-drop.drag { border-color: rgba(31,189,130,0.4); background: var(--green-pale); }
 .pdf-drop p { color: var(--text-muted); font-size: 14px; margin-top: 0.5rem; }
+.import-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+.ocr-panel {
+  margin: 12px 0; padding: 14px 16px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.ocr-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.ocr-panel-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; }
+.ocr-panel-stats { font-size: 13px; color: var(--text-dim); }
+.ocr-bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.ocr-bar-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.25s; }
+.ocr-panel-detail { font-size: 12px; color: var(--text-muted); margin-top: 8px; min-height: 1.2em; }
+.ocr-panel-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
 /* ── EXERCICES ── */
 .ex-tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; }
@@ -751,6 +763,7 @@ footer a { color: var(--green); text-decoration: none; }
     <button type="button" class="mode-btn" id="ai-mode-fast" onclick="setAiMode('fast')">⚡ Groq</button>
   </div>
   <p style="font-size:11px;color:var(--text-muted);margin-top:6px">OpenRouter = sk-or en premier. Auto = Gemini → OpenRouter → Groq.</p>
+  <p style="font-size:11px;color:var(--green);margin-top:4px">📸 100+ photos : clé OpenRouter obligatoire (lots de 8, dossier entier).</p>
   <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;cursor:pointer">
     <input type="checkbox" id="compact-mode-cb" checked onchange="setCompactMode(this.checked)" />
   <span>Mode économie — réponses courtes (moins de tokens)</span>
@@ -886,11 +899,29 @@ footer a { color: var(--green); text-decoration: none; }
         <!-- IMPORT -->
         <div class="apanel active" id="ap-import">
           <div class="courses-bar" id="courses-bar"></div>
-          <div class="pdf-drop" id="pdf-drop" onclick="document.getElementById('pdf-input').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
-            <div style="font-size:2rem">📄</div>
-            <p>PDF ou <strong>images</strong> (JPG, PNG) — import rapide par lots de 5 photos</p>
+          <div class="pdf-drop" id="pdf-drop" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div style="font-size:2rem">📸</div>
+            <p><strong>Jusqu'à 200 photos</strong> — glisse, sélectionne ou importe un dossier entier</p>
+            <div class="import-btns">
+              <button type="button" class="btn-green" onclick="event.stopPropagation();pickImportFiles()">📷 Photos / PDF</button>
+              <button type="button" class="btn-outline" onclick="event.stopPropagation();pickImportFolder()">📁 Dossier entier</button>
+            </div>
+            <p style="font-size:11px;margin-top:8px;color:var(--text-muted)">Conseil 50+ photos : clé <strong>OpenRouter</strong> (gratuit) · lots de 8 · reprise auto</p>
           </div>
           <input type="file" id="pdf-input" accept="application/pdf,.pdf,image/*" style="display:none" onchange="handlePDF(this)" multiple>
+          <input type="file" id="folder-input" accept="image/*" style="display:none" multiple webkitdirectory onchange="handleFolderPick(this)">
+          <div class="ocr-panel" id="ocr-panel" style="display:none">
+            <div class="ocr-panel-head">
+              <span class="ocr-panel-title" id="ocr-panel-title">Import en cours</span>
+              <span class="ocr-panel-stats" id="ocr-panel-stats">0 / 0</span>
+            </div>
+            <div class="ocr-bar"><div class="ocr-bar-fill" id="ocr-bar-fill" style="width:0%"></div></div>
+            <div class="ocr-panel-detail" id="ocr-panel-detail"></div>
+            <div class="ocr-panel-actions">
+              <button type="button" class="btn-outline" style="font-size:12px;padding:6px 12px" id="ocr-cancel-btn" onclick="cancelOcrImport()">✕ Annuler</button>
+              <button type="button" class="btn-outline" style="font-size:12px;padding:6px 12px;display:none" id="ocr-retry-btn" onclick="retryFailedOcr()">↻ Réessayer les échecs</button>
+            </div>
+          </div>
           <textarea class="course-textarea" id="course-text" placeholder="Ou colle le texte de ton cours ici...&#10;&#10;Exemple : 'La dérivée d'une fonction f en un point a est la limite du taux de variation...'"></textarea>
           <div class="course-meta">
             <span id="course-char-count">0 caractères</span>
@@ -1750,10 +1781,16 @@ async function tryAllGemini(fullPrompt, maxTok) {
   throw new Error('Gemini indisponible');
 }
 
-const NOTIQ_BUILD = 'v7.1';
+const NOTIQ_BUILD = 'v8-bulk';
 const EXAM_QUESTION_COUNT = 15;
-const OCR_BATCH_SIZE = 5;
-const OCR_BATCH_DELAY_MS = 400;
+const OCR_MAX_FILES = 200;
+const OCR_BATCH_SIZE_OR = 8;
+const OCR_BATCH_SIZE_GEMINI = 1;
+const OCR_BATCH_DELAY_MS = 2200;
+const OCR_IMAGE_DELAY_MS = 1400;
+const OCR_BULK_COMPRESS_W = 680;
+const OCR_COMPRESS_POOL = 4;
+const OCR_FALLBACK_PARALLEL = 2;
 const FAST_VISION_MODELS = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free'];
 const OPENROUTER_FALLBACK_TEXT = ['openrouter/free', 'meta-llama/llama-3.2-3b-instruct:free', 'deepseek/deepseek-v4-flash:free'];
 const OPENROUTER_FALLBACK_VISION = ['nvidia/nemotron-nano-12b-v2-vl:free', 'openrouter/free', 'google/gemma-4-26b-a4b-it:free'];
@@ -1924,10 +1961,73 @@ function isGeminiVisionBlocked() {
   return Date.now() < geminiVisionBlockedUntil;
 }
 
+let ocrJob = null;
+
+function pickImportFiles() { document.getElementById('pdf-input').click(); }
+function pickImportFolder() { document.getElementById('folder-input').click(); }
+function handleFolderPick(input) {
+  const files = naturalSortFiles(Array.from(input.files || []).filter(isImageFile));
+  input.value = '';
+  if (!files.length) { showToast('Aucune image dans ce dossier.', 'error'); return; }
+  importFiles(files);
+}
+function naturalSortFiles(files) {
+  return [...files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+}
+function cancelOcrImport() {
+  if (ocrJob) ocrJob.cancelled = true;
+  showToast('Import annulé', '');
+}
+async function retryFailedOcr() {
+  const items = ocrJob?.failedItems;
+  if (!items?.length || ocrJob?.running) return;
+  const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
+  ocrJob.failedItems = [];
+  ocrJob.running = true;
+  ocrJob.cancelled = false;
+  ocrJob.total = items.length;
+  ocrJob.done = 0;
+  ocrJob.fail = 0;
+  ocrJob.status = `Reprise de ${items.length} photo(s)…`;
+  showOcrPanel(true);
+  updateOcrUi();
+  await ocrItemsIndividually(items, orKey);
+  ocrJob.running = false;
+  ocrJob.status = `Reprise terminée — ${ocrJob.ok} OK` + (ocrJob.fail ? `, ${ocrJob.fail} échec(s)` : '');
+  updateOcrUi();
+  document.getElementById('ocr-retry-btn').style.display = ocrJob.failedItems.length ? 'inline-flex' : 'none';
+}
+function showOcrPanel(show) {
+  document.getElementById('ocr-panel').style.display = show ? 'block' : 'none';
+}
+function updateOcrUi() {
+  if (!ocrJob) return;
+  const pct = ocrJob.total ? Math.round((ocrJob.done / ocrJob.total) * 100) : 0;
+  document.getElementById('ocr-bar-fill').style.width = pct + '%';
+  document.getElementById('ocr-panel-stats').textContent = `${ocrJob.done} / ${ocrJob.total} · ${ocrJob.ok} OK` + (ocrJob.fail ? ` · ${ocrJob.fail} échec(s)` : '');
+  document.getElementById('ocr-panel-detail').textContent = ocrJob.status || '';
+  document.getElementById('ocr-retry-btn').style.display = ocrJob.failedItems?.length && !ocrJob.running ? 'inline-flex' : 'none';
+}
+async function mapPool(items, fn, limit) {
+  const out = new Array(items.length);
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      if (ocrJob?.cancelled) return;
+      const idx = i++;
+      out[idx] = await fn(items[idx], idx);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 /** Réduit la taille des photos (évite 429 / erreurs vision). */
-async function compressImageFile(file, maxW = 960) {
+async function compressImageFile(file, maxW = 960, bulk = false) {
+  const targetW = bulk ? OCR_BULK_COMPRESS_W : maxW;
+  const quality = bulk ? 0.72 : 0.8;
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, maxW / bmp.width);
+  const scale = Math.min(1, targetW / bmp.width);
   let w = Math.round(bmp.width * scale);
   let h = Math.round(bmp.height * scale);
   const canvas = document.createElement('canvas');
@@ -1936,18 +2036,18 @@ async function compressImageFile(file, maxW = 960) {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(bmp, 0, 0, w, h);
   bmp.close();
-  // Recadrage : enlève barres Snapchat (haut/bas) pour mieux lire le devoir
-  const top = Math.round(h * 0.06);
-  const bottom = Math.round(h * 0.14);
-  const cropH = Math.max(80, h - top - bottom);
-  const cropped = document.createElement('canvas');
-  cropped.width = w;
-  cropped.height = cropH;
-  cropped.getContext('2d').drawImage(canvas, 0, top, w, cropH, 0, 0, w, cropH);
-  w = cropped.width;
-  h = cropped.height;
-  const out = cropped;
-  const blob = await new Promise(res => out.toBlob(res, 'image/jpeg', 0.8));
+  let drawCanvas = canvas;
+  if (!bulk) {
+    const top = Math.round(h * 0.06);
+    const bottom = Math.round(h * 0.14);
+    const cropH = Math.max(80, h - top - bottom);
+    const cropped = document.createElement('canvas');
+    cropped.width = w;
+    cropped.height = cropH;
+    cropped.getContext('2d').drawImage(canvas, 0, top, w, cropH, 0, 0, w, cropH);
+    drawCanvas = cropped;
+  }
+  const blob = await new Promise(res => drawCanvas.toBlob(res, 'image/jpeg', quality));
   if (!blob) throw new Error('Compression image échouée');
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
@@ -1971,11 +2071,15 @@ function isImageFile(file) {
 
 const OCR_PROMPT = 'OCR : transcris le texte visible (devoir/cours). Numéros et tirets. Français, texte brut. Pas de markdown **, pas de balises <|.|>.';
 
+function ocrBatchPromptIndexed(count) {
+  if (count === 1) return OCR_PROMPT;
+  return `OCR : ${count} pages d'un même cours, dans l'ordre (page 1 en premier).\n` +
+    `Transcris tout le texte visible (devoir/cours). Français, texte brut.\n` +
+    `Après CHAQUE page, écris exactement : --- PAGE N --- (N = 1, 2, 3… jusqu'à ${count}).\nPas de markdown.`;
+}
+
 function ocrBatchPrompt(names) {
-  if (names.length === 1) return OCR_PROMPT;
-  return `OCR rapide : ${names.length} photos du même devoir, dans l'ordre.\n` +
-    names.map((n, i) => `Photo ${i + 1} = "${n}"`).join('\n') +
-    `\nAprès chaque photo, ligne exacte : --- NOM --- (remplace NOM par le nom du fichier).\nTexte brut, pas de **.`;
+  return ocrBatchPromptIndexed(names.length);
 }
 
 function splitBatchOcrText(raw, items) {
@@ -2017,9 +2121,34 @@ function sanitizeOcrText(raw) {
   return t;
 }
 
-function isValidOcrText(text) {
+function splitBatchOcrByPage(raw, count) {
+  const text = sanitizeOcrText(raw);
+  if (count === 1) return isValidOcrText(text, true) ? [text] : [];
+  const markers = [];
+  for (let n = 1; n <= count; n++) {
+    const re = new RegExp(`---\\s*PAGE\\s*${n}\\s*---`, 'i');
+    const idx = text.search(re);
+    if (idx >= 0) markers.push({ n, idx, re });
+  }
+  markers.sort((a, b) => a.idx - b.idx);
+  if (markers.length >= Math.max(2, Math.ceil(count * 0.4))) {
+    const out = [];
+    for (let i = 0; i < markers.length; i++) {
+      const start = markers[i].idx + text.match(markers[i].re)[0].length;
+      const end = i < markers.length - 1 ? markers[i + 1].idx : text.length;
+      const chunk = sanitizeOcrText(text.slice(start, end));
+      if (isValidOcrText(chunk, true)) out.push(chunk);
+    }
+    if (out.length) return out;
+  }
+  const legacy = splitBatchOcrText(raw, Array.from({ length: count }, (_, i) => ({ name: 'page' + (i + 1) })));
+  return legacy.map(x => x.text).filter(t => isValidOcrText(t, true));
+}
+
+function isValidOcrText(text, bulk) {
   const t = sanitizeOcrText(text);
-  if (t.length < 12) return false;
+  const minLen = bulk ? 6 : 12;
+  if (t.length < minLen) return false;
   const letters = (t.match(/[a-zA-ZÀ-ÿ0-9]/g) || []).length;
   if (letters / t.length < 0.35) return false;
   if (/^(\s*<\|)+\s*$/.test(t)) return false;
@@ -2027,18 +2156,16 @@ function isValidOcrText(text) {
   return true;
 }
 
-function appendCourseText(chunk, fileName) {
+function appendCourseText(chunk, fileName, pageNum) {
   const cleanText = sanitizeOcrText(chunk).replace(/\^\\circ\\circ/g, '^\\circ').replace(/\\circ\s*\\circ/g, '\\circ').replace(/\$\s+/g, '$').replace(/\s+\$/g, '$');
-  if (!cleanText || cleanText.length < 8) {
-    showToast(`⚠️ ${fileName || 'Image'} : texte illisible — réessaie une photo plus nette`, 'error');
-    return;
-  }
+  if (!cleanText || cleanText.length < 6) return false;
   const current = document.getElementById('course-text').value.trim();
-  const header = fileName ? `\n\n— ${fileName} —\n\n` : '\n\n—\n\n';
+  const header = pageNum != null ? `\n\n— Page ${pageNum} —\n\n` : (fileName ? `\n\n— ${fileName} —\n\n` : '\n\n—\n\n');
   document.getElementById('course-text').value = current ? current + header + cleanText : cleanText;
   persistCourseTextarea();
   document.getElementById('saved-notice').style.display = 'block';
   updateCharCount();
+  return true;
 }
 
 async function transcribeViaOpenRouter(orKey, contentParts, maxTok, models) {
@@ -2069,13 +2196,13 @@ async function transcribeImageViaOpenRouter(orKey, base64, mimeType, prompt) {
 }
 
 async function transcribeImageBatchOpenRouter(orKey, items) {
-  const content = [{ type: 'text', text: ocrBatchPrompt(items.map(x => x.name)) }];
+  const content = [{ type: 'text', text: ocrBatchPromptIndexed(items.length) }];
   for (const it of items) {
     content.push({ type: 'image_url', image_url: { url: `data:${it.mimeType};base64,${it.base64}`, detail: 'low' } });
   }
-  const cap = Math.min(8000, 1200 + items.length * 1400);
+  const cap = Math.min(14000, 900 + items.length * 1200);
   const raw = await transcribeViaOpenRouter(orKey, content, cap, FAST_VISION_MODELS);
-  return splitBatchOcrText(raw, items);
+  return splitBatchOcrByPage(raw, items.length);
 }
 
 async function transcribeImageViaGemini(base64, mimeType, prompt) {
@@ -2093,7 +2220,7 @@ async function transcribeImageViaGemini(base64, mimeType, prompt) {
               { inline_data: { mime_type: mimeType, data: base64 } }
             ] }], generationConfig: { maxOutputTokens: cap, temperature: 0 } }) }
         );
-        if (r.status === 429 || r.status === 503) { markGeminiVisionBlocked(); await sleep(3000); continue; }
+        if (r.status === 429 || r.status === 503) { markGeminiVisionBlocked(); continue; }
         if (!r.ok) continue;
         const d = await r.json();
         const t = sanitizeOcrText(d.candidates?.[0]?.content?.parts?.[0]?.text || '');
@@ -2114,9 +2241,10 @@ async function transcribeImageBase64(base64, mimeType) {
   throw new Error('Quota Gemini (429) — ajoute une clé OpenRouter pour les photos.');
 }
 
-async function loadImagePayload(file) {
+async function loadImagePayload(file, bulk) {
   try {
-    return { name: file.name, ...(await compressImageFile(file)) };
+    const data = await compressImageFile(file, 960, bulk);
+    return { file, name: file.name, page: 0, ...data };
   } catch(e) {
     const base64 = await new Promise((res, rej) => {
       const r = new FileReader();
@@ -2124,90 +2252,164 @@ async function loadImagePayload(file) {
       r.onerror = () => rej(new Error('Lecture fichier'));
       r.readAsDataURL(file);
     });
-    return { name: file.name, base64, mimeType: file.type || 'image/jpeg' };
+    return { file, name: file.name, page: 0, base64, mimeType: file.type || 'image/jpeg' };
   }
 }
 
-async function processImageBatch(files, drop) {
-  const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
-  const items = await Promise.all(files.map(loadImagePayload));
-
-  if (orKey && files.length > 1) {
+async function transcribeOneItem(item, orKey) {
+  if (orKey) {
     try {
-      const parts = await transcribeImageBatchOpenRouter(orKey, items);
-      if (parts.length) {
-        parts.forEach(p => appendCourseText(p.text, p.name));
-        const done = new Set(parts.map(p => p.name));
-        for (const it of items.filter(x => !done.has(x.name))) {
-          const file = files.find(f => f.name === it.name);
-          if (file) await processImage(file, { batch: true, preloaded: it });
-        }
-        return;
+      return await transcribeImageViaOpenRouter(orKey, item.base64, item.mimeType, OCR_PROMPT);
+    } catch(e) { /* repli */ }
+  }
+  if (!isGeminiVisionBlocked()) {
+    const t = await transcribeImageViaGemini(item.base64, item.mimeType, OCR_PROMPT);
+    if (t) return t;
+  }
+  throw new Error('OCR impossible (quota ou image illisible)');
+}
+
+async function ocrItemsIndividually(items, orKey) {
+  await mapPool(items, async (item) => {
+    if (ocrJob?.cancelled) return;
+    try {
+      const text = await transcribeOneItem(item, orKey);
+      if (appendCourseText(text, item.name, item.page)) {
+        ocrJob.ok++;
+      } else {
+        ocrJob.fail++;
+        ocrJob.failedItems.push(item);
       }
-    } catch(e) { console.warn('Batch OCR, repli 1 par 1:', e.message); }
+    } catch(e) {
+      ocrJob.fail++;
+      ocrJob.failedItems.push(item);
+    }
+    ocrJob.done++;
+    updateOcrUi();
+    await sleep(orKey ? OCR_IMAGE_DELAY_MS : OCR_IMAGE_DELAY_MS * 2);
+  }, OCR_FALLBACK_PARALLEL);
+}
+
+async function processOcrChunk(items, orKey, batchSize) {
+  const startPage = items[0].page;
+  if (orKey && items.length > 1 && batchSize > 1) {
+    ocrJob.status = `Lot ${items.length} photos (pages ${startPage}–${items[items.length - 1].page})…`;
+    updateOcrUi();
+    try {
+      const texts = await transcribeImageBatchOpenRouter(orKey, items);
+      for (let i = 0; i < items.length; i++) {
+        if (ocrJob?.cancelled) return;
+        const text = texts[i];
+        if (text && appendCourseText(text, items[i].name, items[i].page)) {
+          ocrJob.ok++;
+        } else {
+          try {
+            const solo = await transcribeOneItem(items[i], orKey);
+            if (appendCourseText(solo, items[i].name, items[i].page)) ocrJob.ok++;
+            else { ocrJob.fail++; ocrJob.failedItems.push(items[i]); }
+          } catch(e) {
+            ocrJob.fail++;
+            ocrJob.failedItems.push(items[i]);
+          }
+        }
+        ocrJob.done++;
+        updateOcrUi();
+      }
+      return;
+    } catch(e) {
+      console.warn('Lot OCR:', e.message);
+    }
+  }
+  await ocrItemsIndividually(items, orKey);
+}
+
+async function runBulkOcrPipeline(imageFiles, retryOnly) {
+  const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
+  const batchSize = orKey ? OCR_BATCH_SIZE_OR : OCR_BATCH_SIZE_GEMINI;
+  const files = naturalSortFiles(imageFiles).slice(0, OCR_MAX_FILES);
+  if (imageFiles.length > OCR_MAX_FILES) {
+    showToast(`Limité aux ${OCR_MAX_FILES} premières photos (ordre du nom).`, 'error');
   }
 
-  for (let i = 0; i < files.length; i++) {
-    if (i > 0) await sleep(OCR_BATCH_DELAY_MS);
-    await processImage(files[i], { batch: true, preloaded: items[i] });
+  if (!retryOnly) {
+    ocrJob = {
+      cancelled: false, running: true, total: files.length, done: 0, ok: 0, fail: 0,
+      failedItems: [], status: 'Compression des images…'
+    };
+    showOcrPanel(true);
+    updateOcrUi();
+  } else {
+    ocrJob.running = true;
+    ocrJob.cancelled = false;
+    ocrJob.total = files.length;
+    ocrJob.done = 0;
+    ocrJob.status = 'Nouvelle tentative…';
+    updateOcrUi();
+  }
+
+  const drop = document.getElementById('pdf-drop');
+  let payloads;
+  try {
+    payloads = await mapPool(files, (f, idx) => loadImagePayload(f, true), OCR_COMPRESS_POOL);
+    payloads.forEach((p, i) => { p.page = i + 1; });
+  } catch(e) {
+    ocrJob.running = false;
+    showToast('Erreur lecture des images.', 'error');
+    return;
+  }
+
+  if (ocrJob.cancelled) { ocrJob.running = false; updateOcrUi(); return; }
+
+  const batchCount = Math.ceil(payloads.length / batchSize) || 0;
+  for (let b = 0; b < payloads.length; b += batchSize) {
+    if (ocrJob.cancelled) break;
+    const chunk = payloads.slice(b, b + batchSize);
+    const batchNum = Math.floor(b / batchSize) + 1;
+    ocrJob.status = `Lot ${batchNum}/${batchCount} · pages ${chunk[0].page}–${chunk[chunk.length - 1].page}`;
+    drop.innerHTML = `<div style="font-size:2rem">⏳</div><p><strong>${ocrJob.done}/${ocrJob.total}</strong> — lot ${batchNum}/${batchCount}</p>`;
+    updateOcrUi();
+    await processOcrChunk(chunk, orKey, batchSize);
+    if (b + batchSize < payloads.length && !ocrJob.cancelled) {
+      await sleep(orKey ? OCR_BATCH_DELAY_MS : OCR_IMAGE_DELAY_MS * 2);
+    }
+  }
+
+  ocrJob.running = false;
+  ocrJob.status = ocrJob.cancelled ? 'Annulé' : `Terminé — ${ocrJob.ok} page(s) transcrite(s)` + (ocrJob.fail ? `, ${ocrJob.fail} échec(s)` : '');
+  updateOcrUi();
+  const icon = ocrJob.cancelled ? '⚠️' : (ocrJob.fail && !ocrJob.ok ? '❌' : (ocrJob.fail ? '⚠️' : '✅'));
+  drop.innerHTML = `<div style="font-size:2rem">${icon}</div><p><strong>${ocrJob.ok}/${ocrJob.total}</strong> photo(s) transcrite(s)</p>` +
+    (ocrJob.fail ? `<p style="font-size:12px;color:var(--text-muted)">↻ Réessayer les échecs ci-dessous</p>` : '');
+  showToast(ocrJob.ok ? `✅ ${ocrJob.ok} photo(s) importée(s)` : 'Import terminé avec des échecs', ocrJob.ok ? 'success' : 'error');
+  if (!orKey && files.length > 10) {
+    showToast('💡 Ajoute OpenRouter pour importer 50–200 photos plus vite', '');
   }
 }
 
 async function importFiles(files) {
-  const drop = document.getElementById('pdf-drop');
   if (!files.length) return;
   if (!hasAnyApiKey()) { showToast('🔑 Entre ta clé API d\'abord.', 'error'); openKeyModal(); return; }
-  if (files.some(isImageFile) && !hasVisionApiKey()) {
+  const list = Array.from(files);
+  const images = naturalSortFiles(list.filter(isImageFile));
+  const pdfs = list.filter(isPdfFile);
+  const bad = list.filter(f => !isImageFile(f) && !isPdfFile(f));
+
+  if (images.length && !hasVisionApiKey()) {
     showToast('🔑 Images : clé Gemini ou OpenRouter requise.', 'error');
     openKeyModal();
     return;
   }
+  if (ocrJob?.running) { showToast('Import déjà en cours…', 'error'); return; }
 
-  let ok = 0;
-  const failed = [];
-  const pdfs = [];
-  const images = [];
-  for (const f of files) {
-    if (isPdfFile(f)) pdfs.push(f);
-    else if (isImageFile(f)) images.push(f);
-    else failed.push(f.name + ' (format)');
-  }
-
+  const drop = document.getElementById('pdf-drop');
   for (const file of pdfs) {
     drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>PDF : <strong>${escHtml(file.name)}</strong>…</p>`;
-    try { await processPDF(file, true); ok++; } catch(e) {
-      failed.push(file.name);
-      showToast(`⚠️ ${file.name}`, 'error');
-    }
+    try { await processPDF(file, true); } catch(e) { showToast(`⚠️ ${file.name}`, 'error'); }
   }
+  if (bad.length) showToast(`${bad.length} fichier(s) ignoré(s) (format non supporté)`, 'error');
 
-  const batchCount = Math.ceil(images.length / OCR_BATCH_SIZE) || 0;
-  for (let b = 0; b < images.length; b += OCR_BATCH_SIZE) {
-    const chunk = images.slice(b, b + OCR_BATCH_SIZE);
-    const batchNum = Math.floor(b / OCR_BATCH_SIZE) + 1;
-    if (b > 0) await sleep(OCR_BATCH_DELAY_MS);
-    drop.innerHTML = `<div style="font-size:2rem">⏳</div><p>Lot <strong>${batchNum}/${batchCount}</strong> — ${chunk.length} photo(s)…</p>`;
-    try {
-      await processImageBatch(chunk, drop);
-      ok += chunk.length;
-    } catch(e) {
-      console.error('Batch OCR:', e);
-      for (const file of chunk) {
-        try {
-          await processImage(file, { batch: true });
-          ok++;
-        } catch(e2) {
-          failed.push(file.name);
-          showToast(`⚠️ ${file.name} : ${(e2.message || '').slice(0, 50)}`, 'error');
-        }
-      }
-    }
-  }
-
-  const total = files.length;
-  const errN = failed.length;
-  drop.innerHTML = `<div style="font-size:2rem">${errN && !ok ? '❌' : errN ? '⚠️' : '✅'}</div><p><strong>${ok}/${total} importé(s)</strong>${images.length > 1 ? `<br><span style="font-size:12px;color:var(--text-muted)">${batchCount} lot(s) OCR</span>` : ''}${errN ? `<br><span style="font-size:12px;color:var(--text-muted)">Échec : ${escHtml(failed.join(', '))}</span>` : ''}</p>`;
-  showToast(errN ? `⚠️ ${ok}/${total}` : `✅ ${ok} fichier(s) — import rapide`, errN ? 'error' : 'success');
+  if (images.length) await runBulkOcrPipeline(images, false);
+  else if (!pdfs.length) showToast('Aucun PDF ou image valide.', 'error');
 }
 
 function handleDragOver(e) { e.preventDefault(); document.getElementById('pdf-drop').classList.add('drag'); }
