@@ -946,6 +946,66 @@ footer a { color: var(--green); text-decoration: none; }
         <!-- IMPORT -->
         <div class="apanel active" id="ap-import">
           <div class="courses-bar" id="courses-bar"></div>
+          
+          <!-- CATALOG SELECTOR -->
+          <div style="margin-bottom:1rem;padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius)">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+              <select id="catalog-year" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+                <option value="">Année...</option>
+                <option value="1P">1ère Primaire</option>
+                <option value="2P">2ème Primaire</option>
+                <option value="3P">3ème Primaire</option>
+                <option value="4P">4ème Primaire</option>
+                <option value="5P">5ème Primaire</option>
+                <option value="6P">6ème Primaire</option>
+                <option value="1S">1ère Secondaire</option>
+                <option value="2S">2ème Secondaire</option>
+                <option value="3S">3ème Secondaire</option>
+                <option value="4S">4ème Secondaire</option>
+                <option value="5S">5ème Secondaire</option>
+                <option value="6S">6ème Secondaire</option>
+                <option value="Bac1">Bachelier 1</option>
+                <option value="Bac2">Bachelier 2</option>
+                <option value="Bac3">Bachelier 3</option>
+                <option value="Master1">Master 1</option>
+                <option value="Master2">Master 2</option>
+              </select>
+              <select id="catalog-option" style="display:none;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+                <option value="">Option...</option>
+                <option value="Eco">Sciences Économiques</option>
+                <option value="Math">Mathématiques</option>
+                <option value="ScHum">Sciences Humaines</option>
+                <option value="Latin">Latin</option>
+                <option value="Grec">Grec</option>
+                <option value="ScApp">Sciences Appliquées</option>
+                <option value="Langues">Langues Modernes</option>
+                <option value="ScBase">Sciences de Base</option>
+                <option value="Arts">Arts</option>
+                <option value="Sport">Sport</option>
+              </select>
+              <select id="catalog-subject" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+                <option value="">Matière...</option>
+                <option value="maths">Mathématiques</option>
+                <option value="physique">Physique-Chimie</option>
+                <option value="svt">SVT</option>
+                <option value="francais">Français</option>
+                <option value="histoire">Histoire-Géographie</option>
+                <option value="anglais">Anglais</option>
+                <option value="philosophie">Philosophie</option>
+                <option value="economie">Économie</option>
+                <option value="informatique">Informatique</option>
+              </select>
+              <button class="btn-outline" style="padding:6px 12px;font-size:13px" onclick="loadCatalogCourse()">📚 Charger cours catalogue</button>
+              <button class="btn-outline" style="padding:6px 12px;font-size:13px" onclick="aiIdentifyChapter()">🤖 IA identifier chapitre</button>
+              <button class="btn-outline" style="padding:6px 12px;font-size:13px" onclick="suggestCourses()">💡 Suggest cours connexes</button>
+            </div>
+            <div id="catalog-chapters" style="display:none;margin-top:8px">
+              <select id="catalog-chapter" style="width:100%;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+                <option value="">Chapitre...</option>
+              </select>
+            </div>
+          </div>
+          
           <div class="pdf-drop" id="pdf-drop" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
             <div style="font-size:2rem">📸</div>
             <p><strong>Jusqu'à 200 photos</strong> — glisse, sélectionne ou importe un dossier entier</p>
@@ -1218,6 +1278,1171 @@ footer a { color: var(--green); text-decoration: none; }
 </footer>
 
 <script>
+// ══ BASE DE DONNÉES DE COURS STRUCTURÉE (SYSTÈME BELGE) ══
+const COURSE_CATALOG = {
+  maths: {
+    '1P': [
+      { id: 'm1p-1', name: 'Nombres jusqu\'à 10', keywords: ['nombres', 'compter', 'addition', 'soustraction'] },
+      { id: 'm1p-2', name: 'Formes géométriques', keywords: ['carré', 'cercle', 'triangle', 'forme'] },
+      { id: 'm1p-3', name: 'Mesures simples', keywords: ['longueur', 'taille', 'mesurer', 'comparer'] }
+    ],
+    '2P': [
+      { id: 'm2p-1', name: 'Nombres jusqu\'à 100', keywords: ['nombres', 'dizaines', 'unités', 'compter'] },
+      { id: 'm2p-2', name: 'Additions et soustractions', keywords: ['addition', 'soustraction', 'calcul', 'opérations'] },
+      { id: 'm2p-3', name: 'Géométrie de base', keywords: ['carré', 'rectangle', 'cercle', 'triangle'] }
+    ],
+    '3P': [
+      { id: 'm3p-1', name: 'Nombres jusqu\'à 1000', keywords: ['nombres', 'centaines', 'milliers', 'valeur'] },
+      { id: 'm3p-2', name: 'Multiplication', keywords: ['multiplication', 'tables', 'calcul', 'produit'] },
+      { id: 'm3p-3', name: 'Fractions simples', keywords: ['fraction', 'demi', 'quart', 'tiers'] }
+    ],
+    '4P': [
+      { id: 'm4p-1', name: 'Nombres décimaux', keywords: ['décimaux', 'virgule', 'dixièmes', 'centièmes'] },
+      { id: 'm4p-2', name: 'Division', keywords: ['division', 'quotient', 'reste', 'partage'] },
+      { id: 'm4p-3', name: 'Périmètre et aire', keywords: ['périmètre', 'aire', 'surface', 'calcul'] }
+    ],
+    '5P': [
+      { id: 'm5p-1', name: 'Grands nombres', keywords: ['millions', 'milliards', 'grands nombres', 'valeur'] },
+      { id: 'm5p-2', name: 'Fractions et pourcentages', keywords: ['fraction', 'pourcentage', 'proportion', 'calcul'] },
+      { id: 'm5p-3', name: 'Volume', keywords: ['volume', 'cube', 'pavé', 'capacité'] }
+    ],
+    '6P': [
+      { id: 'm6p-1', name: 'Opérations complexes', keywords: ['addition', 'soustraction', 'multiplication', 'division'] },
+      { id: 'm6p-2', name: 'Proportionnalité', keywords: ['proportionnalité', 'échelle', 'vitesse', 'rapport'] },
+      { id: 'm6p-3', name: 'Géométrie avancée', keywords: ['cercle', 'triangle', 'quadrilatère', 'propriétés'] }
+    ],
+    '1S': {
+      '': [
+        { id: 'm1s-1', name: 'Nombres et opérations', keywords: ['nombres', 'entiers', 'décimaux', 'opérations'] },
+        { id: 'm1s-2', name: 'Algèbre de base', keywords: ['variable', 'expression', 'équation simple', 'inconnue'] },
+        { id: 'm1s-3', name: 'Géométrie plane', keywords: ['droite', 'angle', 'triangle', 'quadrilatère'] }
+      ],
+      'Eco': [
+        { id: 'm1s-eco-1', name: 'Statistiques de base', keywords: ['statistique', 'moyenne', 'médiane', 'graphique'] },
+        { id: 'm1s-eco-2', name: 'Proportionnalité', keywords: ['proportionnalité', 'pourcentage', 'échelle', 'taux'] }
+      ],
+      'Math': [
+        { id: 'm1s-math-1', name: 'Calcul littéral avancé', keywords: ['développement', 'factorisation', 'identité remarquable'] },
+        { id: 'm1s-math-2', name: 'Géométrie analytique', keywords: ['repère', 'coordonnées', 'équation de droite'] }
+      ],
+      'ScHum': [
+        { id: 'm1s-schum-1', name: 'Statistiques appliquées', keywords: ['statistique', 'sondage', 'interprétation', 'graphique'] }
+      ],
+      'Latin': [
+        { id: 'm1s-latin-1', name: 'Histoire des mathématiques', keywords: ['histoire', 'Euclide', 'Pythagore', 'Archimède'] }
+      ],
+      'ScApp': [
+        { id: 'm1s-scapp-1', name: 'Mathématiques appliquées', keywords: ['mesure', 'conversion', 'pratique', 'métier'] }
+      ],
+      'Langues': [
+        { id: 'm1s-langues-1', name: 'Mathématiques de base', keywords: ['calcul', 'problème', 'raisonnement', 'logique'] }
+      ],
+      'ScBase': [
+        { id: 'm1s-scbase-1', name: 'Mathématiques générales', keywords: ['calcul', 'géométrie', 'algèbre', 'statistique'] }
+      ]
+    },
+    '2S': {
+      '': [
+        { id: 'm2s-1', name: 'Calcul littéral', keywords: ['développement', 'factorisation', 'expression', 'calcul'] },
+        { id: 'm2s-2', name: 'Équations et inéquations', keywords: ['équation', 'inéquation', 'solution', 'résolution'] },
+        { id: 'm2s-3', name: 'Théorème de Pythagore', keywords: ['pythagore', 'triangle rectangle', 'hypoténuse', 'carré'] }
+      ],
+      'Eco': [
+        { id: 'm2s-eco-1', name: 'Fonctions affines', keywords: ['fonction affine', 'coefficient directeur', 'ordonnée', 'droite'] },
+        { id: 'm2s-eco-2', name: 'Statistiques descriptives', keywords: ['statistique', 'écart-type', 'variance', 'distribution'] }
+      ],
+      'Math': [
+        { id: 'm2s-math-1', name: 'Systèmes d\'équations', keywords: ['système', 'équation linéaire', 'substitution', 'élimination'] },
+        { id: 'm2s-math-2', name: 'Géométrie dans l\'espace', keywords: ['espace', 'solide', 'volume', 'perspective'] }
+      ],
+      'ScHum': [
+        { id: 'm2s-schum-1', name: 'Probabilités de base', keywords: ['probabilité', 'événement', 'arbre', 'fréquence'] }
+      ],
+      'Latin': [
+        { id: 'm2s-latin-1', name: 'Géométrie grecque', keywords: ['géométrie', 'Euclide', 'théorème', 'démonstration'] }
+      ],
+      'ScApp': [
+        { id: 'm2s-scapp-1', name: 'Mathématiques techniques', keywords: ['technique', 'mesure', 'calcul', 'industrie'] }
+      ],
+      'Langues': [
+        { id: 'm2s-langues-1', name: 'Mathématiques intermédiaires', keywords: ['algèbre', 'géométrie', 'problème', 'résolution'] }
+      ],
+      'ScBase': [
+        { id: 'm2s-scbase-1', name: 'Mathématiques approfondies', keywords: ['équation', 'fonction', 'géométrie', 'statistique'] }
+      ]
+    },
+    '3S': {
+      '': [
+        { id: 'm3s-1', name: 'Puissances et racines', keywords: ['puissance', 'racine carrée', 'carré', 'cube'] },
+        { id: 'm3s-2', name: 'Théorème de Thalès', keywords: ['thales', 'proportionnalité', 'triangle', 'droite parallèle'] },
+        { id: 'm3s-3', name: 'Trigonométrie', keywords: ['cosinus', 'sinus', 'tangente', 'angle'] }
+      ],
+      'Eco': [
+        { id: 'm3s-eco-1', name: 'Fonctions de référence', keywords: ['fonction carrée', 'fonction inverse', 'représentation', 'étude'] },
+        { id: 'm3s-eco-2', name: 'Statistiques inférentielles', keywords: ['échantillonnage', 'intervalle de confiance', 'estimation', 'test'] },
+        { id: 'm3s-eco-3', name: 'Suites numériques', keywords: ['suite', 'arithmétique', 'géométrique', 'limite'] }
+      ],
+      'Math': [
+        { id: 'm3s-math-1', name: 'Nombres complexes', keywords: ['complexe', 'module', 'argument', 'forme algébrique'] },
+        { id: 'm3s-math-2', name: 'Polynômes', keywords: ['polynôme', 'racine', 'factorisation', 'équation'] },
+        { id: 'm3s-math-3', name: 'Dérivation', keywords: ['dérivée', 'tangente', 'nombre dérivé', 'limite'] }
+      ],
+      'ScHum': [
+        { id: 'm3s-schum-1', name: 'Statistiques avancées', keywords: ['régression', 'corrélation', 'analyse', 'données'] },
+        { id: 'm3s-schum-2', name: 'Probabilités conditionnelles', keywords: ['probabilité conditionnelle', 'arbre', 'indépendance'] }
+      ],
+      'Latin': [
+        { id: 'm3s-latin-1', name: 'Mathématiques romaines', keywords: ['numération', 'système', 'histoire', 'calcul'] }
+      ],
+      'ScApp': [
+        { id: 'm3s-scapp-1', name: 'Mathématiques de l\'ingénieur', keywords: ['ingénierie', 'calcul', 'modélisation', 'application'] }
+      ],
+      'Langues': [
+        { id: 'm3s-langues-1', name: 'Mathématiques avancées', keywords: ['analyse', 'algèbre', 'géométrie', 'statistique'] }
+      ],
+      'ScBase': [
+        { id: 'm3s-scbase-1', name: 'Mathématiques complètes', keywords: ['analyse', 'algèbre', 'géométrie', 'probabilités'] }
+      ]
+    },
+    '4S': {
+      '': [
+        { id: 'm4s-1', name: 'Fonctions', keywords: ['fonction', 'image', 'antécédent', 'courbe'] },
+        { id: 'm4s-2', name: 'Dérivation', keywords: ['dérivée', 'tangente', 'nombre dérivé', 'limite'] },
+        { id: 'm4s-3', name: 'Suites numériques', keywords: ['suite', 'arithmétique', 'géométrique', 'raison'] }
+      ],
+      'Eco': [
+        { id: 'm4s-eco-1', name: 'Fonctions exponentielles', keywords: ['exponentielle', 'croissance', 'décroissance', 'modèle'] },
+        { id: 'm4s-eco-2', name: 'Intégration', keywords: ['intégrale', 'primitive', 'aire', 'calcul'] },
+        { id: 'm4s-eco-3', name: 'Optimisation', keywords: ['optimisation', 'maximum', 'minimum', 'contrainte'] }
+      ],
+      'Math': [
+        { id: 'm4s-math-1', name: 'Intégration', keywords: ['intégrale', 'primitive', 'aire', 'calcul'] },
+        { id: 'm4s-math-2', name: 'Équations différentielles', keywords: ['équation différentielle', 'ordre', 'solution', 'linéaire'] },
+        { id: 'm4s-math-3', name: 'Géométrie analytique avancée', keywords: ['conique', 'ellipse', 'parabole', 'hyperbole'] }
+      ],
+      'ScHum': [
+        { id: 'm4s-schum-1', name: 'Analyse de données', keywords: ['analyse', 'données', 'régression', 'modèle'] },
+        { id: 'm4s-schum-2', name: 'Théorie des jeux', keywords: ['théorie des jeux', 'stratégie', 'équilibre', 'décision'] }
+      ],
+      'Latin': [
+        { id: 'm4s-latin-1', name: 'Histoire des mathématiques modernes', keywords: ['histoire', 'Newton', 'Leibniz', 'calcul'] }
+      ],
+      'ScApp': [
+        { id: 'm4s-scapp-1', name: 'Mathématiques pour l\'industrie', keywords: ['industrie', 'optimisation', 'contrôle', 'qualité'] }
+      ],
+      'Langues': [
+        { id: 'm4s-langues-1', name: 'Mathématiques supérieures', keywords: ['analyse supérieure', 'algèbre linéaire', 'géométrie'] }
+      ],
+      'ScBase': [
+        { id: 'm4s-scbase-1', name: 'Mathématiques intégrales', keywords: ['intégrale', 'dérivée', 'limite', 'continuité'] }
+      ]
+    },
+    '5S': {
+      '': [
+        { id: 'm5s-1', name: 'Intégration', keywords: ['intégrale', 'primitive', 'aire', 'calcul'] },
+        { id: 'm5s-2', name: 'Nombres complexes', keywords: ['complexe', 'module', 'argument', 'forme trigonométrique'] },
+        { id: 'm5s-3', name: 'Probabilités', keywords: ['probabilité', 'événement', 'arbre', 'fréquence'] }
+      ],
+      'Eco': [
+        { id: 'm5s-eco-1', name: 'Logarithmes', keywords: ['logarithme', 'ln', 'log', 'propriétés'] },
+        { id: 'm5s-eco-2', name: 'Statistiques multivariées', keywords: ['multivariée', 'régression multiple', 'corrélation', 'analyse'] },
+        { id: 'm5s-eco-3', name: 'Économétrie', keywords: ['économétrie', 'modèle', 'régression', 'estimation'] }
+      ],
+      'Math': [
+        { id: 'm5s-math-1', name: 'Algèbre linéaire', keywords: ['matrice', 'vecteur', 'espace vectoriel', 'déterminant'] },
+        { id: 'm5s-math-2', name: 'Analyse complexe', keywords: ['fonction complexe', 'holomorphe', 'intégrale', 'résidu'] },
+        { id: 'm5s-math-3', name: 'Topologie', keywords: ['topologie', 'ouvert', 'fermé', 'continuité'] }
+      ],
+      'ScHum': [
+        { id: 'm5s-schum-1', name: 'Méthodes quantitatives', keywords: ['quantitative', 'méthode', 'données', 'analyse'] },
+        { id: 'm5s-schum-2', name: 'Économétrie appliquée', keywords: ['économétrie', 'application', 'données', 'modèle'] }
+      ],
+      'Latin': [
+        { id: 'm5s-latin-1', name: 'Mathématiques classiques', keywords: ['classique', 'géométrie', 'algèbre', 'histoire'] }
+      ],
+      'ScApp': [
+        { id: 'm5s-scapp-1', name: 'Mathématiques pour l\'ingénieur avancé', keywords: ['ingénieur', 'modélisation', 'simulation', 'optimisation'] }
+      ],
+      'Langues': [
+        { id: 'm5s-langues-1', name: 'Mathématiques spécialisées', keywords: ['spécialisée', 'analyse', 'algèbre', 'application'] }
+      ],
+      'ScBase': [
+        { id: 'm5s-scbase-1', name: 'Mathématiques expertes', keywords: ['expert', 'analyse', 'algèbre', 'géométrie'] }
+      ]
+    },
+    '6S': {
+      '': [
+        { id: 'm6s-1', name: 'Analyse avancée', keywords: ['limite', 'continuité', 'dérivabilité', 'intégrale'] },
+        { id: 'm6s-2', name: 'Géométrie dans l\'espace', keywords: ['espace', 'plan', 'droite', 'vecteur'] },
+        { id: 'm6s-3', name: 'Statistiques', keywords: ['moyenne', 'écart-type', 'loi normale', 'distribution'] }
+      ],
+      'Eco': [
+        { id: 'm6s-eco-1', name: 'Analyse financière', keywords: ['finance', 'analyse', 'ratio', 'investissement'] },
+        { id: 'm6s-eco-2', name: 'Théorie des probabilités', keywords: ['probabilité', 'loi', 'théorème', 'limite'] },
+        { id: 'm6s-eco-3', name: 'Modélisation économique', keywords: ['modélisation', 'économie', 'mathématique', 'prédiction'] }
+      ],
+      'Math': [
+        { id: 'm6s-math-1', name: 'Analyse fonctionnelle', keywords: ['espace de Banach', 'espace de Hilbert', 'opérateur', 'spectre'] },
+        { id: 'm6s-math-2', name: 'Géométrie différentielle', keywords: ['variété', 'tangente', 'forme différentielle', 'courbure'] },
+        { id: 'm6s-math-3', name: 'Théorie de la mesure', keywords: ['mesure', 'intégrale de Lebesgue', 'espace Lp', 'théorème'] }
+      ],
+      'ScHum': [
+        { id: 'm6s-schum-1', name: 'Statistiques avancées', keywords: ['avancée', 'inférence', 'test', 'modèle'] },
+        { id: 'm6s-schum-2', name: 'Recherche quantitative', keywords: ['recherche', 'méthode', 'données', 'publication'] }
+      ],
+      'Latin': [
+        { id: 'm6s-latin-1', name: 'Histoire des mathématiques contemporaines', keywords: ['histoire', 'contemporaine', 'XXe', 'XXIe'] }
+      ],
+      'ScApp': [
+        { id: 'm6s-scapp-1', name: 'Mathématiques de recherche', keywords: ['recherche', 'innovation', 'développement', 'application'] }
+      ],
+      'Langues': [
+        { id: 'm6s-langues-1', name: 'Mathématiques de recherche', keywords: ['recherche', 'théorie', 'application', 'publication'] }
+      ],
+      'ScBase': [
+        { id: 'm6s-scbase-1', name: 'Mathématiques de niveau supérieur', keywords: ['supérieur', 'analyse', 'algèbre', 'géométrie'] }
+      ]
+    },
+    Bac1: [
+      { id: 'mb1-1', name: 'Algèbre linéaire', keywords: ['matrice', 'vecteur', 'espace vectoriel', 'déterminant'] },
+      { id: 'mb1-2', name: 'Analyse réelle', keywords: ['limite', 'continuité', 'dérivabilité', 'intégrale'] },
+      { id: 'mb1-3', name: 'Probabilités', keywords: ['variable aléatoire', 'loi', 'espérance', 'variance'] }
+    ],
+    Bac2: [
+      { id: 'mb2-1', name: 'Analyse complexe', keywords: ['fonction holomorphe', 'intégrale', 'série', 'résidu'] },
+      { id: 'mb2-2', name: 'Équations différentielles', keywords: ['équation différentielle', 'ordre', 'solution', 'linéaire'] },
+      { id: 'mb2-3', name: 'Statistiques inférentielles', keywords: ['estimation', 'test', 'intervalle de confiance', 'p-value'] }
+    ],
+    Bac3: [
+      { id: 'mb3-1', name: 'Topologie', keywords: ['espace topologique', 'continuité', 'compacité', 'connexité'] },
+      { id: 'mb3-2', name: 'Analyse fonctionnelle', keywords: ['espace de Banach', 'espace de Hilbert', 'opérateur', 'spectre'] },
+      { id: 'mb3-3', name: 'Géométrie différentielle', keywords: ['variété', 'tangente', 'forme différentielle', 'courbure'] }
+    ],
+    Master1: [
+      { id: 'mm1-1', name: 'Analyse avancée', keywords: ['mesure', 'intégrale de Lebesgue', 'espace Lp', 'théorème'] },
+      { id: 'mm1-2', name: 'Algèbre avancée', keywords: ['groupe', 'anneau', 'corps', 'théorie de Galois'] },
+      { id: 'mm1-3', name: 'Probabilités avancées', keywords: ['martingale', 'processus stochastique', 'mouvement brownien', 'théorème'] }
+    ],
+    Master2: [
+      { id: 'mm2-1', name: 'Recherche en mathématiques', keywords: ['thèse', 'publication', 'conférence', 'séminaire'] },
+      { id: 'mm2-2', name: 'Mathématiques appliquées', keywords: ['modélisation', 'simulation', 'analyse numérique', 'optimisation'] }
+    ]
+  },
+  physique: {
+    '1P': [
+      { id: 'p1p-1', name: 'L\'électricité simple', keywords: ['électricité', 'pile', 'ampoule', 'circuit'] },
+      { id: 'p1p-2', name: 'La lumière', keywords: ['lumière', 'couleur', 'ombre', 'prisme'] },
+      { id: 'p1p-3', name: 'Le son', keywords: ['son', 'bruit', 'vibration', 'écouter'] }
+    ],
+    '2P': [
+      { id: 'p2p-1', name: 'L\'énergie', keywords: ['énergie', 'soleil', 'vent', 'eau'] },
+      { id: 'p2p-2', name: 'La matière', keywords: ['solide', 'liquide', 'gaz', 'eau'] },
+      { id: 'p2p-3', name: 'Les aimants', keywords: ['aimant', 'attraction', 'pôle', 'magnétique'] }
+    ],
+    '3P': [
+      { id: 'p3p-1', name: 'Forces et mouvements', keywords: ['force', 'pousser', 'tirer', 'mouvement'] },
+      { id: 'p3p-2', name: 'L\'électricité', keywords: ['circuit', 'courant', 'interrupteur', 'lampe'] },
+      { id: 'p3p-3', name: 'La chaleur', keywords: ['chaleur', 'température', 'thermomètre', 'chauffer'] }
+    ],
+    '4P': [
+      { id: 'p4p-1', name: 'Électricité avancée', keywords: ['tension', 'résistance', 'loi d\'Ohm', 'circuit'] },
+      { id: 'p4p-2', name: 'La chimie simple', keywords: ['mélange', 'réaction', 'acide', 'base'] },
+      { id: 'p4p-3', name: 'L\'optique', keywords: ['lentille', 'miroir', 'focale', 'image'] }
+    ],
+    '5P': [
+      { id: 'p5p-1', name: 'Mécanique', keywords: ['vitesse', 'accélération', 'force', 'newton'] },
+      { id: 'p5p-2', name: 'Énergie et travail', keywords: ['énergie', 'travail', 'puissance', 'rendement'] },
+      { id: 'p5p-3', name: 'L\'atome', keywords: ['atome', 'noyau', 'électron', 'molécule'] }
+    ],
+    '6P': [
+      { id: 'p6p-1', name: 'Électricité et magnétisme', keywords: ['champ magnétique', 'induction', 'électromagnétisme'] },
+      { id: 'p6p-2', name: 'L\'énergie nucléaire', keywords: ['noyau', 'fission', 'fusion', 'radioactivité'] },
+      { id: 'p6p-3', name: 'La chimie', keywords: ['réaction', 'combustion', 'acidité', 'pH'] }
+    ],
+    '1S': [
+      { id: 'p1s-1', name: 'Mécanique de base', keywords: ['vitesse', 'accélération', 'force', 'mouvement'] },
+      { id: 'p1s-2', name: 'Électricité', keywords: ['courant', 'tension', 'résistance', 'circuit'] },
+      { id: 'p1s-3', name: 'Optique', keywords: ['lumière', 'réflexion', 'réfraction', 'lentille'] }
+    ],
+    '2S': [
+      { id: 'p2s-1', name: 'Dynamique', keywords: ['force', 'newton', 'masse', 'accélération'] },
+      { id: 'p2s-2', name: 'Énergie mécanique', keywords: ['énergie cinétique', 'énergie potentielle', 'travail', 'puissance'] },
+      { id: 'p2s-3', name: 'Chimie organique', keywords: ['carbone', 'hydrocarbure', 'combustion', 'molécule'] }
+    ],
+    '3S': [
+      { id: 'p3s-1', name: 'Thermodynamique', keywords: ['chaleur', 'température', 'enthalpie', 'entropie'] },
+      { id: 'p3s-2', name: 'Électromagnétisme', keywords: ['champ électrique', 'champ magnétique', 'onde', 'induction'] },
+      { id: 'p3s-3', name: 'Chimie des solutions', keywords: ['solution', 'concentration', 'pH', 'réaction'] }
+    ],
+    '4S': [
+      { id: 'p4s-1', name: 'Ondes', keywords: ['onde', 'fréquence', 'longueur d\'onde', 'vitesse'] },
+      { id: 'p4s-2', name: 'Relativité', keywords: ['relativité', 'E=mc2', 'vitesse lumière', 'temps'] },
+      { id: 'p4s-3', name: 'Physique quantique', keywords: ['quantique', 'atome', 'photon', 'probabilité'] }
+    ],
+    '5S': [
+      { id: 'p5s-1', name: 'Physique nucléaire', keywords: ['noyau', 'radioactivité', 'fission', 'fusion'] },
+      { id: 'p5s-2', name: 'Physique des particules', keywords: ['particule', 'quark', 'boson', 'interaction'] },
+      { id: 'p5s-3', name: 'Chimie avancée', keywords: ['cinétique chimique', 'équilibre', 'catalyse', 'réaction'] }
+    ],
+    '6S': [
+      { id: 'p6s-1', name: 'Physique statistique', keywords: ['statistique', 'ensemble', 'distribution', 'thermodynamique'] },
+      { id: 'p6s-2', name: 'Physique de la matière condensée', keywords: ['solide', 'cristal', 'bande', 'semi-conducteur'] },
+      { id: 'p6s-3', name: 'Chimie physique', keywords: ['thermochimie', 'électrochimie', 'spectroscopie', 'cinétique'] }
+    ],
+    Bac1: [
+      { id: 'pb1-1', name: 'Mécanique du point', keywords: ['mécanique', 'lagrangien', 'hamiltonien', 'équation'] },
+      { id: 'pb1-2', name: 'Électromagnétisme', keywords: ['maxwell', 'champ', 'onde', 'électromagnétique'] },
+      { id: 'pb1-3', name: 'Thermodynamique', keywords: ['thermodynamique', 'enthalpie', 'entropie', 'gaz parfait'] }
+    ],
+    Bac2: [
+      { id: 'pb2-1', name: 'Mécanique analytique', keywords: ['lagrange', 'hamilton', 'principe', 'variationnel'] },
+      { id: 'pb2-2', name: 'Physique statistique', keywords: ['statistique', 'ensemble', 'distribution', 'thermodynamique'] },
+      { id: 'pb2-3', name: 'Optique ondulatoire', keywords: ['interférence', 'diffraction', 'polarisation', 'laser'] }
+    ],
+    Bac3: [
+      { id: 'pb3-1', name: 'Physique quantique avancée', keywords: ['quantique', 'opérateur', 'état', 'évolution'] },
+      { id: 'pb3-2', name: 'Physique des particules', keywords: ['particule', 'quark', 'boson', 'interaction'] },
+      { id: 'pb3-3', name: 'Physique de la matière condensée', keywords: ['solide', 'cristal', 'bande', 'semi-conducteur'] }
+    ],
+    Master1: [
+      { id: 'pm1-1', name: 'Théorie quantique des champs', keywords: ['champ quantique', 'lagrangien', 'symétrie', 'gauge'] },
+      { id: 'pm1-2', name: 'Relativité générale', keywords: ['relativité générale', 'courbure', 'métrique', 'gravitation'] },
+      { id: 'pm1-3', name: 'Physique statistique avancée', keywords: ['transition de phase', 'critique', 'renormalisation', 'groupe'] }
+    ],
+    Master2: [
+      { id: 'pm2-1', name: 'Recherche en physique', keywords: ['thèse', 'expérience', 'théorie', 'publication'] },
+      { id: 'pm2-2', name: 'Physique appliquée', keywords: ['application', 'industrie', 'médecine', 'environnement'] }
+    ]
+  },
+  svt: {
+    '1P': [
+      { id: 's1p-1', name: 'Les êtres vivants', keywords: ['vivant', 'animal', 'plante', 'homme'] },
+      { id: 's1p-2', name: 'Le corps humain', keywords: ['corps', 'sens', 'mains', 'pieds'] },
+      { id: 's1p-3', name: 'L\'environnement', keywords: ['environnement', 'nature', 'eau', 'air'] }
+    ],
+    '2P': [
+      { id: 's2p-1', name: 'Les animaux', keywords: ['animal', 'mammifère', 'oiseau', 'poisson'] },
+      { id: 's2p-2', name: 'Les plantes', keywords: ['plante', 'fleur', 'arbre', 'racine'] },
+      { id: 's2p-3', name: 'Les saisons', keywords: ['saison', 'printemps', 'été', 'automne', 'hiver'] }
+    ],
+    '3P': [
+      { id: 's3p-1', name: 'La respiration', keywords: ['respiration', 'poumon', 'oxygène', 'air'] },
+      { id: 's3p-2', name: 'La digestion', keywords: ['digestion', 'bouche', 'estomac', 'manger'] },
+      { id: 's3p-3', name: 'Les sens', keywords: ['sens', 'vue', 'ouïe', 'toucher', 'goût', 'odorat'] }
+    ],
+    '4P': [
+      { id: 's4p-1', name: 'Le squelette', keywords: ['squelette', 'os', 'articulation', 'muscle'] },
+      { id: 's4p-2', name: 'La circulation', keywords: ['circulation', 'cœur', 'sang', 'vaisseau'] },
+      { id: 's4p-3', name: 'L\'hygiène', keywords: ['hygiène', 'santé', 'propreté', 'brossage'] }
+    ],
+    '5P': [
+      { id: 's5p-1', name: 'La reproduction', keywords: ['reproduction', 'naissance', 'bébé', 'famille'] },
+      { id: 's5p-2', name: 'L\'écosystème', keywords: ['écosystème', 'chaîne alimentaire', 'prédateur', 'proie'] },
+      { id: 's5p-3', name: 'L\'énergie', keywords: ['énergie', 'soleil', 'nourriture', 'mouvement'] }
+    ],
+    '6P': [
+      { id: 's6p-1', name: 'La génétique simple', keywords: ['gène', 'caractère', 'parents', 'enfants'] },
+      { id: 's6p-2', name: 'L\'immunité', keywords: ['immunité', 'maladie', 'guérison', 'vaccin'] },
+      { id: 's6p-3', name: 'L\'environnement', keywords: ['environnement', 'pollution', 'recyclage', 'nature'] }
+    ],
+    '1S': [
+      { id: 's1s-1', name: 'La cellule', keywords: ['cellule', 'membrane', 'noyau', 'organite'] },
+      { id: 's1s-2', name: 'Le métabolisme', keywords: ['métabolisme', 'enzyme', 'ATP', 'respiration cellulaire'] },
+      { id: 's1s-3', name: 'La génétique moléculaire', keywords: ['ADN', 'ARN', 'protéine', 'expression génique'] }
+    ],
+    '2S': [
+      { id: 's2s-1', name: 'La régulation', keywords: ['homéostasie', 'hormone', 'récepteur', 'signal'] },
+      { id: 's2s-2', name: 'La reproduction sexuée', keywords: ['méiose', 'fécondation', 'développement', 'placenta'] },
+      { id: 's2s-3', name: 'L\'immunité', keywords: ['immunité', 'lymphocyte', 'anticorps', 'vaccination'] }
+    ],
+    '3S': [
+      { id: 's3s-1', name: 'La génétique', keywords: ['gène', 'allèle', 'dominance', 'hérédité'] },
+      { id: 's3s-2', name: 'La plante', keywords: ['photosynthèse', 'nutrition', 'développement', 'hormone'] },
+      { id: 's3s-3', name: 'L\'animal', keywords: ['nutrition', 'circulation', 'respiration', 'excrétion'] }
+    ],
+    '4S': [
+      { id: 's4s-1', name: 'L\'évolution', keywords: ['évolution', 'phylogénie', 'spéciation', 'adaptation'] },
+      { id: 's4s-2', name: 'L\'immunité avancée', keywords: ['immunité', 'maladie', 'vaccination', 'sida'] },
+      { id: 's4s-3', name: 'L\'écologie', keywords: ['écologie', 'écosystème', 'biodiversité', 'population'] }
+    ],
+    '5S': [
+      { id: 's5s-1', name: 'Biologie cellulaire', keywords: ['cellule', 'cycle cellulaire', 'apoptose', 'signalisation'] },
+      { id: 's5s-2', name: 'Génétique', keywords: ['génétique', 'génomique', 'transcription', 'traduction'] },
+      { id: 's5s-3', name: 'Biochimie', keywords: ['protéine', 'enzyme', 'métabolisme', 'structure'] }
+    ],
+    '6S': [
+      { id: 's6s-1', name: 'Biologie moléculaire', keywords: ['ADN', 'ARN', 'épissage', 'régulation'] },
+      { id: 's6s-2', name: 'Biologie du développement', keywords: ['développement', 'embryogenèse', 'différenciation', 'morphogenèse'] },
+      { id: 's6s-3', name: 'Écologie avancée', keywords: ['écosystème', 'biodiversité', 'population', 'communauté'] }
+    ],
+    Bac1: [
+      { id: 'sb1-1', name: 'Biologie cellulaire', keywords: ['cellule', 'cycle cellulaire', 'apoptose', 'signalisation'] },
+      { id: 'sb1-2', name: 'Génétique', keywords: ['génétique', 'génomique', 'transcription', 'traduction'] },
+      { id: 'sb1-3', name: 'Biochimie', keywords: ['protéine', 'enzyme', 'métabolisme', 'structure'] }
+    ],
+    Bac2: [
+      { id: 'sb2-1', name: 'Biologie moléculaire', keywords: ['ADN', 'ARN', 'épissage', 'régulation'] },
+      { id: 'sb2-2', name: 'Biologie du développement', keywords: ['développement', 'embryogenèse', 'différenciation', 'morphogenèse'] },
+      { id: 'sb2-3', name: 'Écologie', keywords: ['écosystème', 'biodiversité', 'population', 'communauté'] }
+    ],
+    Bac3: [
+      { id: 'sb3-1', name: 'Biologie évolutive', keywords: ['évolution', 'phylogénie', 'sélection', 'adaptation'] },
+      { id: 'sb3-2', name: 'Neurobiologie', keywords: ['neurone', 'synapse', 'plasticité', 'cognition'] },
+      { id: 'sb3-3', name: 'Microbiologie', keywords: ['microbe', 'virus', 'bactérie', 'pathogène'] }
+    ],
+    Master1: [
+      { id: 'sm1-1', name: 'Biologie systémique', keywords: ['système', 'réseau', 'modélisation', 'simulation'] },
+      { id: 'sm1-2', name: 'Génomique fonctionnelle', keywords: ['génome', 'transcriptome', 'protéome', 'métabolome'] },
+      { id: 'sm1-3', name: 'Biologie structurale', keywords: ['structure', 'cristallographie', 'NMR', 'cryo-EM'] }
+    ],
+    Master2: [
+      { id: 'sm2-1', name: 'Recherche en biologie', keywords: ['thèse', 'laboratoire', 'publication', 'conférence'] },
+      { id: 'sm2-2', name: 'Biotechnologie', keywords: ['biotech', 'thérapie génique', 'CRISPR', 'application'] }
+    ]
+  },
+  francais: {
+    '1P': [
+      { id: 'f1p-1', name: 'Lecture et alphabet', keywords: ['lecture', 'alphabet', 'lettres', 'mots'] },
+      { id: 'f1p-2', name: 'Écriture', keywords: ['écriture', 'mots', 'phrases', 'copier'] },
+      { id: 'f1p-3', name: 'Vocabulaire', keywords: ['mots', 'vocabulaire', 'images', 'signification'] }
+    ],
+    '2P': [
+      { id: 'f2p-1', name: 'Lecture avancée', keywords: ['lecture', 'compréhension', 'texte', 'histoire'] },
+      { id: 'f2p-2', name: 'Grammaire simple', keywords: ['grammaire', 'phrase', 'sujet', 'verbe'] },
+      { id: 'f2p-3', name: 'Expression orale', keywords: ['parler', 'raconter', 'expression', 'communication'] }
+    ],
+    '3P': [
+      { id: 'f3p-1', name: 'Conjugaison', keywords: ['conjugaison', 'verbe', 'temps', 'présent'] },
+      { id: 'f3p-2', name: 'Orthographe', keywords: ['orthographe', 'mots', 'lettres', 'correction'] },
+      { id: 'f3p-3', name: 'Rédaction', keywords: ['rédaction', 'texte', 'histoire', 'écrire'] }
+    ],
+    '4P': [
+      { id: 'f4p-1', name: 'Grammaire avancée', keywords: ['grammaire', 'syntaxe', 'ponctuation', 'accord'] },
+      { id: 'f4p-2', name: 'Littérature enfantine', keywords: ['livre', 'histoire', 'conte', 'lecture'] },
+      { id: 'f4p-3', name: 'Compréhension', keywords: ['compréhension', 'texte', 'analyse', 'résumé'] }
+    ],
+    '5P': [
+      { id: 'f5p-1', name: 'Types de textes', keywords: ['narratif', 'descriptif', 'informatif', 'argumentatif'] },
+      { id: 'f5p-2', name: 'Poésie', keywords: ['poésie', 'rime', 'vers', 'strophe'] },
+      { id: 'f5p-3', name: 'Vocabulaire enrichi', keywords: ['vocabulaire', 'synonymes', 'antonymes', 'expressions'] }
+    ],
+    '6P': [
+      { id: 'f6p-1', name: 'Grammaire complète', keywords: ['grammaire', 'conjugaison', 'orthographe', 'syntaxe'] },
+      { id: 'f6p-2', name: 'Littérature jeunesse', keywords: ['roman', 'nouvelle', 'auteur', 'lecture'] },
+      { id: 'f6p-3', name: 'Expression écrite', keywords: ['rédaction', 'narration', 'description', 'argumentation'] }
+    ],
+    '1S': [
+      { id: 'f1s-1', name: 'Littérature du XIXe siècle', keywords: ['romantisme', 'réalisme', 'naturalisme', 'symbolisme'] },
+      { id: 'f1s-2', name: 'Théâtre', keywords: ['théâtre', 'tragédie', 'comédie', 'dialogue'] },
+      { id: 'f1s-3', name: 'Poésie moderne', keywords: ['poésie', 'vers libre', 'surréalisme', 'symbolisme'] }
+    ],
+    '2S': [
+      { id: 'f2s-1', name: 'Littérature du XXe siècle', keywords: ['modernisme', 'absurde', 'nouveau roman', 'engagement'] },
+      { id: 'f2s-2', name: 'Argumentation', keywords: ['argumentation', 'essai', 'pamphlet', 'manifeste'] },
+      { id: 'f2s-3', name: 'Poésie contemporaine', keywords: ['poésie', 'contemporaine', 'performance', 'slam'] }
+    ],
+    '3S': [
+      { id: 'f3s-1', name: 'Littérature française', keywords: ['littérature', 'canon', 'œuvre', 'auteur'] },
+      { id: 'f3s-2', name: 'Objet d\'étude', keywords: ['objet d\'étude', 'thème', 'problématique', 'perspective'] },
+      { id: 'f3s-3', name: 'Écriture d\'invention', keywords: ['écriture', 'invention', 'création', 'style'] }
+    ],
+    '4S': [
+      { id: 'f4s-1', name: 'Littérature belge', keywords: ['littérature belge', 'Simenon', 'Verhaeren', 'Maeterlinck'] },
+      { id: 'f4s-2', name: 'Analyse de texte', keywords: ['analyse', 'thème', 'personnage', 'intrigue'] },
+      { id: 'f4s-3', name: 'Grammaire avancée', keywords: ['grammaire', 'syntaxe', 'ponctuation', 'style'] }
+    ],
+    '5S': [
+      { id: 'f5s-1', name: 'Genres littéraires', keywords: ['genre', 'épistolaire', 'autobiographie', 'fantastique'] },
+      { id: 'f5s-2', name: 'Dissertation', keywords: ['dissertation', 'problématique', 'plan', 'argumentation'] },
+      { id: 'f5s-3', name: 'Commentaire composé', keywords: ['commentaire', 'analyse', 'extrait', 'méthode'] }
+    ],
+    '6S': [
+      { id: 'f6s-1', name: 'Littérature comparée', keywords: ['comparée', 'intertextualité', 'traduction', 'culture'] },
+      { id: 'f6s-2', name: 'Linguistique', keywords: ['linguistique', 'phonétique', 'morphologie', 'syntaxe'] },
+      { id: 'f6s-3', name: 'Cultural studies', keywords: ['culture', 'identité', 'genre', 'média'] }
+    ],
+    Bac1: [
+      { id: 'fb1-1', name: 'Littérature médiévale', keywords: ['moyen âge', 'chanson de geste', 'roman courtois', 'poésie'] },
+      { id: 'fb1-2', name: 'Littérature classique', keywords: ['classique', 'XVIIe', 'tragédie', 'comédie'] },
+      { id: 'fb1-3', name: 'Linguistique', keywords: ['linguistique', 'phonétique', 'morphologie', 'syntaxe'] }
+    ],
+    Bac2: [
+      { id: 'fb2-1', name: 'Littérature moderne', keywords: ['moderne', 'XIXe', 'romantisme', 'réalisme'] },
+      { id: 'fb2-2', name: 'Littérature contemporaine', keywords: ['contemporaine', 'XXe', 'postmodernisme', 'engagement'] },
+      { id: 'fb2-3', name: 'Sémiotique', keywords: ['sémiotique', 'signe', 'symbole', 'interprétation'] }
+    ],
+    Bac3: [
+      { id: 'fb3-1', name: 'Théorie littéraire', keywords: ['théorie', 'narratologie', 'intertextualité', 'réception'] },
+      { id: 'fb3-2', name: 'Littérature comparée', keywords: ['comparée', 'intertextualité', 'traduction', 'culture'] },
+      { id: 'fb3-3', name: 'Cultural studies', keywords: ['culture', 'identité', 'genre', 'média'] }
+    ],
+    Master1: [
+      { id: 'fm1-1', name: 'Recherche en littérature', keywords: ['recherche', 'méthodologie', 'archive', 'édition'] },
+      { id: 'fm1-2', name: 'Écriture créative', keywords: ['écriture', 'création', 'atelier', 'publication'] },
+      { id: 'fm1-3', name: 'Édition', keywords: ['édition', 'publication', 'marché', 'numérique'] }
+    ],
+    Master2: [
+      { id: 'fm2-1', name: 'Thèse de doctorat', keywords: ['thèse', 'doctorat', 'recherche', 'soutenance'] },
+      { id: 'fm2-2', name: 'Enseignement', keywords: ['enseignement', 'pédagogie', 'didactique', 'formation'] }
+    ]
+  },
+  histoire: {
+    '1P': [
+      { id: 'h1p-1', name: 'Le temps', keywords: ['temps', 'hier', 'aujourd\'hui', 'demain'] },
+      { id: 'h1p-2', name: 'La famille', keywords: ['famille', 'parents', 'grands-parents', 'enfants'] },
+      { id: 'h1p-3', name: 'Les fêtes', keywords: ['fêtes', 'noël', 'pâques', 'traditions'] }
+    ],
+    '2P': [
+      { id: 'h2p-1', name: 'L\'école', keywords: ['école', 'classe', 'maître', 'apprendre'] },
+      { id: 'h2p-2', name: 'Le quartier', keywords: ['quartier', 'ville', 'maison', 'rue'] },
+      { id: 'h2p-3', name: 'Les saisons', keywords: ['saisons', 'climat', 'météo', 'nature'] }
+    ],
+    '3P': [
+      { id: 'h3p-1', name: 'La Belgique', keywords: ['Belgique', 'Bruxelles', 'drapeau', 'roi'] },
+      { id: 'h3p-2', name: 'L\'Europe', keywords: ['Europe', 'pays', 'frontières', 'carte'] },
+      { id: 'h3p-3', name: 'Le monde', keywords: ['monde', 'continents', 'océans', 'carte'] }
+    ],
+    '4P': [
+      { id: 'h4p-1', name: 'Les Romains', keywords: ['Romains', 'empire', 'légion', 'Belgique'] },
+      { id: 'h4p-2', name: 'Le Moyen Âge', keywords: ['moyen âge', 'chevaliers', 'châteaux', 'seigneurs'] },
+      { id: 'h4p-3', name: 'Les inventions', keywords: ['inventions', 'machine', 'électricité', 'train'] }
+    ],
+    '5P': [
+      { id: 'h5p-1', name: 'La Révolution belge', keywords: ['révolution', '1830', 'indépendance', 'Léopold'] },
+      { id: 'h5p-2', name: 'L\'industrialisation', keywords: ['industrialisation', 'charbon', 'usine', 'ouvrier'] },
+      { id: 'h5p-3', name: 'Les guerres mondiales', keywords: ['guerre mondiale', '1914', '1940', 'paix'] }
+    ],
+    '6P': [
+      { id: 'h6p-1', name: 'L\'Union européenne', keywords: ['Union européenne', 'Bruxelles', 'euro', 'parlement'] },
+      { id: 'h6p-2', name: 'La géographie', keywords: ['géographie', 'climat', 'population', 'économie'] },
+      { id: 'h6p-3', name: 'L\'histoire contemporaine', keywords: ['histoire', 'XXe siècle', 'technologie', 'société'] }
+    ],
+    '1S': [
+      { id: 'h1s-1', name: 'L\'Antiquité', keywords: ['antiquité', 'Égypte', 'Grèce', 'Rome'] },
+      { id: 'h1s-2', name: 'Le Moyen Âge', keywords: ['moyen âge', 'féodalité', 'croisade', 'charlemagne'] },
+      { id: 'h1s-3', name: 'Les Temps modernes', keywords: ['renaissance', 'réforme', 'découverte', 'imprimerie'] }
+    ],
+    '2S': [
+      { id: 'h2s-1', name: 'La Révolution française', keywords: ['révolution', '1789', 'république', 'Napoléon'] },
+      { id: 'h2s-2', name: 'L\'indépendance belge', keywords: ['1830', 'indépendance', 'Congrès national', 'constitution'] },
+      { id: 'h2s-3', name: 'L\'industrialisation', keywords: ['industrialisation', 'révolution industrielle', 'ouvrier', 'usine'] }
+    ],
+    '3S': [
+      { id: 'h3s-1', name: 'Le XXe siècle', keywords: ['XXe', 'guerre mondiale', 'guerre froide', 'décolonisation'] },
+      { id: 'h3s-2', name: 'La Belgique contemporaine', keywords: ['Belgique', 'fédéralisme', 'communautés', 'régions'] },
+      { id: 'h3s-3', name: 'L\'Europe', keywords: ['Europe', 'Union européenne', 'intégration', 'institutions'] }
+    ],
+    '4S': [
+      { id: 'h4s-1', name: 'Le monde antique', keywords: ['antique', 'Méditerranée', 'civilisation', 'empire'] },
+      { id: 'h4s-2', name: 'Le monde médiéval', keywords: ['médiéval', 'christianisme', 'islam', 'féodalité'] },
+      { id: 'h4s-3', name: 'La Renaissance', keywords: ['renaissance', 'humanisme', 'réforme', 'découverte'] }
+    ],
+    '5S': [
+      { id: 'h5s-1', name: 'Le monde moderne', keywords: ['moderne', 'XVIe', 'XVIIe', 'XVIIIe'] },
+      { id: 'h5s-2', name: 'La Révolution industrielle', keywords: ['industrielle', 'capitalisme', 'ouvrier', 'socialisme'] },
+      { id: 'h5s-3', name: 'L\'histoire belge', keywords: ['Belgique', 'indépendance', 'colonisation', 'neutralité'] }
+    ],
+    '6S': [
+      { id: 'h6s-1', name: 'Le monde contemporain', keywords: ['contemporain', 'XXe', 'XXIe', 'mondialisation'] },
+      { id: 'h6s-2', name: 'La guerre froide', keywords: ['guerre froide', 'URSS', 'USA', 'bloc'] },
+      { id: 'h6s-3', name: 'La décolonisation', keywords: ['décolonisation', 'indépendance', 'tiers-monde', 'néocolonialisme'] }
+    ],
+    Bac1: [
+      { id: 'hb1-1', name: 'Histoire ancienne', keywords: ['ancienne', 'antiquité', 'archéologie', 'épigraphie'] },
+      { id: 'hb1-2', name: 'Histoire médiévale', keywords: ['médiévale', 'manuscrit', 'chartrier', 'féodalité'] },
+      { id: 'hb1-3', name: 'Histoire moderne', keywords: ['moderne', 'archives', 'diplomatie', 'guerre'] }
+    ],
+    Bac2: [
+      { id: 'hb2-1', name: 'Histoire contemporaine', keywords: ['contemporaine', 'XXe', 'mémoire', 'témoignage'] },
+      { id: 'hb2-2', name: 'Histoire sociale', keywords: ['sociale', 'classe', 'genre', 'mouvement'] },
+      { id: 'hb2-3', name: 'Histoire culturelle', keywords: ['culturelle', 'représentation', 'média', 'art'] }
+    ],
+    Bac3: [
+      { id: 'hb3-1', name: 'Histoire globale', keywords: ['globale', 'mondialisation', 'connecté', 'transnational'] },
+      { id: 'hb3-2', name: 'Histoire environnementale', keywords: ['environnementale', 'climat', 'nature', 'écologie'] },
+      { id: 'hb3-3', name: 'Histoire des sciences', keywords: ['sciences', 'technologie', 'innovation', 'révolution'] }
+    ],
+    Master1: [
+      { id: 'hm1-1', name: 'Recherche en histoire', keywords: ['recherche', 'archives', 'méthodologie', 'publication'] },
+      { id: 'hm1-2', name: 'Patrimoine', keywords: ['patrimoine', 'musée', 'conservation', 'valorisation'] },
+      { id: 'hm1-3', name: 'Enseignement de l\'histoire', keywords: ['enseignement', 'pédagogie', 'didactique', 'programme'] }
+    ],
+    Master2: [
+      { id: 'hm2-1', name: 'Thèse de doctorat', keywords: ['thèse', 'doctorat', 'recherche', 'soutenance'] },
+      { id: 'hm2-2', name: 'Archives', keywords: ['archives', 'classification', 'conservation', 'numérisation'] }
+    ]
+  },
+  anglais: {
+    '1P': [
+      { id: 'a1p-1', name: 'Mots simples', keywords: ['hello', 'goodbye', 'colors', 'numbers'] },
+      { id: 'a1p-2', name: 'L\'alphabet', keywords: ['alphabet', 'letters', 'ABC', 'song'] },
+      { id: 'a1p-3', name: 'Compter', keywords: ['count', 'one', 'two', 'three'] }
+    ],
+    '2P': [
+      { id: 'a2p-1', name: 'Vocabulaire de base', keywords: ['vocabulary', 'word', 'meaning', 'translation'] },
+      { id: 'a2p-2', name: 'Grammaire simple', keywords: ['grammar', 'verb', 'tense', 'sentence'] },
+      { id: 'a2p-3', name: 'Expression orale', keywords: ['speaking', 'listening', 'conversation', 'pronunciation'] }
+    ],
+    '3P': [
+      { id: 'a3p-1', name: 'Vocabulaire avancé', keywords: ['vocabulary', 'idiom', 'expression', 'phrasal verb'] },
+      { id: 'a3p-2', name: 'Grammaire intermédiaire', keywords: ['grammar', 'conditionnel', 'passif', 'comparatif'] },
+      { id: 'a3p-3', name: 'Compréhension écrite', keywords: ['reading', 'comprehension', 'text', 'article'] }
+    ],
+    '4P': [
+      { id: 'a4p-1', name: 'Vocabulaire thématique', keywords: ['vocabulary', 'theme', 'topic', 'subject'] },
+      { id: 'a4p-2', name: 'Grammaire avancée', keywords: ['grammar', 'subjonctif', 'reported speech', 'perfect'] },
+      { id: 'a4p-3', name: 'Expression écrite', keywords: ['writing', 'essay', 'letter', 'email'] }
+    ],
+    '5P': [
+      { id: 'a5p-1', name: 'Vocabulaire académique', keywords: ['vocabulary', 'academic', 'formal', 'essay'] },
+      { id: 'a5p-2', name: 'Grammaire complexe', keywords: ['grammar', 'mixed conditionals', 'passive voice', 'inversion'] },
+      { id: 'a5p-3', name: 'Compréhension orale', keywords: ['listening', 'audio', 'video', 'podcast'] }
+    ],
+    '6P': [
+      { id: 'a6p-1', name: 'Vocabulaire professionnel', keywords: ['vocabulary', 'professional', 'business', 'workplace'] },
+      { id: 'a6p-2', name: 'Grammaire professionnelle', keywords: ['grammar', 'business', 'formal', 'email'] },
+      { id: 'a6p-3', name: 'Communication professionnelle', keywords: ['communication', 'presentation', 'meeting', 'negotiation'] }
+    ],
+    '1S': [
+      { id: 'a1s-1', name: 'Vocabulaire académique', keywords: ['vocabulary', 'academic', 'university', 'research'] },
+      { id: 'a1s-2', name: 'Grammaire académique', keywords: ['grammar', 'academic', 'formal', 'essay'] },
+      { id: 'a1s-3', name: 'Littérature anglaise', keywords: ['literature', 'novel', 'poetry', 'drama'] }
+    ],
+    '2S': [
+      { id: 'a2s-1', name: 'Vocabulaire avancé', keywords: ['vocabulary', 'advanced', 'specialized', 'technical'] },
+      { id: 'a2s-2', name: 'Grammaire avancée', keywords: ['grammar', 'advanced', 'complex', 'nuance'] },
+      { id: 'a2s-3', name: 'Culture anglophone', keywords: ['culture', 'history', 'society', 'institutions'] }
+    ],
+    '3S': [
+      { id: 'a3s-1', name: 'Linguistique anglaise', keywords: ['linguistics', 'phonetics', 'morphology', 'syntax'] },
+      { id: 'a3s-2', name: 'Littérature anglaise', keywords: ['literature', 'canon', 'author', 'period'] },
+      { id: 'a3s-3', name: 'Civilisation anglophone', keywords: ['civilization', 'history', 'politics', 'culture'] }
+    ],
+    '4S': [
+      { id: 'a4s-1', name: 'Littérature américaine', keywords: ['literature', 'American', 'novel', 'poetry'] },
+      { id: 'a4s-2', name: 'Linguistique appliquée', keywords: ['applied linguistics', 'TESOL', 'methodology', 'acquisition'] },
+      { id: 'a4s-3', name: 'Traduction', keywords: ['translation', 'interpretation', 'localization', 'adaptation'] }
+    ],
+    '5S': [
+      { id: 'a5s-1', name: 'Théorie littéraire', keywords: ['theory', 'criticism', 'narratology', 'postcolonial'] },
+      { id: 'a5s-2', name: 'Sociolinguistique', keywords: ['sociolinguistics', 'society', 'language', 'variation'] },
+      { id: 'a5s-3', name: 'Études culturelles', keywords: ['cultural studies', 'media', 'identity', 'globalization'] }
+    ],
+    '6S': [
+      { id: 'a6s-1', name: 'Anglais des affaires', keywords: ['business english', 'corporate', 'negotiation', 'presentation'] },
+      { id: 'a6s-2', name: 'Anglais scientifique', keywords: ['scientific english', 'research', 'academic', 'publication'] },
+      { id: 'a6s-3', name: 'Anglais juridique', keywords: ['legal english', 'law', 'contract', 'terminology'] }
+    ],
+    Bac1: [
+      { id: 'ab1-1', name: 'Linguistique anglaise', keywords: ['linguistics', 'phonetics', 'morphology', 'syntax'] },
+      { id: 'ab1-2', name: 'Littérature anglaise', keywords: ['literature', 'canon', 'author', 'period'] },
+      { id: 'ab1-3', name: 'Civilisation anglophone', keywords: ['civilization', 'history', 'politics', 'culture'] }
+    ],
+    Bac2: [
+      { id: 'ab2-1', name: 'Littérature américaine', keywords: ['literature', 'American', 'novel', 'poetry'] },
+      { id: 'ab2-2', name: 'Linguistique appliquée', keywords: ['applied linguistics', 'TESOL', 'methodology', 'acquisition'] },
+      { id: 'ab2-3', name: 'Traduction', keywords: ['translation', 'interpretation', 'localization', 'adaptation'] }
+    ],
+    Bac3: [
+      { id: 'ab3-1', name: 'Théorie littéraire', keywords: ['theory', 'criticism', 'narratology', 'postcolonial'] },
+      { id: 'ab3-2', name: 'Sociolinguistique', keywords: ['sociolinguistics', 'society', 'language', 'variation'] },
+      { id: 'ab3-3', name: 'Études culturelles', keywords: ['cultural studies', 'media', 'identity', 'globalization'] }
+    ],
+    Master1: [
+      { id: 'am1-1', name: 'Recherche en anglais', keywords: ['research', 'methodology', 'academic writing', 'publication'] },
+      { id: 'am1-2', name: 'Enseignement de l\'anglais', keywords: ['teaching', 'methodology', 'curriculum', 'assessment'] },
+      { id: 'am1-3', name: 'Traduction professionnelle', keywords: ['translation', 'technical', 'legal', 'medical'] }
+    ],
+    Master2: [
+      { id: 'am2-1', name: 'Thèse de doctorat', keywords: ['thesis', 'doctorate', 'research', 'dissertation'] },
+      { id: 'am2-2', name: 'Interprétation de conférence', keywords: ['interpretation', 'conference', 'simultaneous', 'consecutive'] }
+    ]
+  },
+  philosophie: {
+    '5S': [
+      { id: 'ph5s-1', name: 'Introduction à la philosophie', keywords: ['philosophie', 'question', 'réflexion', 'pensée'] },
+      { id: 'ph5s-2', name: 'La conscience', keywords: ['conscience', 'esprit', 'sujet', 'identité'] },
+      { id: 'ph5s-3', name: 'La morale', keywords: ['morale', 'éthique', 'bien', 'mal'] }
+    ],
+    '6S': [
+      { id: 'ph6s-1', name: 'Le sujet', keywords: ['sujet', 'conscience', 'inconscient', 'liberté'] },
+      { id: 'ph6s-2', name: 'La culture', keywords: ['culture', 'art', 'religion', 'science'] },
+      { id: 'ph6s-3', name: 'La vérité', keywords: ['vérité', 'raison', 'logique', 'science'] }
+    ],
+    Bac1: [
+      { id: 'phb1-1', name: 'Histoire de la philosophie antique', keywords: ['antique', 'Platon', 'Aristote', 'stoïcisme'] },
+      { id: 'phb1-2', name: 'Histoire de la philosophie moderne', keywords: ['moderne', 'Descartes', 'Kant', 'rationalisme'] },
+      { id: 'phb1-3', name: 'Logique', keywords: ['logique', 'syllogisme', 'proposition', 'argument'] }
+    ],
+    Bac2: [
+      { id: 'phb2-1', name: 'Philosophie contemporaine', keywords: ['contemporaine', 'phénoménologie', 'existentialisme', 'structuralisme'] },
+      { id: 'phb2-2', name: 'Éthique', keywords: ['éthique', 'morale', 'responsabilité', 'justice'] },
+      { id: 'phb2-3', name: 'Philosophie politique', keywords: ['politique', 'démocratie', 'justice', 'droit'] }
+    ],
+    Bac3: [
+      { id: 'phb3-1', name: 'Philosophie de l\'esprit', keywords: ['esprit', 'conscience', 'IA', 'cognition'] },
+      { id: 'phb3-2', name: 'Philosophie des sciences', keywords: ['science', 'épistémologie', 'méthode', 'vérité'] },
+      { id: 'phb3-3', name: 'Esthétique', keywords: ['esthétique', 'art', 'beauté', 'création'] }
+    ],
+    Master1: [
+      { id: 'phm1-1', name: 'Recherche en philosophie', keywords: ['recherche', 'méthode', 'publication', 'conférence'] },
+      { id: 'phm1-2', name: 'Philosophie appliquée', keywords: ['appliquée', 'éthique', 'bioéthique', 'environnement'] },
+      { id: 'phm1-3', name: 'Enseignement de la philosophie', keywords: ['enseignement', 'pédagogie', 'didactique', 'programme'] }
+    ],
+    Master2: [
+      { id: 'phm2-1', name: 'Thèse de doctorat', keywords: ['thèse', 'doctorat', 'recherche', 'soutenance'] },
+      { id: 'phm2-2', name: 'Consultation philosophique', keywords: ['consultation', 'éthique', 'entreprise', 'société'] }
+    ]
+  },
+  economie: {
+    '3S': {
+      '': [
+        { id: 'e3s-1', name: 'Introduction à l\'économie', keywords: ['économie', 'marché', 'offre', 'demande'] },
+        { id: 'e3s-2', name: 'La production', keywords: ['production', 'entreprise', 'travail', 'capital'] },
+        { id: 'e3s-3', name: 'La consommation', keywords: ['consommation', 'revenu', 'épargne', 'investissement'] }
+      ],
+      'Eco': [
+        { id: 'e3s-eco-1', name: 'Microéconomie de base', keywords: ['microéconomie', 'consommateur', 'producteur', 'équilibre'] },
+        { id: 'e3s-eco-2', name: 'Comptabilité nationale', keywords: ['comptabilité', 'PIB', 'revenu national', 'compte'] },
+        { id: 'e3s-eco-3', name: 'Monnaie et banque', keywords: ['monnaie', 'banque', 'inflation', 'taux d\'intérêt'] }
+      ],
+      'Math': [
+        { id: 'e3s-math-1', name: 'Mathématiques pour économie', keywords: ['mathématiques', 'économie', 'modèle', 'équation'] },
+        { id: 'e3s-math-2', name: 'Statistiques économiques', keywords: ['statistique', 'données', 'analyse', 'interprétation'] }
+      ],
+      'ScHum': [
+        { id: 'e3s-schum-1', name: 'Sociologie économique', keywords: ['sociologie', 'économie', 'société', 'comportement'] },
+        { id: 'e3s-schum-2', name: 'Psychologie économique', keywords: ['psychologie', 'économie', 'décision', 'comportement'] }
+      ],
+      'Latin': [
+        { id: 'e3s-latin-1', name: 'Histoire de la pensée économique', keywords: ['histoire', 'économie', 'pensée', 'classique'] }
+      ],
+      'ScApp': [
+        { id: 'e3s-scapp-1', name: 'Économie d\'entreprise', keywords: ['entreprise', 'économie', 'gestion', 'business'] }
+      ],
+      'Langues': [
+        { id: 'e3s-langues-1', name: 'Économie internationale', keywords: ['internationale', 'commerce', 'échange', 'mondialisation'] }
+      ],
+      'ScBase': [
+        { id: 'e3s-scbase-1', name: 'Économie générale', keywords: ['générale', 'économie', 'marché', 'système'] }
+      ]
+    },
+    '4S': {
+      '': [
+        { id: 'e4s-1', name: 'Microéconomie', keywords: ['microéconomie', 'marché', 'concurrence', 'monopole'] },
+        { id: 'e4s-2', name: 'Macroéconomie', keywords: ['macroéconomie', 'PIB', 'inflation', 'chômage'] },
+        { id: 'e4s-3', name: 'Finance', keywords: ['finance', 'banque', 'marché financier', 'investissement'] }
+      ],
+      'Eco': [
+        { id: 'e4s-eco-1', name: 'Théorie du consommateur', keywords: ['consommateur', 'utilité', 'préférence', 'choix'] },
+        { id: 'e4s-eco-2', name: 'Théorie du producteur', keywords: ['producteur', 'coût', 'profit', 'production'] },
+        { id: 'e4s-eco-3', name: 'Marchés et prix', keywords: ['marché', 'prix', 'équilibre', 'offre demande'] }
+      ],
+      'Math': [
+        { id: 'e4s-math-1', name: 'Optimisation économique', keywords: ['optimisation', 'lagrangien', 'contrainte', 'maximum'] },
+        { id: 'e4s-math-2', name: 'Économétrie de base', keywords: ['économétrie', 'régression', 'corrélation', 'test'] }
+      ],
+      'ScHum': [
+        { id: 'e4s-schum-1', name: 'Politique économique', keywords: ['politique', 'économie', 'gouvernement', 'intervention'] },
+        { id: 'e4s-schum-2', name: 'Économie du travail', keywords: ['travail', 'salaire', 'emploi', 'chômage'] }
+      ],
+      'Latin': [
+        { id: 'e4s-latin-1', name: 'Économie antique', keywords: ['antique', 'économie', 'Rome', 'Grèce'] }
+      ],
+      'ScApp': [
+        { id: 'e4s-scapp-1', name: 'Gestion financière', keywords: ['financière', 'gestion', 'budget', 'comptabilité'] }
+      ],
+      'Langues': [
+        { id: 'e4s-langues-1', name: 'Commerce international', keywords: ['commerce', 'international', 'export', 'import'] }
+      ],
+      'ScBase': [
+        { id: 'e4s-scbase-1', name: 'Économie approfondie', keywords: ['approfondie', 'micro', 'macro', 'finance'] }
+      ]
+    },
+    '5S': {
+      '': [
+        { id: 'e5s-1', name: 'Croissance et développement', keywords: ['croissance', 'développement', 'PIB', 'inégalités'] },
+        { id: 'e5s-2', name: 'Mondialisation', keywords: ['mondialisation', 'commerce', 'investissement', 'multinationale'] },
+        { id: 'e5s-3', name: 'Politiques économiques', keywords: ['politique', 'budgétaire', 'monétaire', 'structurelle'] }
+      ],
+      'Eco': [
+        { id: 'e5s-eco-1', name: 'Macroéconomie avancée', keywords: ['macroéconomie', 'modèle', 'IS-LM', 'équilibre'] },
+        { id: 'e5s-eco-2', name: 'Commerce international', keywords: ['commerce', 'avantage comparatif', 'protectionnisme', 'OMC'] },
+        { id: 'e5s-eco-3', name: 'Finance internationale', keywords: ['finance', 'taux de change', 'balance des paiements', 'euro'] }
+      ],
+      'Math': [
+        { id: 'e5s-math-1', name: 'Économétrie avancée', keywords: ['économétrie', 'modèle', 'MCO', 'test'] },
+        { id: 'e5s-math-2', name: 'Théorie des jeux', keywords: ['théorie des jeux', 'équilibre de Nash', 'stratégie', 'coopération'] }
+      ],
+      'ScHum': [
+        { id: 'e5s-schum-1', name: 'Développement durable', keywords: ['développement', 'durable', 'environnement', 'économie verte'] },
+        { id: 'e5s-schum-2', name: 'Économie sociale', keywords: ['sociale', 'économie', 'solidarité', 'inégalités'] }
+      ],
+      'Latin': [
+        { id: 'e5s-latin-1', name: 'Histoire économique moderne', keywords: ['histoire', 'moderne', 'révolution industrielle', 'capitalisme'] }
+      ],
+      'ScApp': [
+        { id: 'e5s-scapp-1', name: 'Marketing', keywords: ['marketing', 'stratégie', 'marché', 'consommateur'] }
+      ],
+      'Langues': [
+        { id: 'e5s-langues-1', name: 'Économie mondiale', keywords: ['mondiale', 'économie', 'pays émergents', 'BRICS'] }
+      ],
+      'ScBase': [
+        { id: 'e5s-scbase-1', name: 'Économie experte', keywords: ['experte', 'théorie', 'politique', 'mondialisation'] }
+      ]
+    },
+    '6S': {
+      '': [
+        { id: 'e6s-1', name: 'Économie belge', keywords: ['Belgique', 'économie', 'UE', 'Bruxelles'] },
+        { id: 'e6s-2', name: 'Finance personnelle', keywords: ['finance personnelle', 'budget', 'épargne', 'investissement'] },
+        { id: 'e6s-3', name: 'Entrepreneuriat', keywords: ['entrepreneuriat', 'startup', 'business plan', 'innovation'] }
+      ],
+      'Eco': [
+        { id: 'e6s-eco-1', name: 'Politique économique belge', keywords: ['politique', 'Belgique', 'budget', 'fédéral'] },
+        { id: 'e6s-eco-2', name: 'Économie de l\'UE', keywords: ['UE', 'économie européenne', 'euro', 'politique monétaire'] },
+        { id: 'e6s-eco-3', name: 'Économie belge approfondie', keywords: ['Belgique', 'économie', 'secteurs', 'compétitivité'] }
+      ],
+      'Math': [
+        { id: 'e6s-math-1', name: 'Finance quantitative', keywords: ['quantitative', 'finance', 'modèle', 'risque'] },
+        { id: 'e6s-math-2', name: 'Économétrie appliquée', keywords: ['économétrie', 'données', 'prévision', 'modèle'] }
+      ],
+      'ScHum': [
+        { id: 'e6s-schum-1', name: 'Socio-économie', keywords: ['socio-économie', 'société', 'économie', 'inégalités'] },
+        { id: 'e6s-schum-2', name: 'Économie du développement', keywords: ['développement', 'pays en développement', 'aide', 'croissance'] }
+      ],
+      'Latin': [
+        { id: 'e6s-latin-1', name: 'Histoire économique contemporaine', keywords: ['histoire', 'contemporaine', 'XXe', 'XXIe'] }
+      ],
+      'ScApp': [
+        { id: 'e6s-scapp-1', name: 'Gestion de projet', keywords: ['gestion', 'projet', 'planification', 'ressources'] }
+      ],
+      'Langues': [
+        { id: 'e6s-langues-1', name: 'Affaires internationales', keywords: ['internationales', 'affaires', 'négociation', 'diplomatie'] }
+      ],
+      'ScBase': [
+        { id: 'e6s-scbase-1', name: 'Économie de niveau supérieur', keywords: ['supérieur', 'théorie', 'politique', 'mondialisation'] }
+      ]
+    },
+    Bac1: [
+      { id: 'eb1-1', name: 'Microéconomie avancée', keywords: ['microéconomie', 'théorie', 'modèle', 'équilibre'] },
+      { id: 'eb1-2', name: 'Macroéconomie avancée', keywords: ['macroéconomie', 'modèle', 'politique', 'croissance'] },
+      { id: 'eb1-3', name: 'Économétrie', keywords: ['économétrie', 'statistique', 'régression', 'modèle'] }
+    ],
+    Bac2: [
+      { id: 'eb2-1', name: 'Finance d\'entreprise', keywords: ['finance', 'entreprise', 'investissement', 'valorisation'] },
+      { id: 'eb2-2', name: 'Économie internationale', keywords: ['internationale', 'commerce', 'change', 'balance'] },
+      { id: 'eb2-3', name: 'Économie du travail', keywords: ['travail', 'salaire', 'chômage', 'négociation'] }
+    ],
+    Bac3: [
+      { id: 'eb3-1', name: 'Finance de marché', keywords: ['marché', 'action', 'obligation', 'dérivé'] },
+      { id: 'eb3-2', name: 'Économie publique', keywords: ['publique', 'fiscalité', 'dépense', 'politique'] },
+      { id: 'eb3-3', name: 'Économie du développement', keywords: ['développement', 'pays émergent', 'aide', 'croissance'] }
+    ],
+    Master1: [
+      { id: 'em1-1', name: 'Recherche en économie', keywords: ['recherche', 'méthode', 'données', 'publication'] },
+      { id: 'em1-2', name: 'Finance quantitative', keywords: ['quantitative', 'modèle', 'algorithme', 'trading'] },
+      { id: 'em1-3', name: 'Politique économique', keywords: ['politique', 'gouvernement', 'banque centrale', 'régulation'] }
+    ],
+    Master2: [
+      { id: 'em2-1', name: 'Thèse de doctorat', keywords: ['thèse', 'doctorat', 'recherche', 'soutenance'] },
+      { id: 'em2-2', name: 'Conseil en économie', keywords: ['conseil', 'entreprise', 'stratégie', 'analyse'] }
+    ]
+  },
+  informatique: {
+    '3S': [
+      { id: 'i3s-1', name: 'Introduction à l\'informatique', keywords: ['informatique', 'ordinateur', 'logiciel', 'internet'] },
+      { id: 'i3s-2', name: 'Algorithmique de base', keywords: ['algorithme', 'variable', 'condition', 'boucle'] },
+      { id: 'i3s-3', name: 'Programmation', keywords: ['programmation', 'Python', 'code', 'syntaxe'] }
+    ],
+    '4S': [
+      { id: 'i4s-1', name: 'Algorithmique avancée', keywords: ['algorithme', 'tri', 'recherche', 'complexité'] },
+      { id: 'i4s-2', name: 'Structures de données', keywords: ['structure', 'tableau', 'liste', 'arbre'] },
+      { id: 'i4s-3', name: 'Programmation orientée objet', keywords: ['POO', 'classe', 'objet', 'héritage'] }
+    ],
+    '5S': [
+      { id: 'i5s-1', name: 'Bases de données', keywords: ['base de données', 'SQL', 'table', 'requête'] },
+      { id: 'i5s-2', name: 'Réseaux', keywords: ['réseau', 'internet', 'protocole', 'sécurité'] },
+      { id: 'i5s-3', name: 'Développement web', keywords: ['web', 'HTML', 'CSS', 'JavaScript'] }
+    ],
+    '6S': [
+      { id: 'i6s-1', name: 'Cybersécurité', keywords: ['cybersécurité', 'cryptographie', 'attaque', 'défense'] },
+      { id: 'i6s-2', name: 'Intelligence artificielle', keywords: ['IA', 'machine learning', 'réseau neuronal', 'deep learning'] },
+      { id: 'i6s-3', name: 'Data science', keywords: ['data science', 'analyse de données', 'statistiques', 'visualisation'] }
+    ],
+    Bac1: [
+      { id: 'ib1-1', name: 'Algorithmique et structures', keywords: ['algorithme', 'structure', 'complexité', 'graph'] },
+      { id: 'ib1-2', name: 'Programmation avancée', keywords: ['programmation', 'C++', 'Java', 'Python'] },
+      { id: 'ib1-3', name: 'Systèmes d\'exploitation', keywords: ['OS', 'processus', 'mémoire', 'fichier'] }
+    ],
+    Bac2: [
+      { id: 'ib2-1', name: 'Bases de données avancées', keywords: ['base de données', 'NoSQL', 'optimisation', 'transaction'] },
+      { id: 'ib2-2', name: 'Réseaux avancés', keywords: ['réseau', 'protocole', 'sécurité', 'administration'] },
+      { id: 'ib2-3', name: 'Intelligence artificielle', keywords: ['IA', 'machine learning', 'réseau neuronal', 'deep learning'] }
+    ],
+    Bac3: [
+      { id: 'ib3-1', name: 'Cybersécurité', keywords: ['cybersécurité', 'cryptographie', 'attaque', 'défense'] },
+      { id: 'ib3-2', name: 'Cloud computing', keywords: ['cloud', 'AWS', 'Azure', 'conteneur'] },
+      { id: 'ib3-3', name: 'DevOps', keywords: ['DevOps', 'CI/CD', 'Docker', 'Kubernetes'] }
+    ],
+    Master1: [
+      { id: 'im1-1', name: 'Recherche en informatique', keywords: ['recherche', 'publication', 'conférence', 'innovation'] },
+      { id: 'im1-2', name: 'Big Data', keywords: ['big data', 'Hadoop', 'Spark', 'analytics'] },
+      { id: 'im1-3', name: 'Machine learning avancé', keywords: ['machine learning', 'deep learning', 'reinforcement', 'NLP'] }
+    ],
+    Master2: [
+      { id: 'im2-1', name: 'Thèse de doctorat', keywords: ['thèse', 'doctorat', 'recherche', 'soutenance'] },
+      { id: 'im2-2', name: 'Architecture logicielle', keywords: ['architecture', 'design', 'pattern', 'scalabilité'] }
+    ]
+  }
+};
+
+// ══ FONCTIONS CATALOGUE ══
+let selectedCatalogYear = '';
+let selectedCatalogSubject = '';
+let selectedCatalogChapter = '';
+
+function updateCatalogChapters() {
+  const year = document.getElementById('catalog-year').value;
+  const subject = document.getElementById('catalog-subject').value;
+  const option = document.getElementById('catalog-option').value;
+  const chapterSelect = document.getElementById('catalog-chapter');
+  const chaptersDiv = document.getElementById('catalog-chapters');
+  
+  if (!year || !subject || !COURSE_CATALOG[subject] || !COURSE_CATALOG[subject][year]) {
+    chaptersDiv.style.display = 'none';
+    chapterSelect.innerHTML = '<option value="">Chapitre...</option>';
+    return;
+  }
+  
+  let chapters = COURSE_CATALOG[subject][year];
+  
+  // Si c'est un objet avec options (pour le secondaire)
+  if (typeof chapters === 'object' && !Array.isArray(chapters)) {
+    // Combiner les chapitres de base et les chapitres de l'option
+    const baseChapters = chapters[''] || [];
+    const optionChapters = option ? (chapters[option] || []) : [];
+    chapters = [...baseChapters, ...optionChapters];
+  }
+  
+  if (!chapters || chapters.length === 0) {
+    chaptersDiv.style.display = 'none';
+    chapterSelect.innerHTML = '<option value="">Chapitre...</option>';
+    return;
+  }
+  
+  chapterSelect.innerHTML = '<option value="">Chapitre...</option>' + 
+    chapters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  chaptersDiv.style.display = 'block';
+}
+
+function loadCatalogCourse() {
+  const year = document.getElementById('catalog-year').value;
+  const subject = document.getElementById('catalog-subject').value;
+  const chapterId = document.getElementById('catalog-chapter').value;
+  
+  if (!year || !subject || !chapterId) {
+    showToast('Sélectionne année, matière et chapitre', 'error');
+    return;
+  }
+  
+  let chapter;
+  const yearData = COURSE_CATALOG[subject]?.[year];
+  
+  if (!yearData) {
+    showToast('Chapitre introuvable', 'error');
+    return;
+  }
+  
+  // Si c'est un tableau (ancienne structure, sans options)
+  if (Array.isArray(yearData)) {
+    chapter = yearData.find(c => c.id === chapterId);
+  } 
+  // Si c'est un objet avec options (nouvelle structure)
+  else if (typeof yearData === 'object') {
+    // Chercher dans tous les chapitres (base + options)
+    for (const optionKey in yearData) {
+      const found = yearData[optionKey].find(c => c.id === chapterId);
+      if (found) {
+        chapter = found;
+        break;
+      }
+    }
+  }
+  
+  if (!chapter) {
+    showToast('Chapitre introuvable', 'error');
+    return;
+  }
+  
+  // Générer un cours modèle pour ce chapitre
+  const courseText = generateCourseTemplate(chapter, subject, year);
+  document.getElementById('course-text').value = courseText;
+  updateCharCount();
+  showToast(`✅ Cours chargé : ${chapter.name}`, 'success');
+}
+
+function generateCourseTemplate(chapter, subject, year) {
+  const subjectNames = {
+    maths: 'Mathématiques',
+    physique: 'Physique-Chimie',
+    svt: 'SVT',
+    francais: 'Français',
+    histoire: 'Histoire-Géographie',
+    anglais: 'Anglais',
+    philosophie: 'Philosophie',
+    economie: 'Économie',
+    informatique: 'Informatique'
+  };
+  
+  return `Cours : ${subjectNames[subject] || subject} - ${year}\nChapitre : ${chapter.name}\n\n` +
+    `Ce cours couvre les concepts suivants :\n` +
+    chapter.keywords.map(k => `- ${k}`).join('\n') + '\n\n' +
+    `Définitions principales :\n\n` +
+    `Exemples et applications :\n\n` +
+    `Exercices d\'entraînement :\n\n` +
+    `Résumé du chapitre :\n\n` +
+    `[Colle ton cours ici pour générer les quiz, flashcards et autres outils]`;
+}
+
+async function aiIdentifyChapter() {
+  const courseText = document.getElementById('course-text').value.trim();
+  if (!courseText || courseText.length < 50) {
+    showToast('Ajoute d\'abord du texte de cours', 'error');
+    return;
+  }
+  
+  if (!hasAnyApiKey()) {
+    openKeyModal();
+    return;
+  }
+  
+  const yearSelect = document.getElementById('catalog-year');
+  const subjectSelect = document.getElementById('catalog-subject');
+  const optionSelect = document.getElementById('catalog-option');
+  const chapterSelect = document.getElementById('catalog-chapter');
+  
+  try {
+    const prompt = `Analyse ce cours et identifie :\n` +
+      `1. L'année scolaire belge (1P-6P pour primaire, 1S-6S pour secondaire, Bac1-3 pour bachelier, Master1-2 pour master)\n` +
+      `2. La matière (maths, physique, svt, francais, histoire, anglais, philosophie, economie, informatique)\n` +
+      `3. L'option pour le secondaire (Eco, Math, ScHum, Latin, Grec, ScApp, Langues, ScBase, Arts, Sport) ou vide si pas d'option\n` +
+      `4. Le chapitre le plus probable\n\n` +
+      `Cours :\n${courseText.slice(0, 2000)}\n\n` +
+      `Réponds uniquement au format JSON :\n` +
+      `{"year":"...","subject":"...","option":"...","chapter":"...","confidence":0.8}`;
+    
+    const result = await aiJSON(prompt, 'Expert en éducation belge. JSON uniquement.' + compactSuffix());
+    
+    if (result.year) yearSelect.value = result.year;
+    if (result.subject) subjectSelect.value = result.subject;
+    if (result.option && (result.year === '1S' || result.year === '2S' || result.year === '3S' || result.year === '4S' || result.year === '5S' || result.year === '6S')) {
+      optionSelect.value = result.option;
+    }
+    
+    updateCatalogChapters();
+    
+    if (result.chapter) {
+      setTimeout(() => {
+        const yearData = COURSE_CATALOG[result.subject]?.[result.year];
+        let chapters = [];
+        
+        if (yearData) {
+          if (Array.isArray(yearData)) {
+            chapters = yearData;
+          } else if (typeof yearData === 'object') {
+            const baseChapters = yearData[''] || [];
+            const optionChapters = result.option ? (yearData[result.option] || []) : [];
+            chapters = [...baseChapters, ...optionChapters];
+          }
+        }
+        
+        const match = chapters.find(c => 
+          c.name.toLowerCase().includes(result.chapter.toLowerCase()) ||
+          result.chapter.toLowerCase().includes(c.name.toLowerCase())
+        );
+        if (match) {
+          chapterSelect.value = match.id;
+          showToast(`🤖 IA identifié : ${match.name} (${result.confidence ? Math.round(result.confidence * 100) : '?'}%)`, 'success');
+        } else {
+          showToast(`🤖 IA suggère : ${result.chapter} (non trouvé dans catalogue)`, 'error');
+        }
+      }, 100);
+    }
+  } catch(e) {
+    showToast('Erreur identification IA : ' + e.message, 'error');
+  }
+}
+
+async function suggestCourses() {
+  const courseText = document.getElementById('course-text').value.trim();
+  if (!courseText || courseText.length < 50) {
+    showToast('Ajoute d\'abord du texte de cours', 'error');
+    return;
+  }
+  
+  if (!hasAnyApiKey()) {
+    openKeyModal();
+    return;
+  }
+  
+  try {
+    const prompt = `Analyse ce cours et suggère 3 chapitres connexes du catalogue qui pourraient être utiles pour l'étudiant.\n\n` +
+      `Cours :\n${courseText.slice(0, 1500)}\n\n` +
+      `Réponds uniquement au format JSON avec un tableau de suggestions :\n` +
+      `{"suggestions":[{"subject":"...","year":"...","chapterId":"...","chapterName":"...","reason":"..."}]}\n\n` +
+      `Utilise les identifiants exacts du catalogue (ex: m6-1, p5-2, etc.).`;
+    
+    const result = await aiJSON(prompt, 'Expert en pédagogie. JSON uniquement.' + compactSuffix());
+    
+    if (result.suggestions && result.suggestions.length > 0) {
+      let suggestionHtml = '<div style="margin-top:1rem;padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius)">';
+      suggestionHtml += '<h4 style="margin:0 0 0.5rem 0">💡 Chapitres suggérés</h4>';
+      
+      result.suggestions.forEach((s, i) => {
+        suggestionHtml += `<div style="margin-bottom:0.5rem;padding:0.5rem;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+          <div style="font-weight:600">${i + 1}. ${s.chapterName || s.chapterId}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${s.subject} - ${s.year}</div>
+          <div style="font-size:13px;margin-top:4px">${s.reason || 'Chapitre connexe'}</div>
+        </div>`;
+      });
+      
+      suggestionHtml += '</div>';
+      
+      const existingSuggestions = document.getElementById('course-suggestions');
+      if (existingSuggestions) existingSuggestions.remove();
+      
+      const suggestionsDiv = document.createElement('div');
+      suggestionsDiv.id = 'course-suggestions';
+      suggestionsDiv.innerHTML = suggestionHtml;
+      
+      const catalogDiv = document.querySelector('#ap-import > div:nth-child(2)');
+      if (catalogDiv) catalogDiv.appendChild(suggestionsDiv);
+      
+      showToast(`✅ ${result.suggestions.length} suggestions générées`, 'success');
+    } else {
+      showToast('Aucune suggestion trouvée', 'error');
+    }
+  } catch(e) {
+    showToast('Erreur suggestions IA : ' + e.message, 'error');
+  }
+}
+
+// Écouteurs pour le catalogue
+document.getElementById('catalog-year')?.addEventListener('change', function() {
+  const year = this.value;
+  const optionSelect = document.getElementById('catalog-option');
+  // Afficher le sélecteur d'option seulement pour le secondaire (1S-6S)
+  if (year && (year === '1S' || year === '2S' || year === '3S' || year === '4S' || year === '5S' || year === '6S')) {
+    optionSelect.style.display = 'block';
+  } else {
+    optionSelect.style.display = 'none';
+    optionSelect.value = '';
+  }
+  updateCatalogChapters();
+});
+document.getElementById('catalog-option')?.addEventListener('change', updateCatalogChapters);
+document.getElementById('catalog-subject')?.addEventListener('change', updateCatalogChapters);
+
 const STYLES = {
   simple:  'Définition + 3 points essentiels. Max 120 mots. Texte brut.',
   analogy: '1 analogie "Imagine que…" + 2 phrases. Texte brut.',
