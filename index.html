@@ -13,6 +13,8 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -2196,6 +2198,125 @@ const COURSE_CATALOG = {
   }
 };
 
+// ══ SYSTÈME D'APPRENTISSAGE DISTRIBUÉ ══
+const firebaseConfig = {
+  apiKey: "AIzaSyC2WN231HZj-LrN-x58PEd9lipgky9nAJw",
+  authDomain: "notiq-learning.firebaseapp.com",
+  databaseURL: "https://notiq-learning-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "notiq-learning",
+  storageBucket: "notiq-learning.firebasestorage.app",
+  messagingSenderId: "458125290879",
+  appId: "1:458125290879:web:62e249faed7d3c11a0fe4a"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const learningDatabase = firebase.database();
+
+const LEARNING_CONFIG = {
+  enabled: true,
+  batchSize: 10,
+  flushInterval: 60000, // 1 minute
+  anonymize: true
+};
+
+let learningQueue = [];
+let learningSessionId = generateSessionId();
+let learningFlushTimer = null;
+
+function generateSessionId() {
+  return 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+}
+
+function getSessionHash() {
+  // Hash persistant mais anonyme pour l'utilisateur
+  let hash = localStorage.getItem('notiq_session_hash');
+  if (!hash) {
+    hash = 'user_' + crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+    localStorage.setItem('notiq_session_hash', hash);
+  }
+  return hash;
+}
+
+function anonymizeData(data) {
+  const clean = JSON.parse(JSON.stringify(data));
+  
+  // Supprimer les contenus sensibles
+  delete clean.courseText;
+  delete clean.apiKeys;
+  delete clean.email;
+  delete clean.name;
+  delete clean.phone;
+  
+  // Anonymiser les textes longs
+  if (clean.text && typeof clean.text === 'string' && clean.text.length > 100) {
+    clean.text = clean.text.substring(0, 100) + '...';
+  }
+  
+  // Arrondir les timestamps à l'heure
+  if (clean.timestamp) {
+    clean.timestamp = Math.floor(clean.timestamp / 3600000) * 3600000;
+  }
+  
+  return clean;
+}
+
+function collectLearningEvent(type, data) {
+  if (!LEARNING_CONFIG.enabled) return;
+  
+  const event = {
+    type,
+    timestamp: Date.now(),
+    session: learningSessionId,
+    userHash: getSessionHash(),
+    version: NOTIQ_BUILD,
+    ...anonymizeData(data)
+  };
+  
+  learningQueue.push(event);
+  
+  // Flush si on atteint la taille du batch
+  if (learningQueue.length >= LEARNING_CONFIG.batchSize) {
+    flushLearningQueue();
+  }
+}
+
+function flushLearningQueue() {
+  if (learningQueue.length === 0) return;
+  
+  const batch = [...learningQueue];
+  learningQueue = [];
+  
+  console.log('[Learning] Flushing batch of', batch.length, 'events');
+  
+  // Envoyer à Firebase Realtime Database
+  batch.forEach(event => {
+    learningDatabase.ref('learning_events').push(event)
+      .then(() => {
+        console.log('[Learning] Event sent to Firebase:', event.type);
+      })
+      .catch(err => {
+        console.error('[Learning] Firebase error:', err);
+        // Re-queue en cas d'erreur
+        learningQueue.push(event);
+      });
+  });
+}
+
+// Démarrer le timer de flush automatique
+function startLearningFlush() {
+  if (learningFlushTimer) clearInterval(learningFlushTimer);
+  learningFlushTimer = setInterval(flushLearningQueue, LEARNING_CONFIG.flushInterval);
+}
+
+// Arrêter le flush avant de quitter
+window.addEventListener('beforeunload', () => {
+  flushLearningQueue();
+});
+
+// Initialiser le système d'apprentissage
+startLearningFlush();
+
 // ══ FONCTIONS CATALOGUE ══
 let selectedCatalogYear = '';
 let selectedCatalogSubject = '';
@@ -2308,11 +2429,13 @@ async function aiIdentifyChapter() {
   const courseText = document.getElementById('course-text').value.trim();
   if (!courseText || courseText.length < 50) {
     showToast('Ajoute d\'abord du texte de cours', 'error');
+    collectLearningEvent('ai_error', { action: 'identify_chapter', reason: 'insufficient_text' });
     return;
   }
   
   if (!hasAnyApiKey()) {
     openKeyModal();
+    collectLearningEvent('ai_error', { action: 'identify_chapter', reason: 'no_api_key' });
     return;
   }
   
@@ -2363,13 +2486,16 @@ async function aiIdentifyChapter() {
         if (match) {
           chapterSelect.value = match.id;
           showToast(`🤖 IA identifié : ${match.name} (${result.confidence ? Math.round(result.confidence * 100) : '?'}%)`, 'success');
+          collectLearningEvent('ai_success', { action: 'identify_chapter', chapter: match.id, confidence: result.confidence });
         } else {
           showToast(`🤖 IA suggère : ${result.chapter} (non trouvé dans catalogue)`, 'error');
+          collectLearningEvent('ai_miss', { action: 'identify_chapter', suggested: result.chapter, subject: result.subject, year: result.year });
         }
       }, 100);
     }
   } catch(e) {
     showToast('Erreur identification IA : ' + e.message, 'error');
+    collectLearningEvent('ai_error', { action: 'identify_chapter', error: e.message });
   }
 }
 
@@ -4397,6 +4523,7 @@ async function genQuiz(retrySmall) {
     if (!quizData.length) throw new Error('Aucune question');
     renderQuiz();
     saveCourseGenerated();
+    collectLearningEvent('quiz_success', { questionCount: quizData.length, retry: retrySmall });
   } catch(e) {
     if (!retrySmall && /satur|quota|429|rate/i.test(e.message || '')) {
       return genQuiz(true);
@@ -4406,6 +4533,7 @@ async function genQuiz(retrySmall) {
     showToast(msg.slice(0, 80), 'error');
     if (/satur|toutes les ia/i.test(msg) && !localStorage.getItem('notiq_openrouter_key')) openKeyModal();
     console.error('Quiz error:', e);
+    collectLearningEvent('quiz_error', { error: msg, retry: retrySmall, questionCount: nQ });
   }
 }
 function renderQuiz() {
@@ -4433,10 +4561,12 @@ function renderQuiz() {
 }
 function ansQ(qi, a) {
   quizAnswers[qi] = a;
+  const isCorrect = quizData[qi] && parseInt(a, 10) === quizData[qi].correct;
   renderQuiz();
   saveCourseGenerated();
-  if (quizData[qi] && parseInt(a, 10) === quizData[qi].correct) showToast('✅ Bonne réponse !', 'success');
+  if (isCorrect) showToast('✅ Bonne réponse !', 'success');
   else showToast('❌ Mauvaise réponse', 'error');
+  collectLearningEvent('quiz_answer', { questionIndex: qi, isCorrect, totalQuestions: quizData.length });
 }
 function saveQuizResult(correct, total) {
   const pct = Math.round((correct / total) * 100);
