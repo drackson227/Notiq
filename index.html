@@ -4053,7 +4053,7 @@ async function processOcrChunk(items, orKey, batchSize) {
   const startPage = items[0].page;
   const geminiKeys = getGeminiKeys();
   
-  if (geminiKeys.length > 0 && items.length > 1) {
+  if (geminiKeys.length > 0 && items.length > 1 && !isGeminiVisionBlocked()) {
     ocrJob.status = `Lot ${items.length} photos Gemini (pages ${startPage}–${items[items.length - 1].page})…`;
     updateOcrUi();
     try {
@@ -4075,6 +4075,31 @@ async function processOcrChunk(items, orKey, batchSize) {
       return;
     } catch(e) {
       console.warn('Lot Gemini OCR:', e.message);
+    }
+  }
+  
+  if (orKey && items.length > 1) {
+    ocrJob.status = `Lot ${items.length} photos OpenRouter (pages ${startPage}–${items[items.length - 1].page})…`;
+    updateOcrUi();
+    try {
+      const texts = await transcribeImageBatchOpenRouter(orKey, items);
+      for (let i = 0; i < items.length; i++) {
+        if (ocrJob?.cancelled) return;
+        const text = texts[i] || null;
+        if (text && appendCourseText(text, items[i].name, items[i].page)) {
+          ocrJob.ok++;
+        } else {
+          ocrJob.fail++;
+          ocrJob.failedItems.push(items[i]);
+          ocrJob.failedNames = ocrJob.failedNames || [];
+          ocrJob.failedNames.push(items[i].name);
+        }
+        ocrJob.done++;
+        updateOcrUi();
+      }
+      return;
+    } catch(e) {
+      console.warn('Lot OpenRouter OCR:', e.message);
     }
   }
   
