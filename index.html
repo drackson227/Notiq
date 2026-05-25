@@ -3559,8 +3559,14 @@ const OCR_PROMPT = 'OCR : transcris le texte visible (devoir/cours). Numéros et
 function ocrBatchPromptIndexed(count) {
   if (count === 1) return OCR_PROMPT;
   return `OCR : ${count} pages d'un même cours, dans l'ordre (page 1 en premier).\n` +
-    `Transcris tout le texte visible (devoir/cours). Français, texte brut.\n` +
-    `Après CHAQUE page, écris exactement : --- PAGE N --- (N = 1, 2, 3… jusqu'à ${count}).\nPas de markdown.`;
+    `RÈGLES STRICTES :\n` +
+    `1. Transcris le texte de CHAQUE image séparément, dans l'ordre.\n` +
+    `2. Après le texte de l'image 1, écris EXACTEMENT sur une nouvelle ligne : --- PAGE 1 ---\n` +
+    `3. Après le texte de l'image 2, écris EXACTEMENT sur une nouvelle ligne : --- PAGE 2 ---\n` +
+    `4. Continue ainsi jusqu'à l'image ${count}.\n` +
+    `5. NE MÉLANGE PAS le texte de différentes images.\n` +
+    `6. NE RÉPÈTE PAS le texte d'une image dans une autre.\n` +
+    `Français, texte brut. Pas de markdown.`;
 }
 
 function ocrBatchPrompt(names) {
@@ -3628,10 +3634,28 @@ function splitBatchOcrByPage(raw, count) {
       const chunk = sanitizeOcrText(text.slice(start, end));
       if (isValidOcrText(chunk, true)) out.push(chunk);
     }
-    if (out.length) return out;
+    if (out.length) return removeDuplicateTexts(out);
   }
   const legacy = splitBatchOcrText(raw, Array.from({ length: count }, (_, i) => ({ name: 'page' + (i + 1) })));
-  return legacy.map(x => x.text).filter(t => isValidOcrText(t, true));
+  const legacyTexts = legacy.map(x => x.text).filter(t => isValidOcrText(t, true));
+  if (legacyTexts.length === count) return removeDuplicateTexts(legacyTexts);
+  if (legacyTexts.length > 0) return removeDuplicateTexts(legacyTexts);
+  return isValidOcrText(text, true) ? [text] : [];
+}
+
+function removeDuplicateTexts(texts) {
+  if (texts.length <= 1) return texts;
+  const out = [];
+  const seen = new Set();
+  for (const t of texts) {
+    const normalized = t.toLowerCase().replace(/\s+/g, ' ').trim();
+    const hash = normalized.substring(0, 100);
+    if (!seen.has(hash)) {
+      seen.add(hash);
+      out.push(t);
+    }
+  }
+  return out;
 }
 
 function isValidOcrText(text, bulk) {
