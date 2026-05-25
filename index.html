@@ -1210,6 +1210,7 @@ footer a { color: var(--green); text-decoration: none; }
                 <button id="flash-mode-ai" class="mode-btn" onclick="setFlashMode('ai')">🧠 Générées par l'IA</button>
               </div>
               <button class="btn-outline" style="padding:6px 14px;font-size:13px" onclick="genFlash()">↻ Régénérer</button>
+              <button class="btn-outline" style="padding:6px 14px;font-size:13px" onclick="exportFlashcardsCSV()">📥 Export CSV</button>
             </div>
             <p id="flash-mode-desc" style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:0.5rem">Les notions clés extraites directement de ton cours</p>
 
@@ -1377,6 +1378,7 @@ footer a { color: var(--green); text-decoration: none; }
                 <div class="mastery-row" style="margin-top:8px"><span>Flashcards maîtrisées</span><span id="stat-flash-count">0%</span></div>
                 <div class="mastery-bar-track"><div class="mastery-bar-fill" id="stat-flash-bar" style="width:0%"></div></div>
                 <div class="mastery-row" style="margin-top:8px"><span>Sessions Pomodoro</span><span id="stat-pomo-count">0</span></div>
+                <div class="mastery-row" style="margin-top:8px"><span>🔥 Streak quotidien</span><span id="stat-streak-count">0 jours</span></div>
               </div>
             </div>
           </div>
@@ -2331,7 +2333,7 @@ firebase.initializeApp(firebaseConfig);
 const learningDatabase = firebase.database();
 
 const LEARNING_CONFIG = {
-  enabled: true,
+  enabled: false,
   batchSize: 10,
   flushInterval: 60000, // 1 minute
   anonymize: true
@@ -2727,6 +2729,8 @@ let courses     = {};
 let activeCourseId = null;
 let quizHistory = [];
 let pomoCompletedSessions = 0;
+let studyStreak = 0;
+let lastStudyDate = null;
 function getApiDelay() {
   const mode = localStorage.getItem('notiq_ai_mode') || 'auto';
   if (mode === 'fast') return 1200;
@@ -2780,6 +2784,8 @@ window.addEventListener('load', () => {
   const savedHistory = localStorage.getItem('notiq_history');
   if (savedHistory) { try { quizHistory = JSON.parse(savedHistory); } catch(e) { quizHistory = []; } }
   pomoCompletedSessions = parseInt(localStorage.getItem('notiq_pomo_sessions') || '0');
+  studyStreak = parseInt(localStorage.getItem('notiq_streak') || '0');
+  lastStudyDate = localStorage.getItem('notiq_last_study_date') || null;
 
   // ── RESTAURATION SANS APPEL API ──
   // On restaure le cours actif directement depuis localStorage,
@@ -2812,11 +2818,26 @@ window.addEventListener('load', () => {
   updateCharCount();
 
   document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
-    const keyModal = document.getElementById('key-modal');
-    if (keyModal && keyModal.classList.contains('open')) closeKeyModal();
-    const examOverlay = document.getElementById('exam-overlay');
-    if (examOverlay && examOverlay.classList.contains('open')) closeExam();
+    if (e.key === 'Escape') {
+      const keyModal = document.getElementById('key-modal');
+      if (keyModal && keyModal.classList.contains('open')) closeKeyModal();
+      const examOverlay = document.getElementById('exam-overlay');
+      if (examOverlay && examOverlay.classList.contains('open')) closeExam();
+      return;
+    }
+    const flashPanel = document.getElementById('ap-flash');
+    if (flashPanel && flashPanel.classList.contains('active') && flashData.length > 0) {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        nextFlash();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevFlash();
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        flipFlash();
+      }
+    }
   });
 
   if (!hasAnyApiKey()) openKeyModal();
@@ -4784,6 +4805,7 @@ function ankiRate(rating) {
   ankiScores[flashIdx] = rating;
   updateAnkiStats();
   saveCourseGenerated();
+  updateStreak();
   setTimeout(() => {
     if (flashIdx < flashData.length - 1) { flashIdx++; showFlash(); }
     else {
@@ -4800,6 +4822,30 @@ function updateAnkiStats() {
   const easy = Object.values(ankiScores).filter(v => v === 'easy').length;
   if (rated === 0) { document.getElementById('anki-stats').textContent = ''; return; }
   document.getElementById('anki-stats').textContent = `${rated}/${flashData.length} évaluées · ${easy} faciles`;
+}
+
+function exportFlashcardsCSV() {
+  if (!flashData || flashData.length === 0) {
+    showToast('Aucune flashcard à exporter', 'error');
+    return;
+  }
+  const courseName = courses[activeCourseId]?.name || 'cours';
+  const csvContent = flashData.map(card => {
+    const front = (card.front || '').replace(/"/g, '""');
+    const back = (card.back || '').replace(/"/g, '""');
+    return `"${front}","${back}"`;
+  }).join('\n');
+  const header = '"Front","Back"\n';
+  const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_flashcards.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast('📥 Flashcards exportées en CSV !', 'success');
 }
 
 async function genQuiz(retrySmall) {
@@ -4870,6 +4916,7 @@ function saveQuizResult(correct, total) {
   quizHistory.unshift(entry);
   if (quizHistory.length > QUIZ_HISTORY_MAX_LENGTH) quizHistory.pop();
   localStorage.setItem('notiq_history', JSON.stringify(quizHistory));
+  updateStreak();
   renderStats();
   if (pct === 100) launchConfetti();
 }
@@ -5581,6 +5628,7 @@ function startPomo() {
         pomoSession++; pomoCompletedSessions++;
         localStorage.setItem('notiq_pomo_sessions', pomoCompletedSessions);
         document.getElementById('pomo-session').textContent = pomoSession;
+        updateStreak();
         showToast('🍅 Session Pomodoro terminée !', 'success');
         renderStats();
       } else showToast('⏱️ Pause terminée !', 'success');
@@ -5613,6 +5661,21 @@ function renderPomoFloat() {
   if (floatBtn) floatBtn.textContent = pomoRunning ? '⏸' : '▶';
 }
 
+function updateStreak() {
+  const today = new Date().toDateString();
+  if (lastStudyDate === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (lastStudyDate === yesterday) {
+    studyStreak++;
+  } else if (lastStudyDate !== today) {
+    studyStreak = 1;
+  }
+  lastStudyDate = today;
+  localStorage.setItem('notiq_streak', studyStreak);
+  localStorage.setItem('notiq_last_study_date', lastStudyDate);
+  renderStats();
+}
+
 function renderStats() {
   const quizCount = quizHistory.length;
   const avgPct = quizCount > 0 ? Math.round(quizHistory.reduce((s, e) => s + (e.pct || 0), 0) / quizCount) : 0;
@@ -5624,6 +5687,7 @@ function renderStats() {
   document.getElementById('stat-flash-count').textContent = `${flashPct}%`;
   document.getElementById('stat-flash-bar').style.width = `${flashPct}%`;
   document.getElementById('stat-pomo-count').textContent = pomoCompletedSessions;
+  document.getElementById('stat-streak-count').textContent = `${studyStreak} jour${studyStreak > 1 ? 's' : ''}`;
   let mastery = 0;
   if (quizCount > 0 || flashPct > 0 || pomoCompletedSessions > 0) {
     mastery = Math.min(Math.round(avgPct * MASTERY_QUIZ_WEIGHT + flashPct * MASTERY_FLASH_WEIGHT + Math.min(pomoCompletedSessions * MASTERY_POMO_MULTIPLIER, MASTERY_POMO_MAX_CONTRIBUTION)), 100);
