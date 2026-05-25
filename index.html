@@ -550,6 +550,108 @@ section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
 }
 .mindmap-tooltip.show { opacity: 1; }
 
+/* ── FLOATING POMODORO WIDGET ── */
+.pomo-float-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.pomo-float-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.pomo-float-icon {
+  font-size: 16px;
+}
+.pomo-float-time {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 60px;
+}
+.pomo-float-toggle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-left: auto;
+  transition: transform 0.3s ease;
+}
+.pomo-float-widget.collapsed .pomo-float-toggle {
+  transform: rotate(180deg);
+}
+.pomo-float-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+}
+.pomo-float-widget.collapsed .pomo-float-body {
+  display: none;
+}
+.pomo-float-mode {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.pomo-float-btn {
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pomo-float-btn:hover {
+  background: rgba(31,189,130,0.8);
+}
+
+/* Mobile styles for floating Pomodoro */
+@media (max-width: 768px) {
+  .pomo-float-widget {
+    bottom: 10px;
+    right: 10px;
+    border-radius: 20px;
+  }
+  .pomo-float-header {
+    padding: 8px 12px;
+  }
+  .pomo-float-icon {
+    font-size: 14px;
+  }
+  .pomo-float-time {
+    font-size: 14px;
+    min-width: 50px;
+  }
+  .pomo-float-toggle {
+    display: none;
+  }
+  .pomo-float-body {
+    padding: 8px 12px;
+  }
+  .pomo-float-mode {
+    font-size: 11px;
+  }
+  .pomo-float-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
 /* ── POMODORO ── */
 .pomo-wrap {
   display: flex; flex-direction: column; align-items: center;
@@ -792,6 +894,19 @@ footer a { color: var(--green); text-decoration: none; }
 
 <canvas id="confetti-canvas"></canvas>
 <div id="toast"></div>
+
+<!-- FLOATING POMODORO WIDGET -->
+<div id="pomo-float-widget" class="pomo-float-widget">
+  <div class="pomo-float-header" onclick="togglePomoFloat()">
+    <span class="pomo-float-icon">⏱️</span>
+    <span class="pomo-float-time" id="pomo-float-time">25:00</span>
+    <span class="pomo-float-toggle">−</span>
+  </div>
+  <div class="pomo-float-body" id="pomo-float-body">
+    <div class="pomo-float-mode" id="pomo-float-mode">Travail</div>
+    <button class="pomo-float-btn" id="pomo-float-btn" onclick="togglePomo()">▶</button>
+  </div>
+</div>
 
 <!-- API KEY MODAL -->
 <div class="modal-overlay" id="key-modal">
@@ -5323,10 +5438,16 @@ async function genMindmap() {
       `  {"label":"Résultat","order":3,"hint":"produit","children":["…","…"]},\n` +
       `  {"label":"Lien suivant","order":4,"hint":"conséquence","children":["…"]}\n` +
       `]}\n` +
-      `Règles : 4-5 branches ; order 1→5 = chronologie ou logique (définition → processus → résultat → application) ; 2-3 children par branche ; labels ≤ 4 mots ; hint = lien avec la branche suivante (3 mots max).`,
+      `Règles : 4-5 branches ; order 1→5 = chronologie ou logique (définition → processus → résultat → application) ; 2-3 children par branche ; labels ≤ 4 mots ; hint = lien avec la branche suivante (3 mots max). IMPORTANT : Retourne SEULEMENT du JSON valide, pas de texte avant ou après.`,
       'Assistant. JSON uniquement.' + compactSuffix()
     );
+    if (!raw || !raw.center || !raw.branches || !Array.isArray(raw.branches) || raw.branches.length === 0) {
+      throw new Error('Format JSON invalide : centre ou branches manquants');
+    }
     mindmapData = normalizeMindmapData(raw);
+    if (!mindmapData.branches || mindmapData.branches.length === 0) {
+      throw new Error('Aucune branche valide après normalisation');
+    }
     mindmapView = { scale: 1, panX: 0, panY: 0 };
     document.getElementById('mindmap-empty').style.display = 'none';
     document.getElementById('mindmap-ui').style.display = 'block';
@@ -5337,7 +5458,8 @@ async function genMindmap() {
     ctx2d.fillStyle = bg;
     ctx2d.fillRect(0, 0, W, H);
     ctx2d.fillStyle = '#7a8c7e';
-    ctx2d.fillText('❌ Erreur — vérifie ta clé API', W / 2, H / 2);
+    ctx2d.fillText('❌ Erreur : ' + (e.message || 'réessaie'), W / 2, H / 2);
+    console.error('Mindmap generation error:', e);
   }
 }
 
@@ -5408,17 +5530,23 @@ async function sendChat() {
 const POMO_MODES = { work: 25*60, short: 5*60, long: 15*60 };
 let pomoMode = 'work', pomoTotal = POMO_MODES.work, pomoLeft = POMO_MODES.work;
 let pomoRunning = false, pomoInterval = null, pomoSession = 1;
-function initPomodoro() { renderPomo(); }
+let pomoFloatCollapsed = false;
+function initPomodoro() { renderPomo(); renderPomoFloat(); }
 function setPomoMode(mode, el) {
   document.querySelectorAll('.pomo-pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
   pomoMode = mode; pomoTotal = POMO_MODES[mode]; pomoLeft = pomoTotal;
-  stopPomo(); renderPomo();
+  stopPomo(); renderPomo(); renderPomoFloat();
 }
 function togglePomo() { if (pomoRunning) stopPomo(); else startPomo(); }
+function togglePomoFloat() {
+  pomoFloatCollapsed = !pomoFloatCollapsed;
+  document.getElementById('pomo-float-widget').classList.toggle('collapsed', pomoFloatCollapsed);
+}
 function startPomo() {
   pomoRunning = true;
   document.getElementById('pomo-btn').textContent = '⏸ Pause';
+  document.getElementById('pomo-float-btn').textContent = '⏸';
   clearInterval(pomoInterval);
   pomoInterval = setInterval(() => {
     pomoLeft--;
@@ -5432,11 +5560,11 @@ function startPomo() {
         renderStats();
       } else showToast('⏱️ Pause terminée !', 'success');
     }
-    renderPomo();
+    renderPomo(); renderPomoFloat();
   }, POMO_UPDATE_INTERVAL_MS);
 }
-function stopPomo() { pomoRunning = false; clearInterval(pomoInterval); document.getElementById('pomo-btn').textContent = '▶ Démarrer'; }
-function resetPomo() { stopPomo(); pomoLeft = pomoTotal; renderPomo(); }
+function stopPomo() { pomoRunning = false; clearInterval(pomoInterval); document.getElementById('pomo-btn').textContent = '▶ Démarrer'; document.getElementById('pomo-float-btn').textContent = '▶'; }
+function resetPomo() { stopPomo(); pomoLeft = pomoTotal; renderPomo(); renderPomoFloat(); }
 function renderPomo() {
   const m = String(Math.floor(pomoLeft/60)).padStart(2,'0');
   const s = String(pomoLeft%60).padStart(2,'0');
@@ -5447,6 +5575,17 @@ function renderPomo() {
   circ.style.strokeDashoffset = circumference * (1 - (pomoTotal > 0 ? pomoLeft / pomoTotal : 0));
   const labels = { work: 'Concentration', short: 'Pause courte', long: 'Longue pause' };
   document.getElementById('pomo-mode-label').textContent = labels[pomoMode];
+}
+function renderPomoFloat() {
+  const m = String(Math.floor(pomoLeft/60)).padStart(2,'0');
+  const s = String(pomoLeft%60).padStart(2,'0');
+  const floatTime = document.getElementById('pomo-float-time');
+  if (floatTime) floatTime.textContent = `${m}:${s}`;
+  const labels = { work: 'Travail', short: 'Pause courte', long: 'Longue pause' };
+  const floatMode = document.getElementById('pomo-float-mode');
+  if (floatMode) floatMode.textContent = labels[pomoMode];
+  const floatBtn = document.getElementById('pomo-float-btn');
+  if (floatBtn) floatBtn.textContent = pomoRunning ? '⏸' : '▶';
 }
 
 function renderStats() {
