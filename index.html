@@ -3867,14 +3867,8 @@ async function processOcrChunk(items, orKey, batchSize) {
         if (text && appendCourseText(text, items[i].name, items[i].page)) {
           ocrJob.ok++;
         } else {
-          try {
-            const solo = await transcribeOneItem(items[i], orKey);
-            if (appendCourseText(solo, items[i].name, items[i].page)) ocrJob.ok++;
-            else { ocrJob.fail++; ocrJob.failedItems.push(items[i]); }
-          } catch(e) {
-            ocrJob.fail++;
-            ocrJob.failedItems.push(items[i]);
-          }
+          ocrJob.fail++;
+          ocrJob.failedItems.push(items[i]);
         }
         ocrJob.done++;
         updateOcrUi();
