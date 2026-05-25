@@ -3467,15 +3467,38 @@ async function retryFailedOcr() {
   if (!items?.length || ocrJob?.running) return;
   const orKey = (localStorage.getItem('notiq_openrouter_key') || '').trim();
   ocrJob.failedItems = [];
+  ocrJob.failedNames = [];
+  ocrJob.failReasons = {};
   ocrJob.running = true;
   ocrJob.cancelled = false;
   ocrJob.total = items.length;
   ocrJob.done = 0;
   ocrJob.fail = 0;
-  ocrJob.status = `Attente rate limit (10s)…`;
+  
+  let delayMs = 3000;
+  if (isGeminiVisionBlocked()) {
+    const waitUntil = geminiVisionBlockedUntil - Date.now() + 2000;
+    delayMs = Math.min(Math.max(waitUntil, 3000), 60000);
+  }
+  
+  ocrJob.status = `Attente ${Math.round(delayMs / 1000)}s…`;
   showOcrPanel(true);
   updateOcrUi();
-  await sleep(10000);
+  await sleep(delayMs);
+  
+  for (const item of items) {
+    if (ocrJob?.cancelled) break;
+    if (item.file) {
+      try {
+        const compressed = await compressImageFile(item.file, 480, true);
+        item.base64 = compressed.base64;
+        item.mimeType = compressed.mimeType;
+      } catch(e) {
+        console.warn('Compression retry failed:', e.message);
+      }
+    }
+  }
+  
   ocrJob.status = `Reprise de ${items.length} photo(s)…`;
   updateOcrUi();
   await ocrItemsIndividually(items, orKey);
@@ -3492,7 +3515,32 @@ function updateOcrUi() {
   const pct = ocrJob.total ? Math.round((ocrJob.done / ocrJob.total) * 100) : 0;
   document.getElementById('ocr-bar-fill').style.width = pct + '%';
   document.getElementById('ocr-panel-stats').textContent = `${ocrJob.done} / ${ocrJob.total} · ${ocrJob.ok} OK` + (ocrJob.fail ? ` · ${ocrJob.fail} échec(s)` : '');
-  document.getElementById('ocr-panel-detail').textContent = ocrJob.status || '';
+  
+  let detailHtml = ocrJob.status || '';
+  if (ocrJob.failedNames && ocrJob.failedNames.length > 0) {
+    const displayNames = ocrJob.failedNames.slice(0, 3);
+    const remaining = ocrJob.failedNames.length - 3;
+    const namesText = displayNames.join(', ') + (remaining > 0 ? ` et ${remaining} autre(s)...` : '');
+    detailHtml += `<br><span style="font-size:11px;color:var(--text-muted)">Échecs : ${namesText}</span>`;
+    
+    let errorMsg = '';
+    let hasRateLimit = false;
+    for (const name of ocrJob.failedNames) {
+      const reason = ocrJob.failReasons?.[name] || '';
+      if (/429|rate|quota/i.test(reason)) {
+        hasRateLimit = true;
+        break;
+      }
+    }
+    if (hasRateLimit) {
+      errorMsg = '⏱ Quota API — réessaie dans 1 min';
+    } else {
+      errorMsg = '🔍 Image illisible ou réseau';
+    }
+    detailHtml += `<br><span style="font-size:11px;color:var(--red)">${errorMsg}</span>`;
+  }
+  
+  document.getElementById('ocr-panel-detail').innerHTML = detailHtml;
   document.getElementById('ocr-retry-btn').style.display = ocrJob.failedItems?.length && !ocrJob.running ? 'inline-flex' : 'none';
 }
 async function mapPool(items, fn, limit) {
@@ -3854,6 +3902,10 @@ async function transcribeOneItem(item, orKey) {
   }
   const tesseractResult = await transcribeImageViaTesseract(item.base64, item.mimeType);
   if (tesseractResult) return tesseractResult;
+  if (ocrJob && item.name) {
+    ocrJob.failReasons = ocrJob.failReasons || {};
+    ocrJob.failReasons[item.name] = lastErr || 'OCR impossible (quota ou image illisible)';
+  }
   throw new Error(lastErr || 'OCR impossible (quota ou image illisible)');
 }
 
@@ -3867,10 +3919,14 @@ async function ocrItemsIndividually(items, orKey) {
       } else {
         ocrJob.fail++;
         ocrJob.failedItems.push(item);
+        ocrJob.failedNames = ocrJob.failedNames || [];
+        ocrJob.failedNames.push(item.name);
       }
     } catch(e) {
       ocrJob.fail++;
       ocrJob.failedItems.push(item);
+      ocrJob.failedNames = ocrJob.failedNames || [];
+      ocrJob.failedNames.push(item.name);
     }
     ocrJob.done++;
     updateOcrUi();
@@ -3895,6 +3951,8 @@ async function processOcrChunk(items, orKey, batchSize) {
         } else {
           ocrJob.fail++;
           ocrJob.failedItems.push(items[i]);
+          ocrJob.failedNames = ocrJob.failedNames || [];
+          ocrJob.failedNames.push(items[i].name);
         }
         ocrJob.done++;
         updateOcrUi();
