@@ -2349,7 +2349,7 @@ function updateCatalogChapters() {
     chaptersDiv.style.display = 'none';
     chapterSelect.innerHTML = '<option value="">Chapitre...</option>';
     return;
-  }
+  } 
   
   chapterSelect.innerHTML = '<option value="">Chapitre...</option>' + 
     chapters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -2382,10 +2382,12 @@ function loadCatalogCourse() {
   else if (typeof yearData === 'object') {
     // Chercher dans tous les chapitres (base + options)
     for (const optionKey in yearData) {
-      const found = yearData[optionKey].find(c => c.id === chapterId);
-      if (found) {
-        chapter = found;
-        break;
+      if (Array.isArray(yearData[optionKey])) {
+        const found = yearData[optionKey].find(c => c.id === chapterId);
+        if (found) {
+          chapter = found;
+          break;
+        }
       }
     }
   }
@@ -2744,7 +2746,7 @@ function saveCourses() {
 }
 
 function persistCourseTextarea() {
-  const courseTa = document.getElementById('course-text');
+  const courseTa = domCache.getCourseText();
   if (!courseTa) return;
   const txt = courseTa.value;
   if (activeCourseId && courses[activeCourseId]) {
@@ -2753,19 +2755,51 @@ function persistCourseTextarea() {
   }
 }
 
+// Constants for character count validation
+const CHAR_COUNT_MIN = 50;
+const CHAR_COUNT_MAX = 50000;
+
+// DOM element cache for frequently accessed elements
+const domCache = {
+  courseText: null,
+  charCount: null,
+  charHint: null,
+  
+  getCourseText() {
+    if (!this.courseText) this.courseText = document.getElementById('course-text');
+    return this.courseText;
+  },
+  
+  getCharCount() {
+    if (!this.charCount) this.charCount = document.getElementById('course-char-count');
+    return this.charCount;
+  },
+  
+  getCharHint() {
+    if (!this.charHint) this.charHint = document.getElementById('course-char-hint');
+    return this.charHint;
+  },
+  
+  invalidate() {
+    this.courseText = null;
+    this.charCount = null;
+    this.charHint = null;
+  }
+};
+
 function updateCharCount() {
-  const courseTa = document.getElementById('course-text');
+  const courseTa = domCache.getCourseText();
   if (!courseTa) return;
   const n = courseTa.value.length;
-  const el = document.getElementById('course-char-count');
-  const hint = document.getElementById('course-char-hint');
+  const el = domCache.getCharCount();
+  const hint = domCache.getCharHint();
   if (!el) return;
   el.textContent = n.toLocaleString('fr-FR') + ' caractère' + (n > 1 ? 's' : '');
   if (!hint) return;
-  if (n < 50) {
+  if (n < CHAR_COUNT_MIN) {
     hint.textContent = 'Minimum 50 pour analyser';
     hint.className = 'warn';
-  } else if (n > 50000) {
+  } else if (n > CHAR_COUNT_MAX) {
     hint.textContent = 'Texte très long — l\'analyse sera tronquée';
     hint.className = 'warn';
   } else {
@@ -2777,7 +2811,7 @@ function updateCharCount() {
 function genStorageKey(id) { return 'notiq_gen_' + id; }
 
 function syncActiveCourseText() {
-  const ta = document.getElementById('course-text');
+  const ta = domCache.getCourseText();
   const fromTa = (ta?.value || '').trim();
   if (fromTa) {
     courseText = fromTa;
@@ -4345,10 +4379,10 @@ async function explainSummaryBullet(i) {
   try {
     const ctx = courseText ? `Contexte cours :\n${courseSlice(2500)}\n\n` : '';
     const res = await ai(
-      `${ctx}Développe avec précision (max 100 mots), 1 exemple concret si utile :\n« ${b.text} »`,
+      `${ctx}Développe avec précision (max ${SUMMARY_DETAIL_MAX_WORDS} mots), 1 exemple concret si utile :\n« ${b.text} »`,
       'Tuteur pédagogique.' + compactSuffix()
     );
-    b.detail = sanitizeSummaryDetail(res) || res.slice(0, 400);
+    b.detail = sanitizeSummaryDetail(res) || res.slice(0, SUMMARY_DETAIL_FALLBACK_CHARS);
     detailEl.innerHTML = b.detail.split('\n').filter(l => l.trim()).map(l => `<p style="margin:0.35rem 0">${mdToHtml(l)}</p>`).join('');
     renderMath(detailEl);
     saveCourseGenerated();
@@ -4359,22 +4393,64 @@ async function explainSummaryBullet(i) {
   }
 }
 
+// Constants for summary generation
+const SUMMARY_BULLETS_COMPACT = 6;
+const SUMMARY_BULLETS_NORMAL = 8;
+const SUMMARY_MIN_BULLETS = 4;
+const SUMMARY_MAX_TOKENS_COMPACT = 1400;
+const SUMMARY_MAX_TOKENS_NORMAL = 2400;
+const SUMMARY_DETAIL_MAX_WORDS = 100;
+const SUMMARY_DETAIL_FALLBACK_CHARS = 400;
+
+// Constants for quiz generation
+const QUIZ_QUESTIONS_COMPACT = 6;
+const QUIZ_QUESTIONS_NORMAL = 8;
+const QUIZ_QUESTIONS_RETRY = 5;
+
+// Constants for flashcard/Anki
+const ANKI_MASTERY_THRESHOLD = 80;
+const ANKI_RATING_DELAY_MS = 400;
+
+// Constants for exam
+const EXAM_DURATION_SECONDS = 20 * 60;
+const EXAM_QUESTION_COUNT = 15;
+const EXAM_WARNING_SECONDS = 300; // 5 minutes
+const QUIZ_HISTORY_MAX_LENGTH = 20;
+
+// Constants for chat
+const CHAT_MAX_WORDS = 80;
+const CHAT_HISTORY_CONTEXT_COUNT = 6;
+
+// Constants for Pomodoro
+const POMO_UPDATE_INTERVAL_MS = 1000;
+const POMO_CIRCLE_RADIUS = 80;
+
+// Constants for stats/mastery
+const MASTERY_CIRCLE_RADIUS = 34;
+const MASTERY_QUIZ_WEIGHT = 0.6;
+const MASTERY_FLASH_WEIGHT = 0.3;
+const MASTERY_POMO_MULTIPLIER = 2;
+const MASTERY_POMO_MAX_CONTRIBUTION = 10;
+const HISTORY_STARS_3_THRESHOLD = 80;
+const HISTORY_STARS_2_THRESHOLD = 50;
+const HISTORY_DISPLAY_COUNT = 10;
+
 function buildSummaryPrompt(strict) {
-  const n = isCompactMode() ? 6 : 8;
+  const n = isCompactMode() ? SUMMARY_BULLETS_COMPACT : SUMMARY_BULLETS_NORMAL;
   const extra = strict ? '\nOBLIGATOIRE : exactement ' + n + ' lignes commençant par •, sans phrase d\'introduction.' : '';
   return `Cours :\n\n${courseSlice()}\n\nRésumé de révision : ${n} puces "• " (1–2 phrases chacune, notions importantes du cours).\nPas d'intro, pas de conclusion, pas de titre. Commence par "• ".${extra}${compactSuffix()}`;
 }
 
 async function genSummary() {
-  if (!syncActiveCourseText() || courseText.length < 50) { showToast('Charge un cours d\'abord.', 'error'); return; }
+  if (!syncActiveCourseText() || courseText.length < CHAR_COUNT_MIN) { showToast('Charge un cours d\'abord.', 'error'); return; }
   document.getElementById('summary-empty').style.display = 'none';
   const el = document.getElementById('summary-content');
   document.getElementById('summary-ui').style.display = 'block';
   el.innerHTML = '<span class="loading-txt"><span class="spinner"></span> Génération du résumé…</span>';
-  const maxTok = isCompactMode() ? 1400 : 2400;
+  const maxTok = isCompactMode() ? SUMMARY_MAX_TOKENS_COMPACT : SUMMARY_MAX_TOKENS_NORMAL;
   let res = await ai(buildSummaryPrompt(false), 'Assistant pédagogique.', maxTok);
   const bullets = (res.match(/^[\s]*[•\-*]/gm) || []).length;
-  if (bullets < 4) res = await ai(buildSummaryPrompt(true), 'Assistant pédagogique.', maxTok);
+  if (bullets < SUMMARY_MIN_BULLETS) res = await ai(buildSummaryPrompt(true), 'Assistant pédagogique.', maxTok);
   renderSummaryFromText(res);
   saveCourseGenerated();
 }
@@ -4497,10 +4573,10 @@ function ankiRate(rating) {
       const easy = Object.values(ankiScores).filter(v => v === 'easy').length;
       const pct = flashData.length > 0 ? Math.round((easy / flashData.length) * 100) : 0;
       showToast(`🎯 Session terminée : ${pct}% de maîtrise !`, 'success');
-      if (pct >= 80) launchConfetti();
+      if (pct >= ANKI_MASTERY_THRESHOLD) launchConfetti();
       renderStats();
     }
-  }, 400);
+  }, ANKI_RATING_DELAY_MS);
 }
 function updateAnkiStats() {
   const rated = Object.keys(ankiScores).length;
@@ -4510,10 +4586,10 @@ function updateAnkiStats() {
 }
 
 async function genQuiz(retrySmall) {
-  if (!syncActiveCourseText() || courseText.length < 50) return;
+  if (!syncActiveCourseText() || courseText.length < CHAR_COUNT_MIN) return;
   document.getElementById('quiz-list').innerHTML = '<div class="loading-txt" style="padding:1rem 0"><span class="spinner"></span> Génération des questions…</div>';
   quizAnswers = {};
-  const nQ = retrySmall ? 5 : (isCompactMode() ? 6 : 8);
+  const nQ = retrySmall ? QUIZ_QUESTIONS_RETRY : (isCompactMode() ? QUIZ_QUESTIONS_COMPACT : QUIZ_QUESTIONS_NORMAL);
   try {
     const data = await aiJSON(
       `Cours : ${courseSlice(2500).replace(/[^a-zA-ZÀ-ÿ0-9 .,;:!?();\-]/g, ' ')}\n\n${nQ} QCM. "explanation" = max 12 mots.\n{"questions":[{"q":"…","options":["A","B","C","D"],"correct":0,"explanation":"…"}]}`,
@@ -4575,20 +4651,20 @@ function saveQuizResult(correct, total) {
   if (lastEntry && lastEntry.date === now && lastEntry.score === `${correct}/${total}`) return;
   const entry = { date: now, score: `${correct}/${total}`, pct, course: (activeCourseId && courses[activeCourseId]) ? courses[activeCourseId].name : 'Cours' };
   quizHistory.unshift(entry);
-  if (quizHistory.length > 20) quizHistory.pop();
+  if (quizHistory.length > QUIZ_HISTORY_MAX_LENGTH) quizHistory.pop();
   localStorage.setItem('notiq_history', JSON.stringify(quizHistory));
   renderStats();
   if (pct === 100) launchConfetti();
 }
 
-let examInterval = null, examTimeLeft = 20 * 60, examAnswers = {}, examRunning = false;
+let examInterval = null, examTimeLeft = EXAM_DURATION_SECONDS, examAnswers = {}, examRunning = false;
 let examQuizData = [];
 
 async function startExam() {
-  if (!syncActiveCourseText() || courseText.length < 50) { showToast('Charge un cours d\'abord !', 'error'); return; }
-  examAnswers = {}; examTimeLeft = 20 * 60; examRunning = false;
+  if (!syncActiveCourseText() || courseText.length < CHAR_COUNT_MIN) { showToast('Charge un cours d\'abord !', 'error'); return; }
+  examAnswers = {}; examTimeLeft = EXAM_DURATION_SECONDS; examRunning = false;
   document.getElementById('exam-overlay').classList.add('open');
-  document.getElementById('exam-body').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:1.5rem"><div class="spinner" style="width:40px;height:40px;border-width:3px"></div><p style="color:var(--text-dim);font-size:15px">Génération de 15 questions en cours…</p></div>';
+  document.getElementById('exam-body').innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:1.5rem"><div class="spinner" style="width:40px;height:40px;border-width:3px"></div><p style="color:var(--text-dim);font-size:15px">Génération de ${EXAM_QUESTION_COUNT} questions en cours…</p></div>`;
   updateExamTimer();
   try {
     const data = await aiJSON(
@@ -4614,7 +4690,7 @@ async function startExam() {
   examInterval = setInterval(() => {
     if (!examRunning) return;
     examTimeLeft--; updateExamTimer();
-    document.getElementById('exam-progress-fill').style.width = `${(examTimeLeft / (20*60)) * 100}%`;
+    document.getElementById('exam-progress-fill').style.width = `${(examTimeLeft / EXAM_DURATION_SECONDS) * 100}%`;
     if (examTimeLeft <= 0) closeExam(true);
   }, 1000);
 }
@@ -4623,7 +4699,7 @@ function updateExamTimer() {
   const s = String(examTimeLeft%60).padStart(2,'0');
   const el = document.getElementById('exam-timer');
   el.textContent = `${m}:${s}`;
-  el.classList.toggle('warning', examTimeLeft < 300);
+  el.classList.toggle('warning', examTimeLeft < EXAM_WARNING_SECONDS);
 }
 function renderExamBody() {
   const eqd = examQuizData.length ? examQuizData : quizData;
@@ -5230,12 +5306,12 @@ async function sendChat() {
   if (!hasAnyApiKey()) { openKeyModal(); isChatPending = false; if (chatBtn) chatBtn.disabled = false; return; }
 
   const sys = courseText
-    ? `Tu es un tuteur. RÈGLES : réponds UNIQUEMENT en français ; réponds à la question de l'étudiant (pas un autre sujet) ; max 80 mots ; pas de compteur « X mots ».\n\nCours :\n${courseSlice(2500)}`
-    : 'Tuteur. UNIQUEMENT en français. Max 80 mots. Dis de charger un cours dans l\'onglet Cours.';
+    ? `Tu es un tuteur. RÈGLES : réponds UNIQUEMENT en français ; réponds à la question de l'étudiant (pas un autre sujet) ; max ${CHAT_MAX_WORDS} mots ; pas de compteur « X mots ».\n\nCours :\n${courseSlice(2500)}`
+    : `Tuteur. UNIQUEMENT en français. Max ${CHAT_MAX_WORDS} mots. Dis de charger un cours dans l\'onglet Cours.`;
   chatHistory.push({ role: 'user', parts: [{ text: msg }] });
   if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory = chatHistory.slice(chatHistory.length - MAX_CHAT_HISTORY);
   try {
-    const historyText = chatHistory.slice(0, -1).slice(-6).map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`).join('\n');
+    const historyText = chatHistory.slice(0, -1).slice(-CHAT_HISTORY_CONTEXT_COUNT).map(m => `${m.role === 'user' ? 'Étudiant' : 'Tuteur'}: ${m.parts[0].text}`).join('\n');
     const fullPrompt = historyText ? `${historyText}\nÉtudiant: ${msg}\n\n(Réponds à ce message.)` : msg;
     let reply = cleanChatReply(await ai(fullPrompt, sys));
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
@@ -5280,7 +5356,7 @@ function startPomo() {
       } else showToast('⏱️ Pause terminée !', 'success');
     }
     renderPomo();
-  }, 1000);
+  }, POMO_UPDATE_INTERVAL_MS);
 }
 function stopPomo() { pomoRunning = false; clearInterval(pomoInterval); document.getElementById('pomo-btn').textContent = '▶ Démarrer'; }
 function resetPomo() { stopPomo(); pomoLeft = pomoTotal; renderPomo(); }
@@ -5289,7 +5365,7 @@ function renderPomo() {
   const s = String(pomoLeft%60).padStart(2,'0');
   document.getElementById('pomo-time').textContent = `${m}:${s}`;
   const circ = document.getElementById('pomo-circle');
-  const circumference = 2 * Math.PI * 80;
+  const circumference = 2 * Math.PI * POMO_CIRCLE_RADIUS;
   circ.style.strokeDasharray = circumference;
   circ.style.strokeDashoffset = circumference * (1 - (pomoTotal > 0 ? pomoLeft / pomoTotal : 0));
   const labels = { work: 'Concentration', short: 'Pause courte', long: 'Longue pause' };
@@ -5309,15 +5385,15 @@ function renderStats() {
   document.getElementById('stat-pomo-count').textContent = pomoCompletedSessions;
   let mastery = 0;
   if (quizCount > 0 || flashPct > 0 || pomoCompletedSessions > 0) {
-    mastery = Math.min(Math.round(avgPct * 0.6 + flashPct * 0.3 + Math.min(pomoCompletedSessions * 2, 10)), 100);
+    mastery = Math.min(Math.round(avgPct * MASTERY_QUIZ_WEIGHT + flashPct * MASTERY_FLASH_WEIGHT + Math.min(pomoCompletedSessions * MASTERY_POMO_MULTIPLIER, MASTERY_POMO_MAX_CONTRIBUTION)), 100);
   }
   document.getElementById('mastery-pct').textContent = `${mastery}%`;
   const circ = document.getElementById('mastery-circle');
-  circ.style.strokeDashoffset = (2 * Math.PI * 34) * (1 - mastery / 100);
+  circ.style.strokeDashoffset = (2 * Math.PI * MASTERY_CIRCLE_RADIUS) * (1 - mastery / 100);
   const histEl = document.getElementById('history-list');
   if (!quizHistory.length) { histEl.innerHTML = '<div style="color:var(--text-muted);font-size:14px">Aucun quiz complété pour l\'instant.</div>'; return; }
-  histEl.innerHTML = quizHistory.slice(0, 10).map(e => {
-    const stars = e.pct >= 80 ? '⭐⭐⭐' : e.pct >= 50 ? '⭐⭐' : '⭐';
+  histEl.innerHTML = quizHistory.slice(0, HISTORY_DISPLAY_COUNT).map(e => {
+    const stars = e.pct >= HISTORY_STARS_3_THRESHOLD ? '⭐⭐⭐' : e.pct >= HISTORY_STARS_2_THRESHOLD ? '⭐⭐' : '⭐';
     return `<div class="history-card"><div class="history-date">${escHtml(e.date)}</div><div class="history-score">${escHtml(e.score)}</div><div class="history-label">${escHtml(e.course)} · ${e.pct}%</div><div class="history-stars">${stars}</div></div>`;
   }).join('');
 }
